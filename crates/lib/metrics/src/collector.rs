@@ -175,12 +175,12 @@ mod tests {
     fn observe_pushes_observation_sample() {
       let q = SampleQueue::new();
       let c = MetricsCollector::new(q.clone());
-      c.observe("my.dist", 3.14, vec!["k:v".to_string()]);
+      c.observe("my.dist", 3.125, vec!["k:v".to_string()]);
       assert_eq!(q.len(), 1);
       match &q.drain()[0] {
         Sample::Observation(o) => {
           assert_eq!(o.metric, "my.dist");
-          assert_eq!(o.value, 3.14);
+          assert_eq!(o.value, 3.125);
           assert_eq!(o.tags, vec!["k:v".to_string()]);
         }
         other => panic!("expected Observation, got {:?}", other),
