@@ -15,20 +15,20 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       SQLX_OFFLINE: 'true'
-      ARTCRAFT_TEST_DATABASE_URL: mysql://root:root@127.0.0.1:3306/artcraft_test
+      ARTCRAFT_TEST_DATABASE_URL: mysql://root@127.0.0.1:3306/artcraft_test
     services:
       mysql:
         image: mysql:8.0
         command: --socket=/tmp/mysql.sock
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
           MYSQL_DATABASE: artcraft_test
         ports:
           - 3306:3306
         volumes:
           - /tmp:/tmp
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
