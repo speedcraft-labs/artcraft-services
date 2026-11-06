@@ -35,35 +35,26 @@
 //!
 //! ```no_run
 //! use limitation::Limiter;
-//! use futures::Future;
 //!
 //! // Build a Limiter with a default rate with a local running Redis instance
 //! let limiter = Limiter::build("redis://127.0.0.1/").finish()?;
 //! // The key to count and track
 //! let key = "10.0.0.5";
 //!
-//! // TODO(bt,2023-12-12): This doctest is so far behind in `futures` versions and needs to be updated.
-//! //  Tokio should be executing the future and evaluating the result.
-//! // Start and run a Tokio runtime to drive the Future to completion
-//! //let mut rt = tokio::runtime::Runtime::new().unwrap();
-//! //rt.block_on(...)//!
-//! let _r = limiter
-//!         // Count returns a Status if the key is under the limit and an `Error::LimitExceeded`
-//!         // containing a Status if the limit has been exceeded
-//!         .count(key)
-//!         // This example deals with both limit exceeded and any Redis connection issues. In this
-//!         // case we'll print the error to the standard error stream to show the current limit
-//!         // status
-//!         .map_err(|err| eprintln!("err: {}", err))
-//!         // In this case we are under the limit and can print out the limit status to the
-//!         // standard output stream
-//!         .and_then(|status| {
-//!             println!("ok: {:?}", status);
-//!             Ok(())
-//!         })
-//!         .wait();
-//! //);
-//! # Ok::<(), limitation::Error>(())
+//! async fn run() -> Result<(), limitation::Error> {
+//!     // Count returns a Status if the key is under the limit and an `Error::LimitExceeded`
+//!     // containing a Status if the limit has been exceeded.
+//!     let _status = match limiter.count(key).await {
+//!         Ok(status) => status,
+//!         Err(err) => {
+//!             // This also reports Redis connection errors.
+//!             eprintln!("err: {}", err);
+//!             return Err(err);
+//!         }
+//!     };
+//!     println!("ok: {:?}", _status);
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ## The Limiter Builder
