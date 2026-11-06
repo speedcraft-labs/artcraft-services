@@ -11,8 +11,8 @@
 //! the backend is performing in a non-blocking, asynchronous fashion allowing the library to pair
 //! with other async frameworks such as Tokio, Actix, etc.
 //!
-//! *Note*: Currently pre-*async/await* Futures are used (that is Futures 0.1.x) but that may be
-//! upgraded in the near future as the Rust 1.39.0 release is near.
+//! The asynchronous API uses Rust's `async`/`await` syntax and can run on any compatible async
+//! runtime.
 //!
 //! # Usage
 //!
@@ -27,8 +27,8 @@
 //!
 //! The primary type is the [`Limiter`] which uses a builder to construct itself. Once built, use
 //! the [`count`] method with a key representing a user, a session, an interaction, etc. Note that
-//! `count` is a Future and therefore has to be driving to completion with a runtime. For example,
-//! to run one count on a key of `"10.0.0.5"`:
+//! `count` is asynchronous and has to be driven to completion by a runtime. For example, to run
+//! one count on a key of `"10.0.0.5"`:
 //!
 //! [`Limiter`]: struct.Limiter.html
 //! [`count`]: struct.Limiter.html#method.count
@@ -36,12 +36,7 @@
 //! ```no_run
 //! use limitation::Limiter;
 //!
-//! // Build a Limiter with a default rate with a local running Redis instance
-//! let limiter = Limiter::build("redis://127.0.0.1/").finish()?;
-//! // The key to count and track
-//! let key = "10.0.0.5";
-//!
-//! async fn run() -> Result<(), limitation::Error> {
+//! async fn count_ip(limiter: &Limiter, key: &str) -> Result<(), limitation::Error> {
 //!     // Count returns a Status if the key is under the limit and an `Error::LimitExceeded`
 //!     // containing a Status if the limit has been exceeded.
 //!     let _status = match limiter.count(key).await {
@@ -55,6 +50,12 @@
 //!     println!("ok: {:?}", _status);
 //!     Ok(())
 //! }
+//!
+//! # fn main() -> Result<(), limitation::Error> {
+//! let limiter = Limiter::build("redis://127.0.0.1/").finish()?;
+//! let _count = count_ip(&limiter, "10.0.0.5");
+//! Ok(())
+//! # }
 //! ```
 //!
 //! ## The Limiter Builder
@@ -121,7 +122,6 @@
 #![deny(missing_docs)]
 
 use chrono::SubsecRound;
-use futures::Future;
 use redis::Client;
 use std::convert::TryInto;
 use std::error;
@@ -236,7 +236,7 @@ impl Limiter {
         let result = pipe.query_async(&mut conn)
             .await
             .map_err(|err| Error::from(err))
-            .and_then(|(ignore, count, ttl): ((), usize, u64)| {
+            .and_then(|(_ignore, count, ttl): ((), usize, u64)| {
                 Ok((count, epoch_utc_plus(Duration::from_secs(ttl))?))
             })?;
         
