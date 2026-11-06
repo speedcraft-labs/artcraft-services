@@ -59,7 +59,6 @@ mod tests {
       let random_username = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
       let avatar_id = default_avatar_color_from_username(&random_username);
       distribution.insert(avatar_id);
-      assert!(avatar_id >= 0);
       assert!(avatar_id <= 9);
     }
     // NB: We could test frequency of the distribution too
