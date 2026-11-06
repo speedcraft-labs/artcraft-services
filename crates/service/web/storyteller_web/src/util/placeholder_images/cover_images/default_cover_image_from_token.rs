@@ -63,7 +63,6 @@ mod tests {
       let random_token= ModelWeightToken::new_from_str(&random_token);
       let avatar_id = default_cover_image_from_token(&random_token);
       distribution.insert(avatar_id);
-      assert!(avatar_id >= 0);
       assert!(avatar_id <= 24);
     }
     // NB: We could test frequency of the distribution too
