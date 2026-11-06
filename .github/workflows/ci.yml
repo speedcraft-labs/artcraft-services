@@ -19,11 +19,14 @@ jobs:
     services:
       mysql:
         image: mysql:8.0
+        command: --socket=/tmp/mysql.sock
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: artcraft_test
         ports:
           - 3306:3306
+        volumes:
+          - /tmp:/tmp
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
           --health-interval=10s
@@ -39,6 +42,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev libudev-dev pkg-config libdbus-1-dev libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev fonts-noto-cjk fonts-unifont ffmpeg
+      - name: Verify local MySQL test socket
+        run: test -S /tmp/mysql.sock
       # Existing baseline-wide formatter drift is tracked in hyper#262.
       - name: Rust formatting check (tracked exception)
         run: cargo fmt --all -- --check
