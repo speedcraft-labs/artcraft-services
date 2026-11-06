@@ -72,9 +72,9 @@ mod tests {
 
   #[test]
   fn parses_f64() {
-    let _g = EnvVarGuard::set("NUM_TEST_F64", "3.14");
-    assert_eq!(get_env_num("NUM_TEST_F64", 0.0f64).unwrap(), 3.14);
-    assert_eq!(try_get_env_num_optional::<f64>("NUM_TEST_F64").unwrap(), Some(3.14));
+    let _g = EnvVarGuard::set("NUM_TEST_F64", "3.125");
+    assert_eq!(get_env_num("NUM_TEST_F64", 0.0f64).unwrap(), 3.125);
+    assert_eq!(try_get_env_num_optional::<f64>("NUM_TEST_F64").unwrap(), Some(3.125));
   }
 
   #[test]
