@@ -11,8 +11,8 @@
 //! the backend is performing in a non-blocking, asynchronous fashion allowing the library to pair
 //! with other async frameworks such as Tokio, Actix, etc.
 //!
-//! *Note*: Currently pre-*async/await* Futures are used (that is Futures 0.1.x) but that may be
-//! upgraded in the near future as the Rust 1.39.0 release is near.
+//! The asynchronous API uses Rust's `async`/`await` syntax and can run on any compatible async
+//! runtime.
 //!
 //! # Usage
 //!
@@ -27,43 +27,35 @@
 //!
 //! The primary type is the [`Limiter`] which uses a builder to construct itself. Once built, use
 //! the [`count`] method with a key representing a user, a session, an interaction, etc. Note that
-//! `count` is a Future and therefore has to be driving to completion with a runtime. For example,
-//! to run one count on a key of `"10.0.0.5"`:
+//! `count` is asynchronous and has to be driven to completion by a runtime. For example, to run
+//! one count on a key of `"10.0.0.5"`:
 //!
 //! [`Limiter`]: struct.Limiter.html
 //! [`count`]: struct.Limiter.html#method.count
 //!
 //! ```no_run
 //! use limitation::Limiter;
-//! use futures::Future;
 //!
-//! // Build a Limiter with a default rate with a local running Redis instance
+//! async fn count_ip(limiter: &Limiter, key: &str) -> Result<(), limitation::Error> {
+//!     // Count returns a Status if the key is under the limit and an `Error::LimitExceeded`
+//!     // containing a Status if the limit has been exceeded.
+//!     let _status = match limiter.count(key).await {
+//!         Ok(status) => status,
+//!         Err(err) => {
+//!             // This also reports Redis connection errors.
+//!             eprintln!("err: {}", err);
+//!             return Err(err);
+//!         }
+//!     };
+//!     println!("ok: {:?}", _status);
+//!     Ok(())
+//! }
+//!
+//! # fn main() -> Result<(), limitation::Error> {
 //! let limiter = Limiter::build("redis://127.0.0.1/").finish()?;
-//! // The key to count and track
-//! let key = "10.0.0.5";
-//!
-//! // TODO(bt,2023-12-12): This doctest is so far behind in `futures` versions and needs to be updated.
-//! //  Tokio should be executing the future and evaluating the result.
-//! // Start and run a Tokio runtime to drive the Future to completion
-//! //let mut rt = tokio::runtime::Runtime::new().unwrap();
-//! //rt.block_on(...)//!
-//! let _r = limiter
-//!         // Count returns a Status if the key is under the limit and an `Error::LimitExceeded`
-//!         // containing a Status if the limit has been exceeded
-//!         .count(key)
-//!         // This example deals with both limit exceeded and any Redis connection issues. In this
-//!         // case we'll print the error to the standard error stream to show the current limit
-//!         // status
-//!         .map_err(|err| eprintln!("err: {}", err))
-//!         // In this case we are under the limit and can print out the limit status to the
-//!         // standard output stream
-//!         .and_then(|status| {
-//!             println!("ok: {:?}", status);
-//!             Ok(())
-//!         })
-//!         .wait();
-//! //);
-//! # Ok::<(), limitation::Error>(())
+//! let _count = count_ip(&limiter, "10.0.0.5");
+//! Ok(())
+//! # }
 //! ```
 //!
 //! ## The Limiter Builder
@@ -130,7 +122,6 @@
 #![deny(missing_docs)]
 
 use chrono::SubsecRound;
-use futures::Future;
 use redis::Client;
 use std::convert::TryInto;
 use std::error;
@@ -245,7 +236,7 @@ impl Limiter {
         let result = pipe.query_async(&mut conn)
             .await
             .map_err(|err| Error::from(err))
-            .and_then(|(ignore, count, ttl): ((), usize, u64)| {
+            .and_then(|(_ignore, count, ttl): ((), usize, u64)| {
                 Ok((count, epoch_utc_plus(Duration::from_secs(ttl))?))
             })?;
         
