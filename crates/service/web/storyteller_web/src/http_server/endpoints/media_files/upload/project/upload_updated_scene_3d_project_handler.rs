@@ -42,16 +42,7 @@ pub async fn upload_updated_scene_3d_project_handler(
   path: Path<UploadUpdatedScene3dProjectPathInfo>,
   MultipartForm(form): MultipartForm<UpdateProjectMultipartForm>,
 ) -> Result<Json<UploadUpdatedScene3dProjectSuccessResponse>, CommonWebError> {
-  update_project(UpdateProjectArgs {
-    http_request: &http_request,
-    server_state: &server_state,
-    config: &SCENE_3D_PROJECT_CONFIG,
-    media_file_token: &path.token,
-    form,
-  }).await?;
+  update_project(UpdateProjectArgs { http_request: &http_request, server_state: &server_state, config: &SCENE_3D_PROJECT_CONFIG, media_file_token: &path.token, form }).await?;
 
-  Ok(Json(UploadUpdatedScene3dProjectSuccessResponse {
-    success: true,
-    media_file_token: path.into_inner().token,
-  }))
+  Ok(Json(UploadUpdatedScene3dProjectSuccessResponse { success: true, media_file_token: path.into_inner().token }))
 }

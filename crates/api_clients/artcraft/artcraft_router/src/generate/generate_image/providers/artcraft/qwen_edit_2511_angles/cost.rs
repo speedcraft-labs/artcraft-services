@@ -10,24 +10,14 @@ pub struct ArtcraftQwenEdit2511AnglesCostState {
 
 impl ArtcraftQwenEdit2511AnglesCostState {
   pub fn from_request(request: &ArtcraftQwenEdit2511AnglesRequestState) -> Self {
-    Self {
-      num_images: request.request.image_batch_count.unwrap_or(1),
-    }
+    Self { num_images: request.request.image_batch_count.unwrap_or(1) }
   }
 
   pub fn estimate_cost(&self) -> ImageGenerationCostEstimate {
     // 4.6¢ per output image (held in hundredths of a cent, rounded up to
     // whole cents across the batch).
     let cost_in_usd_cents = (460u64 * self.num_images as u64).div_ceil(100);
-    ImageGenerationCostEstimate {
-      cost_in_credits: Some(cost_in_usd_cents),
-      cost_in_usd_cents: Some(cost_in_usd_cents),
-      is_free: false,
-      is_unlimited: false,
-      is_rate_limited: false,
-      has_watermark: false,
-      failures_are_refunded: None,
-    }
+    ImageGenerationCostEstimate { cost_in_credits: Some(cost_in_usd_cents), cost_in_usd_cents: Some(cost_in_usd_cents), is_free: false, is_unlimited: false, is_rate_limited: false, has_watermark: false, failures_are_refunded: None }
   }
 }
 
@@ -61,14 +51,22 @@ mod tests {
   }
 
   #[test]
-  fn one_image_costs_5_cents() { assert_eq!(cost_cents(1), 5); }
+  fn one_image_costs_5_cents() {
+    assert_eq!(cost_cents(1), 5);
+  }
 
   #[test]
-  fn two_images_costs_10_cents() { assert_eq!(cost_cents(2), 10); }
+  fn two_images_costs_10_cents() {
+    assert_eq!(cost_cents(2), 10);
+  }
 
   #[test]
-  fn three_images_costs_14_cents() { assert_eq!(cost_cents(3), 14); }
+  fn three_images_costs_14_cents() {
+    assert_eq!(cost_cents(3), 14);
+  }
 
   #[test]
-  fn four_images_costs_19_cents() { assert_eq!(cost_cents(4), 19); }
+  fn four_images_costs_19_cents() {
+    assert_eq!(cost_cents(4), 19);
+  }
 }

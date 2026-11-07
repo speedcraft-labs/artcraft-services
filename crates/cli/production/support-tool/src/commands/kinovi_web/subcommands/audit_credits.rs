@@ -6,9 +6,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use clap::Args;
 use log::info;
-use kinovi_web_client::billing::get_credits_history::{
-  get_credits_history, CreditHistoryEntry, GetCreditsHistoryArgs,
-};
+use kinovi_web_client::billing::get_credits_history::{get_credits_history, CreditHistoryEntry, GetCreditsHistoryArgs};
 use kinovi_web_client::creds::kinovi_web_session::KinoviWebSession;
 
 use super::super::state::KinoviWebState;
@@ -55,8 +53,7 @@ pub async fn run(state: &KinoviWebState, args: AuditCreditsArgs) -> anyhow::Resu
   let session = KinoviWebSession::from_cookies_string(state.cookies.clone());
 
   let file_is_new = std::fs::metadata(&args.out).map(|m| m.len() == 0).unwrap_or(true);
-  let mut out = OpenOptions::new().create(true).append(true).open(&args.out)
-    .map_err(|err| anyhow!("Cannot open {}: {}", args.out, err))?;
+  let mut out = OpenOptions::new().create(true).append(true).open(&args.out).map_err(|err| anyhow!("Cannot open {}: {}", args.out, err))?;
   if file_is_new {
     writeln!(out, "account,entry_id,created_at,entry_type,credit_delta,order_id,product_name")?;
   }
@@ -67,15 +64,7 @@ pub async fn run(state: &KinoviWebState, args: AuditCreditsArgs) -> anyhow::Resu
   let mut last_reported_total = 0u64;
 
   for page_number in 1..=args.max_pages {
-    let page = get_credits_history(GetCreditsHistoryArgs {
-      session: &session,
-      limit: args.limit,
-      offset,
-      host_override: None,
-    }).await
-      .map_err(|err| anyhow!(
-        "Error fetching credits page {} (resume with --offset {}): {:?}",
-        page_number, offset, err))?;
+    let page = get_credits_history(GetCreditsHistoryArgs { session: &session, limit: args.limit, offset, host_override: None }).await.map_err(|err| anyhow!("Error fetching credits page {} (resume with --offset {}): {:?}", page_number, offset, err))?;
 
     last_reported_total = page.total;
     if page.entries.is_empty() {
@@ -96,10 +85,7 @@ pub async fn run(state: &KinoviWebState, args: AuditCreditsArgs) -> anyhow::Resu
     out.flush()?;
 
     if page_number % 25 == 0 || page_number == 1 {
-      info!(
-        "Page {} (offset {}): {} entries ({} .. {}), written {} (server total {})",
-        page_number, offset, page.entries.len(), newest_day, oldest_day, rows, page.total,
-      );
+      info!("Page {} (offset {}): {} entries ({} .. {}), written {} (server total {})", page_number, offset, page.entries.len(), newest_day, oldest_day, rows, page.total,);
     }
 
     // Newest-first: once a whole page predates the window, everything
@@ -130,17 +116,7 @@ fn day_of(entry: &CreditHistoryEntry) -> String {
 }
 
 fn write_entry_row(out: &mut impl Write, account: &str, entry: &CreditHistoryEntry) -> anyhow::Result<()> {
-  writeln!(
-    out,
-    "{},{},{},{},{},{},{}",
-    account,
-    entry.id,
-    entry.created_at,
-    entry.entry_type.as_str(),
-    entry.credit_delta,
-    entry.maybe_order_id.as_deref().unwrap_or(""),
-    csv_quote(&entry.product_name),
-  )?;
+  writeln!(out, "{},{},{},{},{},{},{}", account, entry.id, entry.created_at, entry.entry_type.as_str(), entry.credit_delta, entry.maybe_order_id.as_deref().unwrap_or(""), csv_quote(&entry.product_name),)?;
   Ok(())
 }
 

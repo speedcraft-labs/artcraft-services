@@ -9,9 +9,7 @@ use sqlx::MySqlPool;
 use tokens::tokens::user_sessions::UserSessionToken;
 use tokens::tokens::users::UserToken;
 
-use mysql_queries::queries::users::user::create::create_account_from_email_and_password::{
-  create_account_from_email_and_password, CreateAccountFromEmailPasswordArgs,
-};
+use mysql_queries::queries::users::user::create::create_account_from_email_and_password::{create_account_from_email_and_password, CreateAccountFromEmailPasswordArgs};
 use mysql_queries::queries::users::user_sessions::create_user_session_with_executor::create_user_session_with_executor;
 
 /// Every fixture account uses this password (hashed once per process).
@@ -35,13 +33,7 @@ pub async fn create_test_user(pool: &MySqlPool) -> anyhow::Result<TestUser> {
   // rows left by previous test runs.
   let user_token = UserToken::generate();
 
-  let suffix: String = user_token
-    .as_str()
-    .chars()
-    .rev()
-    .take(10)
-    .collect::<String>()
-    .to_lowercase();
+  let suffix: String = user_token.as_str().chars().rev().take(10).collect::<String>().to_lowercase();
   let username = format!("test_{suffix}");
   let email_address = format!("{username}@example-test.invalid");
 
@@ -67,15 +59,9 @@ pub async fn create_test_user(pool: &MySqlPool) -> anyhow::Result<TestUser> {
   .await
   .map_err(|err| anyhow!("create_account_from_email_and_password failed: {err:?}"))?;
 
-  let session_token =
-    create_user_session_with_executor(&user_token, TEST_IP_ADDRESS, &mut *connection).await?;
+  let session_token = create_user_session_with_executor(&user_token, TEST_IP_ADDRESS, &mut *connection).await?;
 
-  Ok(TestUser {
-    user_token,
-    session_token,
-    username,
-    email_address,
-  })
+  Ok(TestUser { user_token, session_token, username, email_address })
 }
 
 /// Bcrypt hash of [`TEST_USER_PASSWORD`] at minimum cost, computed once.
@@ -83,7 +69,5 @@ pub async fn create_test_user(pool: &MySqlPool) -> anyhow::Result<TestUser> {
 /// requires a well-formed 60-byte bcrypt hash.)
 fn test_password_bcrypt_hash() -> &'static str {
   static HASH: OnceLock<String> = OnceLock::new();
-  HASH.get_or_init(|| {
-    bcrypt::hash(TEST_USER_PASSWORD, 4).expect("bcrypt hash")
-  })
+  HASH.get_or_init(|| bcrypt::hash(TEST_USER_PASSWORD, 4).expect("bcrypt hash"))
 }

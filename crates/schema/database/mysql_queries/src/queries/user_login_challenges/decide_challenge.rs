@@ -33,8 +33,8 @@ WHERE id = ? AND status = ? AND expires_at > NOW()
     args.challenge_id,
     UserLoginChallengeStatus::Pending.to_str()
   )
-    .execute(args.mysql_executor)
-    .await?
-    .rows_affected();
+  .execute(args.mysql_executor)
+  .await?
+  .rows_affected();
   Ok(affected == 1)
 }

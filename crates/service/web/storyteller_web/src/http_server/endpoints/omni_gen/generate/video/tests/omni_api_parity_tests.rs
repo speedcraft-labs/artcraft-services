@@ -11,10 +11,7 @@ use enums::common::generation::common_video_model::CommonVideoModel;
 
 use artcraft_api_keys::ArtcraftApiKey;
 
-use crate::http_server::endpoints::omni_gen::generate::video::tests::support::{
-  base_generate_request, stub_traffic, to_omni_api_request, ExpectedCredits, Seconds,
-  TestHarness, STARTING_CREDITS,
-};
+use crate::http_server::endpoints::omni_gen::generate::video::tests::support::{base_generate_request, stub_traffic, to_omni_api_request, ExpectedCredits, Seconds, TestHarness, STARTING_CREDITS};
 
 mod billing_parity {
   use super::*;
@@ -23,12 +20,7 @@ mod billing_parity {
   #[tokio::test]
   #[cfg_attr(feature = "skip_database_tests", ignore)]
   async fn seedance_2p0_bills_identically_on_both_endpoints() {
-    assert_endpoints_bill_identically(
-      CommonVideoModel::Seedance2p0,
-      Some(CommonResolution::SevenTwentyP),
-      Seconds(5),
-      ExpectedCredits(93),
-    ).await;
+    assert_endpoints_bill_identically(CommonVideoModel::Seedance2p0, Some(CommonResolution::SevenTwentyP), Seconds(5), ExpectedCredits(93)).await;
   }
 
   /// BytePlus Ultra at 720p 5s — the canonical collapse-bug shape (125, NOT
@@ -37,12 +29,7 @@ mod billing_parity {
   #[tokio::test]
   #[cfg_attr(feature = "skip_database_tests", ignore)]
   async fn seedance_2p0_byteplus_ultra_bills_identically_on_both_endpoints() {
-    assert_endpoints_bill_identically(
-      CommonVideoModel::Seedance2p0BytePlusUltra,
-      Some(CommonResolution::SevenTwentyP),
-      Seconds(5),
-      ExpectedCredits(125),
-    ).await;
+    assert_endpoints_bill_identically(CommonVideoModel::Seedance2p0BytePlusUltra, Some(CommonResolution::SevenTwentyP), Seconds(5), ExpectedCredits(125)).await;
   }
 }
 
@@ -83,22 +70,13 @@ mod url_ingestion {
 
     // omni_gen with a probeable media TOKEN pointing at the 5s stub fixture.
     let web_user = harness.create_funded_user(STARTING_CREDITS).await;
-    let video_token = mysql_testing::fixtures::media_files::create_probeable_test_video_media_file(
-      &harness.pool,
-      &web_user.user_token,
-      5_000,
-    )
-    .await
-    .expect("probeable video fixture");
+    let video_token = mysql_testing::fixtures::media_files::create_probeable_test_video_media_file(&harness.pool, &web_user.user_token, 5_000).await.expect("probeable video fixture");
 
     let mut request = base_generate_request(CommonVideoModel::Seedance2p0);
     request.resolution = Some(CommonResolution::SevenTwentyP);
     request.duration_seconds = Some(5);
     request.reference_video_media_tokens = Some(vec![video_token]);
-    let response = harness
-      .post_generate(&web_user, request)
-      .await
-      .expect("omni_gen generation with reference token");
+    let response = harness.post_generate(&web_user, request).await.expect("omni_gen generation with reference token");
     assert!(response.success);
 
     // omni_api with a URL to the same 5s fixture, no token.
@@ -109,13 +87,9 @@ mod url_ingestion {
     base.resolution = Some(CommonResolution::SevenTwentyP);
     base.duration_seconds = Some(5);
     let mut api_request = to_omni_api_request(base);
-    api_request.reference_video_urls =
-      Some(vec![format!("{}/media/dur5000ms/source.mp4", harness.stub_kinovi_base_url)]);
+    api_request.reference_video_urls = Some(vec![format!("{}/media/dur5000ms/source.mp4", harness.stub_kinovi_base_url)]);
 
-    let response = harness
-      .post_omni_api_request(&api_key, api_request)
-      .await
-      .expect("omni_api generation with reference URL");
+    let response = harness.post_omni_api_request(&api_key, api_request).await.expect("omni_api generation with reference URL");
     assert!(response.success);
 
     let web_debit = STARTING_CREDITS - harness.wallet_balance(&web_user).await;
@@ -124,10 +98,7 @@ mod url_ingestion {
     assert_eq!(api_debit, EXPECTED_CREDITS, "omni_api URL reference debited the wrong amount");
 
     let entries = harness.ledger_entries(&api_user).await;
-    let debit = entries
-      .iter()
-      .find(|entry| entry.credits_delta < 0)
-      .expect("omni_api URL generation must have a debit ledger entry");
+    let debit = entries.iter().find(|entry| entry.credits_delta < 0).expect("omni_api URL generation must have a debit ledger entry");
     assert!(!debit.is_refunded, "successful URL-input generation must not be refunded");
   }
 }
@@ -157,28 +128,17 @@ mod api_key_only_auth {
     let user = harness.create_funded_user(STARTING_CREDITS).await;
 
     let request = base_generate_request(CommonVideoModel::Seedance2p0);
-    let result = harness
-      .post_generate_via_session_cookie_on_omni_api(&user, request)
-      .await;
+    let result = harness.post_generate_via_session_cookie_on_omni_api(&user, request).await;
 
     assert!(result.is_err(), "session cookies must not authenticate omni_api");
-    assert_eq!(
-      harness.wallet_balance(&user).await,
-      STARTING_CREDITS,
-      "rejected session-cookie request must not charge",
-    );
+    assert_eq!(harness.wallet_balance(&user).await, STARTING_CREDITS, "rejected session-cookie request must not charge",);
   }
 }
 
 /// Run the same generation through omni_gen (session cookie) and omni_api
 /// (API key) as two independent fixture users; assert both succeed and both
 /// debit exactly `expected_credits`.
-async fn assert_endpoints_bill_identically(
-  model: CommonVideoModel,
-  resolution: Option<CommonResolution>,
-  Seconds(duration_seconds): Seconds,
-  ExpectedCredits(expected_credits): ExpectedCredits,
-) {
+async fn assert_endpoints_bill_identically(model: CommonVideoModel, resolution: Option<CommonResolution>, Seconds(duration_seconds): Seconds, ExpectedCredits(expected_credits): ExpectedCredits) {
   let harness = TestHarness::create().await;
 
   // omni_gen, session-cookie user.
@@ -186,10 +146,7 @@ async fn assert_endpoints_bill_identically(
   let mut request = base_generate_request(model);
   request.resolution = resolution;
   request.duration_seconds = Some(duration_seconds);
-  let response = harness
-    .post_generate(&web_user, request)
-    .await
-    .unwrap_or_else(|err| panic!("{:?}: omni_gen generation failed: {:?}", model, err));
+  let response = harness.post_generate(&web_user, request).await.unwrap_or_else(|err| panic!("{:?}: omni_gen generation failed: {:?}", model, err));
   assert!(response.success);
 
   // omni_api, API-key user.
@@ -198,22 +155,13 @@ async fn assert_endpoints_bill_identically(
   let mut request = base_generate_request(model);
   request.resolution = resolution;
   request.duration_seconds = Some(duration_seconds);
-  let response = harness
-    .post_generate_via_api_key(&api_key, request)
-    .await
-    .unwrap_or_else(|err| panic!("{:?}: omni_api generation failed: {:?}", model, err));
+  let response = harness.post_generate_via_api_key(&api_key, request).await.unwrap_or_else(|err| panic!("{:?}: omni_api generation failed: {:?}", model, err));
   assert!(response.success);
 
   let web_debit = STARTING_CREDITS - harness.wallet_balance(&web_user).await;
   let api_debit = STARTING_CREDITS - harness.wallet_balance(&api_user).await;
-  assert_eq!(
-    web_debit, expected_credits,
-    "{:?}: omni_gen debited the wrong amount", model,
-  );
-  assert_eq!(
-    api_debit, expected_credits,
-    "{:?}: omni_api debited the wrong amount", model,
-  );
+  assert_eq!(web_debit, expected_credits, "{:?}: omni_gen debited the wrong amount", model,);
+  assert_eq!(api_debit, expected_credits, "{:?}: omni_api debited the wrong amount", model,);
 }
 
 /// Run `model` with an explicit `generate_audio: false` through omni_gen
@@ -228,10 +176,7 @@ async fn assert_endpoints_omit_generate_audio(model: CommonVideoModel) {
   let web_prompt = format!("audio flag test web {}", request.idempotency_token.as_deref().unwrap());
   request.prompt = Some(web_prompt.clone());
   request.generate_audio = Some(false);
-  let response = harness
-    .post_generate(&web_user, request)
-    .await
-    .unwrap_or_else(|err| panic!("{:?}: omni_gen generation failed: {:?}", model, err));
+  let response = harness.post_generate(&web_user, request).await.unwrap_or_else(|err| panic!("{:?}: omni_gen generation failed: {:?}", model, err));
   assert!(response.success);
 
   // omni_api, API-key user.
@@ -241,21 +186,12 @@ async fn assert_endpoints_omit_generate_audio(model: CommonVideoModel) {
   let api_prompt = format!("audio flag test api {}", request.idempotency_token.as_deref().unwrap());
   request.prompt = Some(api_prompt.clone());
   request.generate_audio = Some(false);
-  let response = harness
-    .post_generate_via_api_key(&api_key, request)
-    .await
-    .unwrap_or_else(|err| panic!("{:?}: omni_api generation failed: {:?}", model, err));
+  let response = harness.post_generate_via_api_key(&api_key, request).await.unwrap_or_else(|err| panic!("{:?}: omni_api generation failed: {:?}", model, err));
   assert!(response.success);
 
   let traffic = stub_traffic().lock().unwrap();
   for (endpoint, prompt) in [("omni_gen", &web_prompt), ("omni_api", &api_prompt)] {
-    let params = traffic.workflows.iter()
-      .map(|request| &request["0"]["json"]["apiParams"])
-      .find(|params| params["prompt"].as_str() == Some(prompt))
-      .unwrap_or_else(|| panic!("{:?}: no captured Kinovi request for {}", model, endpoint));
-    assert!(
-      params.get("generate_audio").is_none(),
-      "{:?}: {} forwarded generate_audio to Kinovi: {}", model, endpoint, params,
-    );
+    let params = traffic.workflows.iter().map(|request| &request["0"]["json"]["apiParams"]).find(|params| params["prompt"].as_str() == Some(prompt)).unwrap_or_else(|| panic!("{:?}: no captured Kinovi request for {}", model, endpoint));
+    assert!(params.get("generate_audio").is_none(), "{:?}: {} forwarded generate_audio to Kinovi: {}", model, endpoint, params,);
   }
 }

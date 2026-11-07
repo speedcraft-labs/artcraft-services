@@ -13,10 +13,7 @@ use enums::by_table::model_weights::weights_types::WeightsType;
 use filesys::file_exists::file_exists;
 use filesys::path_to_string::path_to_string;
 use google_drive_downloader::google_drive_download_command::GoogleDriveDownloadCommand;
-use mysql_queries::queries::model_weights::create::create_weight::{
-  create_weight,
-  CreateModelWeightsArgs,
-};
+use mysql_queries::queries::model_weights::create::create_weight::{create_weight, CreateModelWeightsArgs};
 use tokens::tokens::model_weights::ModelWeightToken;
 use tokens::tokens::users::UserToken;
 
@@ -25,19 +22,14 @@ use crate::job::job_loop::process_single_job_error::ProcessSingleJobError;
 use crate::job::job_types::image_generation::sd::process_job::{sd_args_from_job, StableDiffusionProcessArgs};
 use crate::job::job_types::image_generation::sd::sd_inference_command::InferenceArgs;
 
-pub async fn process_job_lora_upload(
-  args: &StableDiffusionProcessArgs<'_>
-) -> Result<JobSuccessResult, ProcessSingleJobError> {
-
+pub async fn process_job_lora_upload(args: &StableDiffusionProcessArgs<'_>) -> Result<JobSuccessResult, ProcessSingleJobError> {
   let job = args.job;
   let deps = args.job_dependencies;
   let mysql_pool = &deps.db.mysql_pool;
 
   let sd_args = sd_args_from_job(&args).await?;
 
-  let sd_deps = match
-  &args.job_dependencies.job.job_specific_dependencies.maybe_stable_diffusion_dependencies
-  {
+  let sd_deps = match &args.job_dependencies.job.job_specific_dependencies.maybe_stable_diffusion_dependencies {
     Some(val) => val,
     None => return Err(ProcessSingleJobError::Other(anyhow!("Missing Job Specific Dependencies"))),
   };
@@ -48,15 +40,12 @@ pub async fn process_job_lora_upload(
     None => return Err(ProcessSingleJobError::InvalidJob(anyhow!("Missing Creator User Token"))),
   };
 
-
   let work_temp_dir = format!("temp_stable_diffusion_inference_{}", job.id.0);
-  let work_temp_dir = args.job_dependencies.fs.scoped_temp_dir_creator_for_work
-      .new_tempdir(&work_temp_dir)
-      .map_err(|e| ProcessSingleJobError::from_io_error(e))?;
+  let work_temp_dir = args.job_dependencies.fs.scoped_temp_dir_creator_for_work.new_tempdir(&work_temp_dir).map_err(|e| ProcessSingleJobError::from_io_error(e))?;
 
   let sd_checkpoint_path = work_temp_dir.path().join("sd_checkpoint.safetensors");
   let lora_path = work_temp_dir.path().join("lora.safetensors"); // input path into execution
-  //let vae_path = work_temp_dir.path().join("vae.safetensors");
+                                                                 //let vae_path = work_temp_dir.path().join("vae.safetensors");
   let vae_path = work_temp_dir.path().join("vae.pt"); // TODO: Should this be `.safetensors` or `.pt`?
   let output_path = work_temp_dir.path().join("output");
 
@@ -67,79 +56,49 @@ pub async fn process_job_lora_upload(
   info!("output_path: {:?}", output_path);
 
   let download_url = match sd_args.maybe_lora_upload_path {
-    Some(val) => { val }
-    None => { "".to_string() }
+    Some(val) => val,
+    None => "".to_string(),
   };
 
   if download_url.len() == 0 {
-    return Err(
-      ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Download URL Missing"))
-    );
+    return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Download URL Missing")));
   }
 
   let file_name = "lora.safetensors";
 
-  let download_script = easyenv::get_env_string_or_default(
-    "DOWNLOAD_SCRIPT",
-    "download_internet_file.py"
-  );
+  let download_script = easyenv::get_env_string_or_default("DOWNLOAD_SCRIPT", "download_internet_file.py");
 
   // Download
-  let google_drive_downloader = GoogleDriveDownloadCommand::new(&download_script,
-                                                                None,
-                                                                None,
-                                                                None);
+  let google_drive_downloader = GoogleDriveDownloadCommand::new(&download_script, None, None, None);
 
   info!("Downloading {}", download_url);
 
-  let download_filename = match
-  google_drive_downloader.download_file_with_file_name(
-    &download_url,
-    &work_temp_dir,
-    file_name
-  ).await
-  {
+  let download_filename = match google_drive_downloader.download_file_with_file_name(&download_url, &work_temp_dir, file_name).await {
     Ok(filename) => filename,
     Err(_e) => {
       return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Download")));
-    }
+    },
   };
 
   let download_file_path = work_temp_dir.path().join(download_filename);
   info!("File Retrieved at {}", download_file_path.display());
   if file_exists(download_file_path.as_path()) == false {
-    return Err(
-      ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Download loRA Model from Google Drive"))
-    );
+    return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Download loRA Model from Google Drive")));
   }
 
-  info!("Downloading predefined SD weight from: {:?} to {:?}",
-    &sd_deps.predefined_sd_weight_bucket_path,
-    &sd_checkpoint_path);
+  info!("Downloading predefined SD weight from: {:?} to {:?}", &sd_deps.predefined_sd_weight_bucket_path, &sd_checkpoint_path);
 
-  args.job_dependencies
-      .buckets
-      .public_bucket_client
-      .download_file_to_disk(&sd_deps.predefined_sd_weight_bucket_path, &sd_checkpoint_path)
-      .await
-      .map_err(|err| {
-        error!("could not download predefined SD weight: {:?}", err);
-        ProcessSingleJobError::from_anyhow_error(anyhow!("could not download predefined SD weight: {:?}", err))
-      })?;
+  args.job_dependencies.buckets.public_bucket_client.download_file_to_disk(&sd_deps.predefined_sd_weight_bucket_path, &sd_checkpoint_path).await.map_err(|err| {
+    error!("could not download predefined SD weight: {:?}", err);
+    ProcessSingleJobError::from_anyhow_error(anyhow!("could not download predefined SD weight: {:?}", err))
+  })?;
 
-  info!("Downloading predefined VAE weight from: {:?} to {:?}",
-    &sd_deps.vae_bucket_path,
-    &vae_path);
+  info!("Downloading predefined VAE weight from: {:?} to {:?}", &sd_deps.vae_bucket_path, &vae_path);
 
-  args.job_dependencies
-      .buckets
-      .public_bucket_client
-      .download_file_to_disk(&sd_deps.vae_bucket_path, &vae_path)
-      .await
-      .map_err(|err| {
-        error!("could not download VAE: {:?}", err);
-        ProcessSingleJobError::from_anyhow_error(anyhow!("could not download VAE: {:?}", err))
-      })?;
+  args.job_dependencies.buckets.public_bucket_client.download_file_to_disk(&sd_deps.vae_bucket_path, &vae_path).await.map_err(|err| {
+    error!("could not download VAE: {:?}", err);
+    ProcessSingleJobError::from_anyhow_error(anyhow!("could not download VAE: {:?}", err))
+  })?;
 
   let stderr_output_file = work_temp_dir.path().join("sd_err.txt");
   let stdout_output_file = work_temp_dir.path().join("sd_out.txt");
@@ -150,9 +109,9 @@ pub async fn process_job_lora_upload(
     output_file: output_path.clone(),
     stderr_output_file: &stderr_output_file,
     stdout_output_file: &stdout_output_file,
-    prompt:String::from("This is a green sign that says go this is a test prompt to test the model."),
+    prompt: String::from("This is a green sign that says go this is a test prompt to test the model."),
     negative_prompt: sd_args.maybe_n_prompt.clone().unwrap_or_default(),
-    number_of_samples:20,
+    number_of_samples: 20,
     samplers: sd_args.maybe_sampler.clone().unwrap_or(String::from("Euler a")),
     width: sd_args.maybe_width.unwrap_or(512),
     height: sd_args.maybe_height.unwrap_or(512),
@@ -188,22 +147,20 @@ pub async fn process_job_lora_upload(
   let file_path = format!("{}_{}.png", path_to_string(path), 0);
 
   if file_exists(file_path.path()) == false {
-    return Err(
-      ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Upload Not a LoRA"))
-    );
+    return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to Upload Not a LoRA")));
   }
 
   // If it worked and didn't fail! then we should save and create the weight.
   // upload and create weights for loRA...
   let remote_cloud_file_client = RemoteCloudFileClient::get_remote_cloud_file_client().await?;
-  let lora_descriptor = Box::new(WeightsLoRADescriptor{});
-  let metadata = remote_cloud_file_client.upload_file(lora_descriptor,lora_path.to_str().unwrap_or_default()).await?;
+  let lora_descriptor = Box::new(WeightsLoRADescriptor {});
+  let metadata = remote_cloud_file_client.upload_file(lora_descriptor, lora_path.to_str().unwrap_or_default()).await?;
 
   let bucket_details = match metadata.bucket_details {
     Some(metadata) => metadata,
     None => {
       return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("Failed to generate bucket details!")));
-    }
+    },
   };
 
   let model_weight_token = &ModelWeightToken::generate();
@@ -225,17 +182,11 @@ pub async fn process_job_lora_upload(
     file_checksum_sha2: metadata.sha256_checksum,
     public_bucket_hash: bucket_details.object_hash,
     maybe_public_bucket_prefix: Some(bucket_details.prefix),
-    maybe_public_bucket_extension:Some(bucket_details.suffix),
+    maybe_public_bucket_extension: Some(bucket_details.suffix),
     version: sd_args.maybe_version.unwrap_or(0),
     mysql_pool,
-  }).await?;
-
-  Ok(JobSuccessResult {
-    maybe_result_entity: Some(ResultEntity {
-      entity_type: InferenceResultType::UploadModel,
-      entity_token: model_weight_token_result.to_string(),
-    }),
-    inference_duration: Duration::from_secs(0),
   })
+  .await?;
 
+  Ok(JobSuccessResult { maybe_result_entity: Some(ResultEntity { entity_type: InferenceResultType::UploadModel, entity_token: model_weight_token_result.to_string() }), inference_duration: Duration::from_secs(0) })
 }

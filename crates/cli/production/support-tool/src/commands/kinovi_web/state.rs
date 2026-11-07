@@ -12,11 +12,7 @@ impl KinoviWebState {
     Self::from_env_lookup(account, maybe_cookies_env, easyenv::get_env_string_optional)
   }
 
-  fn from_env_lookup(
-    account: KinoviAccount,
-    maybe_cookies_env: Option<&str>,
-    mut lookup: impl FnMut(&str) -> Option<String>,
-  ) -> anyhow::Result<Self> {
+  fn from_env_lookup(account: KinoviAccount, maybe_cookies_env: Option<&str>, mut lookup: impl FnMut(&str) -> Option<String>) -> anyhow::Result<Self> {
     // An explicit override must resolve on its own, without requiring or falling
     // back to credentials for the selected account.
     let override_vars;
@@ -30,10 +26,7 @@ impl KinoviWebState {
 
     for &var in cookie_env_vars {
       if let Some(cookies) = lookup(var) {
-        return Ok(Self {
-          cookies,
-          cookies_env: var.to_string(),
-        });
+        return Ok(Self { cookies, cookies_env: var.to_string() });
       }
     }
 
@@ -75,10 +68,7 @@ mod tests {
     #[test]
     fn falls_back_to_the_matching_legacy_variable() {
       let env = &COOKIES[3..5];
-      for (account, var, cookies) in [
-        (KinoviAccount::Volcengine, "SEEDANCE2PRO_COOKIES", "legacy-cookies"),
-        (KinoviAccount::BytePlus, "SEEDANCE2PRO_ALT_COOKIES", "legacy-alt-cookies"),
-      ] {
+      for (account, var, cookies) in [(KinoviAccount::Volcengine, "SEEDANCE2PRO_COOKIES", "legacy-cookies"), (KinoviAccount::BytePlus, "SEEDANCE2PRO_ALT_COOKIES", "legacy-alt-cookies")] {
         let state = resolve(account, None, env).unwrap();
         assert_eq!(state.cookies, cookies);
         assert_eq!(state.cookies_env, var);
@@ -87,10 +77,7 @@ mod tests {
 
     #[test]
     fn missing_account_cookies_never_use_another_accounts_credentials() {
-      for (account, expected_var) in [
-        (KinoviAccount::BytePlus, "SEEDANCE2PRO_BYTEPLUS_COOKIES"),
-        (KinoviAccount::BytePlusUltra, "SEEDANCE2PRO_BYTEPLUS_ULTRA_COOKIES"),
-      ] {
+      for (account, expected_var) in [(KinoviAccount::BytePlus, "SEEDANCE2PRO_BYTEPLUS_COOKIES"), (KinoviAccount::BytePlusUltra, "SEEDANCE2PRO_BYTEPLUS_ULTRA_COOKIES")] {
         let err = resolve(account, None, &COOKIES[3..4]).err().expect("account cookies are missing");
         assert!(err.to_string().contains(expected_var));
       }
@@ -113,19 +100,12 @@ mod tests {
 
     #[test]
     fn missing_explicit_override_errors_instead_of_using_account_cookies() {
-      let err = resolve(KinoviAccount::Volcengine, Some("MISSING_COOKIES"), COOKIES)
-        .err().expect("explicit override must exist");
+      let err = resolve(KinoviAccount::Volcengine, Some("MISSING_COOKIES"), COOKIES).err().expect("explicit override must exist");
       assert_eq!(err.to_string(), "Missing Kinovi cookies: set MISSING_COOKIES");
     }
   }
 
-  fn resolve(
-    account: KinoviAccount,
-    maybe_override: Option<&str>,
-    env: &[(&str, &str)],
-  ) -> anyhow::Result<KinoviWebState> {
-    KinoviWebState::from_env_lookup(account, maybe_override, |var| {
-      env.iter().find(|(name, _)| *name == var).map(|(_, value)| value.to_string())
-    })
+  fn resolve(account: KinoviAccount, maybe_override: Option<&str>, env: &[(&str, &str)]) -> anyhow::Result<KinoviWebState> {
+    KinoviWebState::from_env_lookup(account, maybe_override, |var| env.iter().find(|(name, _)| *name == var).map(|(_, value)| value.to_string()))
   }
 }

@@ -20,9 +20,7 @@ where
 /// `maybe_deleted_at`, so soft-deleted keys are still visible here) except the
 /// internal `id` and the full secret `api_key` (only its first 20 characters
 /// are returned). `Ok(None)` if no row matches the token.
-pub async fn get_api_key_by_token<'e, 'c: 'e, E>(
-  args: GetApiKeyByTokenArgs<'e, 'c, E>,
-) -> Result<Option<ApiKeyRow>, sqlx::Error>
+pub async fn get_api_key_by_token<'e, 'c: 'e, E>(args: GetApiKeyByTokenArgs<'e, 'c, E>) -> Result<Option<ApiKeyRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -45,8 +43,8 @@ LIMIT 1
     "#,
     args.token.as_str(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| ApiKeyRow {
     token: r.token,

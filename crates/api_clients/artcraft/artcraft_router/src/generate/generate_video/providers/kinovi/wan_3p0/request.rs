@@ -37,13 +37,9 @@ impl KinoviWan3p0RequestState {
       KinoviWan3p0Request::PrimeText(request) => generate_wan_3p0_prime_text_to_video(GenerateWan3p0PrimeTextToVideoArgs { request: request.clone(), session, maybe_host_override: None }).await,
       KinoviWan3p0Request::PrimeImage(request) => generate_wan_3p0_prime_image_to_video(GenerateWan3p0PrimeImageToVideoArgs { request: request.clone(), session, maybe_host_override: None }).await,
       KinoviWan3p0Request::PrimeReference(request) => generate_wan_3p0_prime_ref_to_video(GenerateWan3p0PrimeRefToVideoArgs { request: request.clone(), session, maybe_host_override: None }).await,
-    }.map_err(|err| ArtcraftRouterError::Provider(ProviderError::KinoviWeb(err)))?;
-    Ok(GenerateVideoResponse::KinoviWeb(KinoviWebVideoResponsePayload {
-      order_id: response.order_id,
-      task_id: response.task_id,
-      maybe_order_ids: response.order_ids,
-      maybe_task_ids: response.task_ids,
-    }))
+    }
+    .map_err(|err| ArtcraftRouterError::Provider(ProviderError::KinoviWeb(err)))?;
+    Ok(GenerateVideoResponse::KinoviWeb(KinoviWebVideoResponsePayload { order_id: response.order_id, task_id: response.task_id, maybe_order_ids: response.order_ids, maybe_task_ids: response.task_ids }))
   }
 }
 

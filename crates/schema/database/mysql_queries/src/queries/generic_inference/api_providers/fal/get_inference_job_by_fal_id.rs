@@ -29,7 +29,7 @@ pub struct FalJobDetails {
   pub maybe_creator_user_token: Option<UserToken>,
   pub maybe_creator_anonymous_visitor_token: Option<AnonymousVisitorTrackingToken>,
   pub creator_ip_address: String,
-  
+
   pub maybe_prompt_token: Option<PromptToken>,
   pub maybe_debug_log_event_token: Option<DebugLogEventToken>,
 
@@ -65,24 +65,20 @@ struct RawJobRecord {
 }
 
 /// Returns Ok(None) when the record cannot be found.
-pub async fn get_inference_job_by_fal_id(fal_id: &str, mysql_pool: &MySqlPool)
-  -> AnyhowResult<Option<FalJobDetails>>
-{
+pub async fn get_inference_job_by_fal_id(fal_id: &str, mysql_pool: &MySqlPool) -> AnyhowResult<Option<FalJobDetails>> {
   let mut connection = mysql_pool.acquire().await?;
   get_inference_job_by_fal_id_from_connection(fal_id, &mut connection).await
 }
 
 /// Returns Ok(None) when the record cannot be found.
-pub async fn get_inference_job_by_fal_id_from_connection(fal_id: &str, mysql_connection: &mut PoolConnection<MySql>)
-  -> AnyhowResult<Option<FalJobDetails>>
-{
+pub async fn get_inference_job_by_fal_id_from_connection(fal_id: &str, mysql_connection: &mut PoolConnection<MySql>) -> AnyhowResult<Option<FalJobDetails>> {
   // NB(bt): jobs.uuid_idempotency_token is the current way to reconstruct the hash of the
   // TTS result since we don't store a bucket hash on the table. This is an ugly hack :(
   // TODO(bt,2023-10-12): ^^^ Is this comment still accurate? I don't see that field referenced below.
 
   let maybe_status = sqlx::query_as!(
-      RawJobRecord,
-        r#"
+    RawJobRecord,
+    r#"
 SELECT
     jobs.token as `job_token: tokens::tokens::generic_inference_jobs::InferenceJobToken`,
 
@@ -108,11 +104,11 @@ FROM generic_inference_jobs as jobs
 WHERE jobs.maybe_external_third_party = ?
 AND jobs.maybe_external_third_party_id = ?
         "#,
-      InferenceJobExternalThirdParty::Fal.to_str(),
-      fal_id
-    )
-      .fetch_one(&mut **mysql_connection)
-      .await;
+    InferenceJobExternalThirdParty::Fal.to_str(),
+    fal_id
+  )
+  .fetch_one(&mut **mysql_connection)
+  .await;
 
   let record = match maybe_status {
     Ok(record) => record,
@@ -121,12 +117,12 @@ AND jobs.maybe_external_third_party_id = ?
       _ => {
         warn!("error querying job record: {:?}", err);
         return Err(anyhow!("error querying job record: {:?}", err));
-      }
-    }
+      },
+    },
   };
 
   let record = raw_record_to_public_result(record)?;
-  
+
   Ok(Some(record))
 }
 

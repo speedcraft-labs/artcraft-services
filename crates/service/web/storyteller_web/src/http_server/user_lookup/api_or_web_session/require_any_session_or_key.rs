@@ -7,16 +7,9 @@ use sqlx::{Executor, MySql};
 
 use actix_artcraft::sessions::anonymous_visitor_tracking::avt_cookie_manager::AvtCookieManager;
 use mysql_queries::queries::users::api_or_web_sessions::api_or_web_session_user_record::ApiOrWebSessionUserRecord;
-use mysql_queries::queries::users::api_or_web_sessions::get_api_or_web_session_user_by_api_key::{
-  get_api_or_web_session_user_by_api_key, GetApiOrWebSessionUserByApiKeyArgs,
-};
-use mysql_queries::queries::users::api_or_web_sessions::get_api_or_web_session_user_by_mcp_private_session_token::{
-  get_api_or_web_session_user_by_mcp_private_session_token,
-  GetApiOrWebSessionUserByMcpPrivateSessionTokenArgs,
-};
-use mysql_queries::queries::users::api_or_web_sessions::get_api_or_web_session_user_by_session_token::{
-  get_api_or_web_session_user_by_session_token, GetApiOrWebSessionUserBySessionTokenArgs,
-};
+use mysql_queries::queries::users::api_or_web_sessions::get_api_or_web_session_user_by_api_key::{get_api_or_web_session_user_by_api_key, GetApiOrWebSessionUserByApiKeyArgs};
+use mysql_queries::queries::users::api_or_web_sessions::get_api_or_web_session_user_by_mcp_private_session_token::{get_api_or_web_session_user_by_mcp_private_session_token, GetApiOrWebSessionUserByMcpPrivateSessionTokenArgs};
+use mysql_queries::queries::users::api_or_web_sessions::get_api_or_web_session_user_by_session_token::{get_api_or_web_session_user_by_session_token, GetApiOrWebSessionUserBySessionTokenArgs};
 use tokens::tokens::anonymous_visitor_tracking::AnonymousVisitorTrackingToken;
 use tokens::tokens::api_keys::ApiKeyToken;
 use tokens::tokens::mcp_session_private::McpSessionPrivateToken;
@@ -84,13 +77,9 @@ impl AnySession {
 /// No path is cached: every request performs a fresh MySQL lookup. `mysql_executor` can be any
 /// sqlx executor — prefer passing an already-open connection (`&mut *connection`) so the lookup
 /// reuses it rather than acquiring a fresh one from the pool.
-pub async fn require_any_session_or_key<'c, E>(
-  http_request: &HttpRequest,
-  session_checker: &SessionChecker,
-  avt_cookie_manager: &AvtCookieManager,
-  mysql_executor: E,
-) -> Result<AnySession, CommonWebError>
-  where E: 'c + Executor<'c, Database = MySql>
+pub async fn require_any_session_or_key<'c, E>(http_request: &HttpRequest, session_checker: &SessionChecker, avt_cookie_manager: &AvtCookieManager, mysql_executor: E) -> Result<AnySession, CommonWebError>
+where
+  E: 'c + Executor<'c, Database = MySql>,
 {
   if http_request.headers().contains_key(header::AUTHORIZATION) {
     authenticate_by_header_credential(http_request, mysql_executor).await
@@ -99,18 +88,16 @@ pub async fn require_any_session_or_key<'c, E>(
   }
 }
 
-async fn authenticate_by_header_credential<'c, E>(
-  http_request: &HttpRequest,
-  mysql_executor: E,
-) -> Result<AnySession, CommonWebError>
-  where E: 'c + Executor<'c, Database = MySql>
+async fn authenticate_by_header_credential<'c, E>(http_request: &HttpRequest, mysql_executor: E) -> Result<AnySession, CommonWebError>
+where
+  E: 'c + Executor<'c, Database = MySql>,
 {
   let credential = match get_authorization_header_api_key(http_request) {
     Some(credential) => credential,
     None => {
       warn!("Authorization header present but not a usable credential");
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   // MCP session credentials live in the same header (and forms) as API keys; the token prefix
@@ -120,16 +107,10 @@ async fn authenticate_by_header_credential<'c, E>(
     return authenticate_by_mcp_session(&private_session_token, mysql_executor).await;
   }
 
-  let maybe_record = get_api_or_web_session_user_by_api_key(GetApiOrWebSessionUserByApiKeyArgs {
-    api_key: &credential,
-    mysql_executor,
-    phantom: PhantomData,
-  })
-    .await
-    .map_err(|err| {
-      warn!("API key user lookup error: {:?}", err);
-      CommonWebError::from_error(err)
-    })?;
+  let maybe_record = get_api_or_web_session_user_by_api_key(GetApiOrWebSessionUserByApiKeyArgs { api_key: &credential, mysql_executor, phantom: PhantomData }).await.map_err(|err| {
+    warn!("API key user lookup error: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   // A missing or soft-deleted key (or a key whose owner no longer exists) is a 401, not a leak
   // of which case occurred.
@@ -138,29 +119,20 @@ async fn authenticate_by_header_credential<'c, E>(
     None => {
       warn!("No live API key user for presented key: {:?}", credential);
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   into_session_rejecting_banned(record, AnySessionType::Api, None)
 }
 
-async fn authenticate_by_mcp_session<'c, E>(
-  private_session_token: &McpSessionPrivateToken,
-  mysql_executor: E,
-) -> Result<AnySession, CommonWebError>
-  where E: 'c + Executor<'c, Database = MySql>
+async fn authenticate_by_mcp_session<'c, E>(private_session_token: &McpSessionPrivateToken, mysql_executor: E) -> Result<AnySession, CommonWebError>
+where
+  E: 'c + Executor<'c, Database = MySql>,
 {
-  let maybe_record = get_api_or_web_session_user_by_mcp_private_session_token(
-    GetApiOrWebSessionUserByMcpPrivateSessionTokenArgs {
-      private_session_token,
-      mysql_executor,
-      phantom: PhantomData,
-    })
-    .await
-    .map_err(|err| {
-      warn!("MCP session user lookup error: {:?}", err);
-      CommonWebError::from_error(err)
-    })?;
+  let maybe_record = get_api_or_web_session_user_by_mcp_private_session_token(GetApiOrWebSessionUserByMcpPrivateSessionTokenArgs { private_session_token, mysql_executor, phantom: PhantomData }).await.map_err(|err| {
+    warn!("MCP session user lookup error: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   // A missing, terminated, or expired session (or one whose owner no longer exists) is a 401,
   // not a leak of which case occurred.
@@ -169,52 +141,40 @@ async fn authenticate_by_mcp_session<'c, E>(
     None => {
       warn!("No live MCP session for presented credential");
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   into_session_rejecting_banned(record, AnySessionType::McpSession, None)
 }
 
-async fn authenticate_by_web_session<'c, E>(
-  http_request: &HttpRequest,
-  session_checker: &SessionChecker,
-  avt_cookie_manager: &AvtCookieManager,
-  mysql_executor: E,
-) -> Result<AnySession, CommonWebError>
-  where E: 'c + Executor<'c, Database = MySql>
+async fn authenticate_by_web_session<'c, E>(http_request: &HttpRequest, session_checker: &SessionChecker, avt_cookie_manager: &AvtCookieManager, mysql_executor: E) -> Result<AnySession, CommonWebError>
+where
+  E: 'c + Executor<'c, Database = MySql>,
 {
-  let maybe_session_token = session_checker
-      .get_session_token(http_request)
-      .map_err(|err| {
-        warn!("Session cookie decode error: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
+  let maybe_session_token = session_checker.get_session_token(http_request).map_err(|err| {
+    warn!("Session cookie decode error: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   let session_token = match maybe_session_token {
     Some(session_token) => session_token,
     None => {
       warn!("not logged in");
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
-  let maybe_record = get_api_or_web_session_user_by_session_token(GetApiOrWebSessionUserBySessionTokenArgs {
-    session_token: &session_token,
-    mysql_executor,
-    phantom: PhantomData,
-  })
-    .await
-    .map_err(|err| {
-      warn!("Web session user lookup error: {:?}", err);
-      CommonWebError::from_error(err)
-    })?;
+  let maybe_record = get_api_or_web_session_user_by_session_token(GetApiOrWebSessionUserBySessionTokenArgs { session_token: &session_token, mysql_executor, phantom: PhantomData }).await.map_err(|err| {
+    warn!("Web session user lookup error: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   let record = match maybe_record {
     Some(record) => record,
     None => {
       warn!("Valid cookie; invalid session: {}", session_token);
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   let maybe_avt_token = avt_cookie_manager.get_avt_token_from_request(http_request);
@@ -222,11 +182,7 @@ async fn authenticate_by_web_session<'c, E>(
   into_session_rejecting_banned(record, AnySessionType::WebSession, maybe_avt_token)
 }
 
-fn into_session_rejecting_banned(
-  record: ApiOrWebSessionUserRecord,
-  session_type: AnySessionType,
-  maybe_avt_token: Option<AnonymousVisitorTrackingToken>,
-) -> Result<AnySession, CommonWebError> {
+fn into_session_rejecting_banned(record: ApiOrWebSessionUserRecord, session_type: AnySessionType, maybe_avt_token: Option<AnonymousVisitorTrackingToken>) -> Result<AnySession, CommonWebError> {
   if record.is_banned {
     warn!("user is banned: {:?}", record.user_token.as_str());
     return Err(CommonWebError::NotAuthorized);
@@ -268,9 +224,7 @@ mod tests {
   use mysql_queries::queries::api_keys::insert_api_key::{insert_api_key, InsertApiKeyArgs};
   use mysql_testing::fixtures::mcp_sessions::{create_test_mcp_session, force_expire_mcp_session};
   use mysql_testing::fixtures::users::{create_test_user, TestUser};
-  use mysql_queries::queries::mcp_sessions::revoke_mcp_session::{
-    revoke_mcp_session, RevokeMcpSessionArgs,
-  };
+  use mysql_queries::queries::mcp_sessions::revoke_mcp_session::{revoke_mcp_session, RevokeMcpSessionArgs};
   use sqlx::MySqlPool;
 
   use super::*;
@@ -350,9 +304,7 @@ mod tests {
     async fn mcp_session_authenticates() {
       let harness = LookupHarness::create().await;
       let user = harness.create_user().await;
-      let mcp_session = create_test_mcp_session(&harness.pool, &user.user_token)
-        .await
-        .expect("create mcp session");
+      let mcp_session = create_test_mcp_session(&harness.pool, &user.user_token).await.expect("create mcp session");
 
       let request = request_with_bearer(mcp_session.private_session_token.as_str());
       let session = harness.require(&request).await.expect("MCP session should authenticate");
@@ -369,12 +321,8 @@ mod tests {
     async fn expired_mcp_session_is_rejected() {
       let harness = LookupHarness::create().await;
       let user = harness.create_user().await;
-      let mcp_session = create_test_mcp_session(&harness.pool, &user.user_token)
-        .await
-        .expect("create mcp session");
-      force_expire_mcp_session(&harness.pool, &mcp_session.token)
-        .await
-        .expect("expire mcp session");
+      let mcp_session = create_test_mcp_session(&harness.pool, &user.user_token).await.expect("create mcp session");
+      force_expire_mcp_session(&harness.pool, &mcp_session.token).await.expect("expire mcp session");
 
       let request = request_with_bearer(mcp_session.private_session_token.as_str());
       let result = harness.require(&request).await;
@@ -387,18 +335,10 @@ mod tests {
     async fn revoked_mcp_session_is_rejected() {
       let harness = LookupHarness::create().await;
       let user = harness.create_user().await;
-      let mcp_session = create_test_mcp_session(&harness.pool, &user.user_token)
-        .await
-        .expect("create mcp session");
+      let mcp_session = create_test_mcp_session(&harness.pool, &user.user_token).await.expect("create mcp session");
 
       let mut connection = harness.pool.acquire().await.expect("acquire for revoke");
-      let revoked = revoke_mcp_session(RevokeMcpSessionArgs {
-        private_session_token: &mcp_session.private_session_token,
-        mysql_executor: &mut *connection,
-        phantom: PhantomData,
-      })
-      .await
-      .expect("revoke mcp session");
+      let revoked = revoke_mcp_session(RevokeMcpSessionArgs { private_session_token: &mcp_session.private_session_token, mysql_executor: &mut *connection, phantom: PhantomData }).await.expect("revoke mcp session");
       assert_eq!(revoked, 1);
 
       let request = request_with_bearer(mcp_session.private_session_token.as_str());
@@ -430,18 +370,11 @@ mod tests {
   impl LookupHarness {
     async fn create() -> LookupHarness {
       let pool = mysql_testing::pool::create_test_pool().await;
-      let session_cookie_manager = HttpUserSessionManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET)
-        .expect("session cookie manager");
+      let session_cookie_manager = HttpUserSessionManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET).expect("session cookie manager");
       let session_checker = SessionChecker::new(&session_cookie_manager);
-      let avt_cookie_manager =
-        AvtCookieManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET).expect("avt cookie manager");
+      let avt_cookie_manager = AvtCookieManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET).expect("avt cookie manager");
 
-      LookupHarness {
-        pool,
-        session_cookie_manager,
-        session_checker,
-        avt_cookie_manager,
-      }
+      LookupHarness { pool, session_cookie_manager, session_checker, avt_cookie_manager }
     }
 
     async fn create_user(&self) -> TestUser {
@@ -454,38 +387,19 @@ mod tests {
       let entropy = user.user_token.as_str().trim_start_matches("user_").to_string();
       let api_key = ArtcraftApiKey::new_from_str(&format!("artcraft_api_test{entropy}"));
       let mut connection = self.pool.acquire().await.expect("acquire for api key");
-      insert_api_key(InsertApiKeyArgs {
-        owner_user_token: &user.user_token,
-        ip_address: "127.0.0.1",
-        name: "test key",
-        maybe_description: None,
-        api_key: &api_key,
-        mysql_executor: &mut *connection,
-        phantom: PhantomData,
-      })
-      .await
-      .expect("insert api key");
+      insert_api_key(InsertApiKeyArgs { owner_user_token: &user.user_token, ip_address: "127.0.0.1", name: "test key", maybe_description: None, api_key: &api_key, mysql_executor: &mut *connection, phantom: PhantomData }).await.expect("insert api key");
       api_key
     }
 
     /// Run the lookup under test against a fresh connection from the test pool.
     async fn require(&self, request: &HttpRequest) -> Result<AnySession, CommonWebError> {
       let mut connection = self.pool.acquire().await.expect("acquire for lookup");
-      require_any_session_or_key(
-        request,
-        &self.session_checker,
-        &self.avt_cookie_manager,
-        &mut *connection,
-      )
-      .await
+      require_any_session_or_key(request, &self.session_checker, &self.avt_cookie_manager, &mut *connection).await
     }
 
     /// A dummy HTTP request carrying the user's session cookie and no Authorization header.
     fn request_with_session_cookie(&self, user: &TestUser) -> HttpRequest {
-      let cookie = self
-        .session_cookie_manager
-        .create_cookie(&user.session_token, &user.user_token)
-        .expect("create session cookie");
+      let cookie = self.session_cookie_manager.create_cookie(&user.session_token, &user.user_token).expect("create session cookie");
       // TestRequest wants an owned cookie with a 'static-compatible lifetime.
       let cookie = Cookie::new("session", cookie.value().to_string());
 
@@ -495,8 +409,6 @@ mod tests {
 
   /// A dummy HTTP request presenting `credential` as a Bearer Authorization header.
   fn request_with_bearer(credential: &str) -> HttpRequest {
-    TestRequest::default()
-      .insert_header(("Authorization", format!("Bearer {credential}")))
-      .to_http_request()
+    TestRequest::default().insert_header(("Authorization", format!("Bearer {credential}"))).to_http_request()
   }
 }

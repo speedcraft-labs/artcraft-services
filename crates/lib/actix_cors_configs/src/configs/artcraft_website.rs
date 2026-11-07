@@ -33,12 +33,7 @@ mod tests {
   async fn website_domains() {
     for is_production in [true, false] {
       let cors = isolated_cors(add_artcraft_website, is_production);
-      for origin in [
-        "https://getartcraft.com",
-        "https://www.getartcraft.com",
-        "https://artcraft.ai",
-        "https://www.artcraft.ai",
-      ] {
+      for origin in ["https://getartcraft.com", "https://www.getartcraft.com", "https://artcraft.ai", "https://www.artcraft.ai"] {
         assert_exact_https_origin(&cors, origin).await;
       }
     }

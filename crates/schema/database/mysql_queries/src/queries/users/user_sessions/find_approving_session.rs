@@ -22,6 +22,6 @@ WHERE s.token = ? AND s.deleted_at IS NULL AND s.expires_at > NOW()
 "#,
     args.session_token
   )
-    .fetch_optional(args.mysql_executor)
-    .await
+  .fetch_optional(args.mysql_executor)
+  .await
 }

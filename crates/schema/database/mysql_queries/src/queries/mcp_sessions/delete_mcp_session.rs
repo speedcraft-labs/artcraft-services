@@ -17,9 +17,7 @@ where
 /// `maybe_deleted_at = NOW()`. Returns the number of rows affected (0 if no live session
 /// matched the token). Ownership is NOT checked here — callers verify it first via
 /// `get_mcp_session_by_token`.
-pub async fn delete_mcp_session<'e, 'c: 'e, E>(
-  args: DeleteMcpSessionArgs<'e, 'c, E>,
-) -> Result<u64, sqlx::Error>
+pub async fn delete_mcp_session<'e, 'c: 'e, E>(args: DeleteMcpSessionArgs<'e, 'c, E>) -> Result<u64, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -33,8 +31,8 @@ LIMIT 1
     "#,
     args.token.as_str(),
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
 
   Ok(result.rows_affected())
 }

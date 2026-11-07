@@ -17,7 +17,7 @@ SELECT expires_at <= NOW() AS expired FROM user_login_challenges WHERE id = ?
 "#,
     args.challenge_id
   )
-    .fetch_one(args.mysql_executor)
-    .await?;
+  .fetch_one(args.mysql_executor)
+  .await?;
   Ok(result.expired != 0)
 }

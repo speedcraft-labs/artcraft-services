@@ -12,12 +12,8 @@ use enums::by_table::media_files::media_file_type::MediaFileType;
 use enums::by_table::prompts::prompt_type::PromptType;
 use enums::common::view_as::ViewAs;
 use enums::common::visibility::Visibility;
-use mysql_queries::queries::media_files::list::count_media_files_for_user::{
-  count_media_files_for_user, CountMediaFilesForUserArgs,
-};
-use mysql_queries::queries::media_files::list::list_media_files_for_user::{
-  list_media_files_for_user, ListMediaFileForUserArgs,
-};
+use mysql_queries::queries::media_files::list::count_media_files_for_user::{count_media_files_for_user, CountMediaFilesForUserArgs};
+use mysql_queries::queries::media_files::list::list_media_files_for_user::{list_media_files_for_user, ListMediaFileForUserArgs};
 use mysql_queries::queries::media_files::list::user_media_file_filters::UserMediaFileFilters;
 use mysql_testing::fixtures::users::create_test_user;
 use mysql_testing::isolated::IsolatedTestDatabase;
@@ -46,68 +42,26 @@ async fn user_media_library_preserves_filters_visibility_joins_and_pagination() 
     insert_fixture(&db.pool, Fixture::image(&owner.user_token, token)).await;
   }
   insert_fixture(&db.pool, Fixture::image(&other.user_token, "m_other_user")).await;
-  sqlx::query("UPDATE media_files SET is_intermediate_system_file = true WHERE token = 'm_intermediate'")
-    .execute(&db.pool)
-    .await
-    .unwrap();
-  sqlx::query("UPDATE media_files SET user_deleted_at = NOW() WHERE token = 'm_user_deleted'")
-    .execute(&db.pool)
-    .await
-    .unwrap();
-  sqlx::query("UPDATE media_files SET mod_deleted_at = NOW() WHERE token = 'm_mod_deleted'")
-    .execute(&db.pool)
-    .await
-    .unwrap();
-  sqlx::query("UPDATE media_files SET maybe_engine_category = ? WHERE token = 'm_public_mesh'")
-    .bind(MediaFileEngineCategory::Object.to_str())
-    .execute(&db.pool)
-    .await
-    .unwrap();
-  sqlx::query("INSERT INTO prompts (token, prompt_type, creator_ip_address, maybe_other_args) VALUES ('p_library', ?, '127.0.0.1', ?)")
-    .bind(PromptType::ArtcraftApp.to_str()).bind(r#"{"fd":true}"#).execute(&db.pool).await.unwrap();
+  sqlx::query("UPDATE media_files SET is_intermediate_system_file = true WHERE token = 'm_intermediate'").execute(&db.pool).await.unwrap();
+  sqlx::query("UPDATE media_files SET user_deleted_at = NOW() WHERE token = 'm_user_deleted'").execute(&db.pool).await.unwrap();
+  sqlx::query("UPDATE media_files SET mod_deleted_at = NOW() WHERE token = 'm_mod_deleted'").execute(&db.pool).await.unwrap();
+  sqlx::query("UPDATE media_files SET maybe_engine_category = ? WHERE token = 'm_public_mesh'").bind(MediaFileEngineCategory::Object.to_str()).execute(&db.pool).await.unwrap();
+  sqlx::query("INSERT INTO prompts (token, prompt_type, creator_ip_address, maybe_other_args) VALUES ('p_library', ?, '127.0.0.1', ?)").bind(PromptType::ArtcraftApp.to_str()).bind(r#"{"fd":true}"#).execute(&db.pool).await.unwrap();
   sqlx::query("UPDATE media_files SET maybe_cover_image_media_file_token = 'm_intermediate', maybe_prompt_token = 'p_library', maybe_duration_millis = 1234, maybe_title = 'Fixture title' WHERE token = 'm_private_video'").execute(&db.pool).await.unwrap();
-  sqlx::query("INSERT INTO entity_stats (entity_type, entity_token, ratings_positive_count, bookmark_count) VALUES (?, 'm_private_video', 3, 7)")
-    .bind(StatsEntityType::MediaFile.to_str()).execute(&db.pool).await.unwrap();
+  sqlx::query("INSERT INTO entity_stats (entity_type, entity_token, ratings_positive_count, bookmark_count) VALUES (?, 'm_private_video', 3, 7)").bind(StatsEntityType::MediaFile.to_str()).execute(&db.pool).await.unwrap();
 
   let filters = filters(&owner.username);
   for (view_as, expected) in [
-    (
-      ViewAs::Author,
-      vec!["m_legacy_mesh", "m_private_splat", "m_public_mesh", "m_hidden_audio", "m_private_video", "m_public_image"],
-    ),
-    (
-      ViewAs::Moderator,
-      vec!["m_legacy_mesh", "m_private_splat", "m_public_mesh", "m_hidden_audio", "m_private_video", "m_public_image"],
-    ),
+    (ViewAs::Author, vec!["m_legacy_mesh", "m_private_splat", "m_public_mesh", "m_hidden_audio", "m_private_video", "m_public_image"]),
+    (ViewAs::Moderator, vec!["m_legacy_mesh", "m_private_splat", "m_public_mesh", "m_hidden_audio", "m_private_video", "m_public_image"]),
     (ViewAs::AnotherUser, vec!["m_legacy_mesh", "m_public_mesh", "m_public_image"]),
   ] {
     let selected = UserMediaFileFilters { view_as, ..filters };
-    let records = list_media_files_for_user(ListMediaFileForUserArgs {
-      filters: selected,
-      limit: 60,
-      offset: 0,
-      sort_ascending: false,
-      mysql_executor: &db.pool,
-    })
-    .await
-    .unwrap();
+    let records = list_media_files_for_user(ListMediaFileForUserArgs { filters: selected, limit: 60, offset: 0, sort_ascending: false, mysql_executor: &db.pool }).await.unwrap();
     assert_eq!(records.iter().map(|r| r.token.as_str()).collect::<Vec<_>>(), expected);
-    assert_eq!(
-      count_media_files_for_user(CountMediaFilesForUserArgs { filters: selected, mysql_executor: &db.pool })
-        .await
-        .unwrap(),
-      expected.len() as i64
-    );
+    assert_eq!(count_media_files_for_user(CountMediaFilesForUserArgs { filters: selected, mysql_executor: &db.pool }).await.unwrap(), expected.len() as i64);
   }
-  let records = list_media_files_for_user(ListMediaFileForUserArgs {
-    filters,
-    limit: 60,
-    offset: 0,
-    sort_ascending: true,
-    mysql_executor: &db.pool,
-  })
-  .await
-  .unwrap();
+  let records = list_media_files_for_user(ListMediaFileForUserArgs { filters, limit: 60, offset: 0, sort_ascending: true, mysql_executor: &db.pool }).await.unwrap();
   assert_eq!(records.first().unwrap().token.as_str(), "m_public_image");
   let video = &records[1];
   assert_eq!(video.maybe_file_cover_image_public_bucket_hash.as_deref(), Some("fixture_hash"));
@@ -120,15 +74,7 @@ async fn user_media_library_preserves_filters_visibility_joins_and_pagination() 
   // All timestamps tie. The id tiebreaker must avoid duplicates/omissions.
   let mut paged = vec![];
   for offset in [0, 2, 4, 6] {
-    let records = list_media_files_for_user(ListMediaFileForUserArgs {
-      filters,
-      limit: 2,
-      offset,
-      sort_ascending: true,
-      mysql_executor: &db.pool,
-    })
-    .await
-    .unwrap();
+    let records = list_media_files_for_user(ListMediaFileForUserArgs { filters, limit: 2, offset, sort_ascending: true, mysql_executor: &db.pool }).await.unwrap();
     paged.extend(records.into_iter().map(|r| r.token.to_string()));
   }
   assert_eq!(paged, rows.iter().map(|r| r.0.to_string()).collect::<Vec<_>>());
@@ -144,51 +90,17 @@ async fn user_media_library_preserves_filters_visibility_joins_and_pagination() 
     (UserMediaFileFilters { maybe_filter_media_classes: Some(&empty), ..filters }, 6),
     (UserMediaFileFilters { username: "' OR 1=1 --", ..filters }, 0),
   ] {
-    let records = list_media_files_for_user(ListMediaFileForUserArgs {
-      filters: selected,
-      limit: 60,
-      offset: 0,
-      sort_ascending: false,
-      mysql_executor: &db.pool,
-    })
-    .await
-    .unwrap();
+    let records = list_media_files_for_user(ListMediaFileForUserArgs { filters: selected, limit: 60, offset: 0, sort_ascending: false, mysql_executor: &db.pool }).await.unwrap();
     assert_eq!(records.len(), expected);
-    assert_eq!(
-      count_media_files_for_user(CountMediaFilesForUserArgs { filters: selected, mysql_executor: &db.pool })
-        .await
-        .unwrap(),
-      expected as i64
-    );
+    assert_eq!(count_media_files_for_user(CountMediaFilesForUserArgs { filters: selected, mysql_executor: &db.pool }).await.unwrap(), expected as i64);
   }
   // Queries must honor an existing transaction, including uncommitted changes.
   let mut tx = db.pool.begin().await.unwrap();
-  sqlx::query("UPDATE media_files SET user_deleted_at = NOW() WHERE token = 'm_private_video'")
-    .execute(&mut *tx)
-    .await
-    .unwrap();
-  assert_eq!(
-    count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &mut *tx }).await.unwrap(),
-    5
-  );
-  assert_eq!(
-    list_media_files_for_user(ListMediaFileForUserArgs {
-      filters,
-      limit: 60,
-      offset: 0,
-      sort_ascending: false,
-      mysql_executor: &mut *tx
-    })
-    .await
-    .unwrap()
-    .len(),
-    5
-  );
+  sqlx::query("UPDATE media_files SET user_deleted_at = NOW() WHERE token = 'm_private_video'").execute(&mut *tx).await.unwrap();
+  assert_eq!(count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &mut *tx }).await.unwrap(), 5);
+  assert_eq!(list_media_files_for_user(ListMediaFileForUserArgs { filters, limit: 60, offset: 0, sort_ascending: false, mysql_executor: &mut *tx }).await.unwrap().len(), 5);
   tx.rollback().await.unwrap();
-  assert_eq!(
-    count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &db.pool }).await.unwrap(),
-    6
-  );
+  assert_eq!(count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &db.pool }).await.unwrap(), 6);
   db.destroy().await;
 }
 
@@ -220,41 +132,20 @@ async fn user_media_library_large_page_reads_are_bounded() {
     query.build().execute(&db.pool).await.unwrap();
   }
   sqlx::query("ANALYZE TABLE media_files").execute(&db.pool).await.unwrap();
-  let classes = HashSet::from([
-    MediaFileClass::Image,
-    MediaFileClass::Video,
-    MediaFileClass::Audio,
-    MediaFileClass::Dimensional,
-    MediaFileClass::Mesh,
-    MediaFileClass::Splat,
-  ]);
+  let classes = HashSet::from([MediaFileClass::Image, MediaFileClass::Video, MediaFileClass::Audio, MediaFileClass::Dimensional, MediaFileClass::Mesh, MediaFileClass::Splat]);
   let filters = UserMediaFileFilters { maybe_filter_media_classes: Some(&classes), ..filters(&owner.username) };
   let mut conn = db.pool.acquire().await.unwrap();
   let before = scan_reads(&mut conn).await;
   let start = Instant::now();
-  let records = list_media_files_for_user(ListMediaFileForUserArgs {
-    filters,
-    limit: 61,
-    offset: 0,
-    sort_ascending: false,
-    mysql_executor: &mut *conn,
-  })
-  .await
-  .unwrap();
+  let records = list_media_files_for_user(ListMediaFileForUserArgs { filters, limit: 61, offset: 0, sort_ascending: false, mysql_executor: &mut *conn }).await.unwrap();
   let elapsed = start.elapsed();
   let scanned = scan_reads(&mut conn).await - before;
   assert_eq!(records.len(), 61);
   assert_eq!(records.first().unwrap().token.as_str(), "m_bench_59999");
   assert!(scanned < 200, "page query scanned {scanned} sequential index entries");
   let start = Instant::now();
-  assert_eq!(
-    count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &mut *conn }).await.unwrap(),
-    60_000
-  );
-  println!(
-    "300k fixtures / 60k owned: page={elapsed:?}, sequential index reads={scanned}; optional count={:?}",
-    start.elapsed()
-  );
+  assert_eq!(count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &mut *conn }).await.unwrap(), 60_000);
+  println!("300k fixtures / 60k owned: page={elapsed:?}, sequential index reads={scanned}; optional count={:?}", start.elapsed());
   drop(conn);
   db.destroy().await;
 }
@@ -270,40 +161,19 @@ struct Fixture<'a> {
 
 impl<'a> Fixture<'a> {
   fn image(owner: &'a UserToken, token: &'a str) -> Self {
-    Self {
-      owner,
-      token,
-      class: MediaFileClass::Image,
-      kind: MediaFileType::Png,
-      visibility: Visibility::Public,
-      upload: true,
-    }
+    Self { owner, token, class: MediaFileClass::Image, kind: MediaFileType::Png, visibility: Visibility::Public, upload: true }
   }
 }
 
 fn filters(username: &str) -> UserMediaFileFilters<'_> {
-  UserMediaFileFilters {
-    username,
-    maybe_filter_media_types: None,
-    maybe_filter_media_classes: None,
-    maybe_filter_engine_categories: None,
-    include_user_uploads: true,
-    view_as: ViewAs::Author,
-  }
+  UserMediaFileFilters { username, maybe_filter_media_types: None, maybe_filter_media_classes: None, maybe_filter_engine_categories: None, include_user_uploads: true, view_as: ViewAs::Author }
 }
 
 async fn insert_fixture(pool: &MySqlPool, fixture: Fixture<'_>) {
-  sqlx::query("INSERT INTO media_files (token, origin_category, origin_product_category, media_type, media_class, checksum_sha2, public_bucket_directory_hash, creator_ip_address, maybe_creator_user_token, creator_set_visibility, is_intermediate_system_file, is_user_upload, created_at) VALUES (?, ?, ?, ?, ?, ?, 'fixture_hash', '127.0.0.1', ?, ?, false, ?, ?)")
-    .bind(fixture.token).bind(MediaFileOriginCategory::Upload.to_str()).bind(MediaFileOriginProductCategory::Unknown.to_str())
-    .bind(fixture.kind.to_str()).bind(fixture.class.to_str()).bind("0".repeat(64)).bind(fixture.owner.as_str())
-    .bind(fixture.visibility.to_str()).bind(fixture.upload).bind(CREATED_AT).execute(pool).await.unwrap();
+  sqlx::query("INSERT INTO media_files (token, origin_category, origin_product_category, media_type, media_class, checksum_sha2, public_bucket_directory_hash, creator_ip_address, maybe_creator_user_token, creator_set_visibility, is_intermediate_system_file, is_user_upload, created_at) VALUES (?, ?, ?, ?, ?, ?, 'fixture_hash', '127.0.0.1', ?, ?, false, ?, ?)").bind(fixture.token).bind(MediaFileOriginCategory::Upload.to_str()).bind(MediaFileOriginProductCategory::Unknown.to_str()).bind(fixture.kind.to_str()).bind(fixture.class.to_str()).bind("0".repeat(64)).bind(fixture.owner.as_str()).bind(fixture.visibility.to_str()).bind(fixture.upload).bind(CREATED_AT).execute(pool).await.unwrap();
 }
 
 async fn scan_reads(conn: &mut sqlx::MySqlConnection) -> u64 {
-  let values: Vec<(String, String)> =
-    sqlx::query_as("SHOW SESSION STATUS WHERE Variable_name IN ('Handler_read_next', 'Handler_read_prev')")
-      .fetch_all(conn)
-      .await
-      .unwrap();
+  let values: Vec<(String, String)> = sqlx::query_as("SHOW SESSION STATUS WHERE Variable_name IN ('Handler_read_next', 'Handler_read_prev')").fetch_all(conn).await.unwrap();
   values.into_iter().map(|(_, value)| value.parse::<u64>().unwrap()).sum()
 }

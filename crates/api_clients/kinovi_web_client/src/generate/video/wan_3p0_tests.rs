@@ -20,11 +20,7 @@ use crate::pricing::kinovi_cost_calculator_trait::KinoviCostCalculatorTrait;
 use crate::pricing::kinovi_pricing_tier::KinoviPricingTier;
 use crate::requests::kinovi_host::KinoviHost;
 
-const RESOLUTIONS: [KinoviWan3p0OutputResolution; 3] = [
-  KinoviWan3p0OutputResolution::FourEightyP,
-  KinoviWan3p0OutputResolution::SevenTwentyP,
-  KinoviWan3p0OutputResolution::TenEightyP,
-];
+const RESOLUTIONS: [KinoviWan3p0OutputResolution; 3] = [KinoviWan3p0OutputResolution::FourEightyP, KinoviWan3p0OutputResolution::SevenTwentyP, KinoviWan3p0OutputResolution::TenEightyP];
 
 // Literal price snapshots from the supplied observations and Kinovi's model
 // pages, checked 2026-09-18. Keep independent of the calculator's rate tables.
@@ -57,8 +53,7 @@ const PRIME_CREDITS: [(u8, [f64; 3]); 9] = [
 ];
 // Thirty-second USD cents, (rounded down, rounded up), consumer then enterprise.
 const WAN_CENTS: [[(u64, u64); 3]; 2] = [[(155, 156), (310, 311), (620, 621)], [(123, 124), (246, 247), (492, 493)]];
-const PRIME_CENTS: [[(u64, u64); 3]; 2] =
-  [[(293, 294), (603, 604), (1207, 1208)], [(232, 233), (479, 480), (958, 959)]];
+const PRIME_CENTS: [[(u64, u64); 3]; 2] = [[(293, 294), (603, 604), (1207, 1208)], [(232, 233), (479, 480), (958, 959)]];
 // Only sanitized apiParams are included; the original captures contain cookies.
 const CAPTURES: [&str; 7] = [
   include_str!("wan_3p0_test_data/01_wan_ref_to_video_without_ref.json"),
@@ -217,52 +212,16 @@ macro_rules! operation_tests {
   };
 }
 
-operation_tests!(
-  text,
-  GenerateWan3p0TextToVideoRequest,
-  GenerateWan3p0TextToVideoArgs,
-  generate_wan_3p0_text_to_video,
-  "wan3.0-text-to-video",
-  WAN_CREDITS,
-  WAN_CENTS,
-  {}
-);
+operation_tests!(text, GenerateWan3p0TextToVideoRequest, GenerateWan3p0TextToVideoArgs, generate_wan_3p0_text_to_video, "wan3.0-text-to-video", WAN_CREDITS, WAN_CENTS, {});
 operation_tests!(image, GenerateWan3p0ImageToVideoRequest, GenerateWan3p0ImageToVideoArgs,
   generate_wan_3p0_image_to_video, "wan3.0-image-to-video", WAN_CREDITS, WAN_CENTS,
   { maybe_start_frame_url: Some("https://example.com/start.png".to_owned()) });
-operation_tests!(
-  reference,
-  GenerateWan3p0RefToVideoRequest,
-  GenerateWan3p0RefToVideoArgs,
-  generate_wan_3p0_ref_to_video,
-  "wan3.0-ref-to-video",
-  WAN_CREDITS,
-  WAN_CENTS,
-  {}
-);
-operation_tests!(
-  prime_text,
-  GenerateWan3p0PrimeTextToVideoRequest,
-  GenerateWan3p0PrimeTextToVideoArgs,
-  generate_wan_3p0_prime_text_to_video,
-  "wan3.0-prime-text-to-video",
-  PRIME_CREDITS,
-  PRIME_CENTS,
-  {}
-);
+operation_tests!(reference, GenerateWan3p0RefToVideoRequest, GenerateWan3p0RefToVideoArgs, generate_wan_3p0_ref_to_video, "wan3.0-ref-to-video", WAN_CREDITS, WAN_CENTS, {});
+operation_tests!(prime_text, GenerateWan3p0PrimeTextToVideoRequest, GenerateWan3p0PrimeTextToVideoArgs, generate_wan_3p0_prime_text_to_video, "wan3.0-prime-text-to-video", PRIME_CREDITS, PRIME_CENTS, {});
 operation_tests!(prime_image, GenerateWan3p0PrimeImageToVideoRequest, GenerateWan3p0PrimeImageToVideoArgs,
   generate_wan_3p0_prime_image_to_video, "wan3.0-prime-image-to-video", PRIME_CREDITS, PRIME_CENTS,
   { maybe_start_frame_url: Some("https://example.com/start.png".to_owned()) });
-operation_tests!(
-  prime_reference,
-  GenerateWan3p0PrimeRefToVideoRequest,
-  GenerateWan3p0PrimeRefToVideoArgs,
-  generate_wan_3p0_prime_ref_to_video,
-  "wan3.0-prime-ref-to-video",
-  PRIME_CREDITS,
-  PRIME_CENTS,
-  {}
-);
+operation_tests!(prime_reference, GenerateWan3p0PrimeRefToVideoRequest, GenerateWan3p0PrimeRefToVideoArgs, generate_wan_3p0_prime_ref_to_video, "wan3.0-prime-ref-to-video", PRIME_CREDITS, PRIME_CENTS, {});
 
 #[test]
 fn payloads_match_all_seven_consumer_captures() {
@@ -284,14 +243,7 @@ macro_rules! reference_media_tests {
 
       #[test]
       fn references_are_optional_and_empty_lists_are_omitted() {
-        let request = $request {
-          prompt: "A ship at sea".to_owned(),
-          duration_seconds: 30,
-          maybe_reference_image_urls: Some(vec![]),
-          maybe_reference_video_urls: Some(vec![]),
-          maybe_reference_audio_urls: Some(vec![]),
-          ..Default::default()
-        };
+        let request = $request { prompt: "A ship at sea".to_owned(), duration_seconds: 30, maybe_reference_image_urls: Some(vec![]), maybe_reference_video_urls: Some(vec![]), maybe_reference_audio_urls: Some(vec![]), ..Default::default() };
         let params = serde_json::to_value(request.build_api_params().unwrap()).unwrap();
         for field in ["uploadedUrls", "videoUrl", "videoUrls", "audioUrls"] {
           assert!(params.get(field).is_none(), "{field}");
@@ -301,12 +253,7 @@ macro_rules! reference_media_tests {
 
       #[test]
       fn reference_duration_and_output_share_thirty_seconds() {
-        let request = $request {
-          duration_seconds: 20,
-          maybe_reference_video_urls: Some(urls(1)),
-          maybe_total_reference_video_duration_millis: Some(10_000),
-          ..Default::default()
-        };
+        let request = $request { duration_seconds: 20, maybe_reference_video_urls: Some(urls(1)), maybe_total_reference_video_duration_millis: Some(10_000), ..Default::default() };
         assert!(request.clone().build_api_params().is_ok());
         for millis in [0, 999, 10_001, 15_001, u32::MAX] {
           let mut invalid = request.clone();
@@ -328,14 +275,8 @@ macro_rules! reference_media_tests {
 
       #[test]
       fn all_reference_types_have_independent_limits_and_no_surcharge() {
-        let request = $request {
-          duration_seconds: 10,
-          maybe_reference_image_urls: Some(urls(10)),
-          maybe_reference_video_urls: Some(urls(5)),
-          maybe_reference_audio_urls: Some(urls(5)),
-          maybe_total_reference_video_duration_millis: Some(15_000),
-          ..Default::default()
-        };
+        let request =
+          $request { duration_seconds: 10, maybe_reference_image_urls: Some(urls(10)), maybe_reference_video_urls: Some(urls(5)), maybe_reference_audio_urls: Some(urls(5)), maybe_total_reference_video_duration_millis: Some(15_000), ..Default::default() };
         assert_eq!(request.calculate_consumer_costs().kinovi_credits, $credits);
         let params = serde_json::to_value(request.clone().build_api_params().unwrap()).unwrap();
         assert_eq!(params["uploadedUrls"], json!(urls(10)));
@@ -371,10 +312,7 @@ reference_media_tests!(prime_reference_media, GenerateWan3p0PrimeRefToVideoReque
 fn keyframes_require_a_start_image_and_preserve_start_end_order() {
   macro_rules! check {
     ($request:ident, $credits:literal) => {
-      let mut request = $request {
-        prompt: "Waves".to_owned(),
-        ..Default::default()
-      };
+      let mut request = $request { prompt: "Waves".to_owned(), ..Default::default() };
       assert_invalid(request.clone().build_api_params(), "maybe_start_frame_url");
       request.maybe_end_frame_url = Some("https://example.com/end.png".to_owned());
       assert_invalid(request.clone().build_api_params(), "maybe_end_frame_url");
@@ -483,27 +421,15 @@ async fn stub_server() -> (KinoviHost, JoinHandle<(String, Value)>) {
       "taskIds": ["wan-task"], "orderIds": ["wan-order"], "violationWarning": false,
     }}}}])
     .to_string();
-    let response = format!(
-      "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-      response.len(),
-      response,
-    );
+    let response = format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", response.len(), response,);
     stream.write_all(response.as_bytes()).await.unwrap();
     (headers, body)
   });
-  (
-    KinoviHost::CustomHost {
-      api_host: address.clone(),
-      cdn_host: address,
-    },
-    server,
-  )
+  (KinoviHost::CustomHost { api_host: address.clone(), cdn_host: address }, server)
 }
 
 fn capture_urls(value: &Value, field: &str) -> Option<Vec<String>> {
-  value[field]
-    .as_array()
-    .map(|urls| urls.iter().map(|url| url.as_str().unwrap().to_owned()).collect())
+  value[field].as_array().map(|urls| urls.iter().map(|url| url.as_str().unwrap().to_owned()).collect())
 }
 
 fn urls(count: usize) -> Vec<String> {
@@ -512,10 +438,7 @@ fn urls(count: usize) -> Vec<String> {
 
 fn assert_invalid(result: Result<Wan3p0ApiParams, KinoviWebError>, field: &str) {
   match result.unwrap_err() {
-    KinoviWebError::Client(KinoviWebClientError::InvalidRequestField {
-      field: actual,
-      ..
-    }) => {
+    KinoviWebError::Client(KinoviWebClientError::InvalidRequestField { field: actual, .. }) => {
       assert_eq!(actual, field);
     },
     other => panic!("expected invalid {field}, got {other:?}"),

@@ -22,9 +22,7 @@ where
 ///
 /// Returns `Ok(None)` when no row matches, when the session is deleted, or when the owning user
 /// is missing or deleted.
-pub async fn get_api_or_web_session_user_by_session_token<'e, 'c: 'e, E>(
-  args: GetApiOrWebSessionUserBySessionTokenArgs<'e, 'c, E>,
-) -> Result<Option<ApiOrWebSessionUserRecord>, sqlx::Error>
+pub async fn get_api_or_web_session_user_by_session_token<'e, 'c: 'e, E>(args: GetApiOrWebSessionUserBySessionTokenArgs<'e, 'c, E>) -> Result<Option<ApiOrWebSessionUserRecord>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -52,8 +50,8 @@ LIMIT 1
     "#,
     args.session_token,
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| ApiOrWebSessionUserRecord {
     user_token: r.user_token,

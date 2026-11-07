@@ -1,7 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
-use crate::requests::api::video::keyframes::flux_3::raw_request::{
-  Flux3Keyframe, Flux3KeyframesToVideoInput, Flux3KeyframesToVideoOutput,
-};
+use crate::requests::api::video::keyframes::flux_3::raw_request::{Flux3Keyframe, Flux3KeyframesToVideoInput, Flux3KeyframesToVideoOutput};
 use crate::requests::api::video::text::flux_3::api::{Flux3AspectRatio, Flux3Resolution};
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
@@ -60,10 +58,8 @@ mod tests {
   use errors::AnyhowResult;
   use std::fs::read_to_string;
 
-  const KEYFRAME_ONE_URL: &str =
-    "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-1.jpeg";
-  const KEYFRAME_TWO_URL: &str =
-    "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-2.jpeg";
+  const KEYFRAME_ONE_URL: &str = "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-1.jpeg";
+  const KEYFRAME_TWO_URL: &str = "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-2.jpeg";
 
   // ── Real requests (manually run; require a live key and cost money) ──
 
@@ -75,10 +71,7 @@ mod tests {
 
     let request = Flux3KeyframesToVideoRequest {
       prompt: "the scene flows naturally between the pinned keyframes".to_string(),
-      keyframes: vec![
-        Flux3Keyframe { image_url: KEYFRAME_ONE_URL.to_string(), frame_index: 0 },
-        Flux3Keyframe { image_url: KEYFRAME_TWO_URL.to_string(), frame_index: 96 },
-      ],
+      keyframes: vec![Flux3Keyframe { image_url: KEYFRAME_ONE_URL.to_string(), frame_index: 0 }, Flux3Keyframe { image_url: KEYFRAME_TWO_URL.to_string(), frame_index: 96 }],
       duration: Some(5),
       resolution: Some(Flux3Resolution::SevenTwentyP),
       aspect_ratio: None,
@@ -98,10 +91,7 @@ mod tests {
   fn raw_request_maps_all_fields() {
     let request = Flux3KeyframesToVideoRequest {
       prompt: "p".to_string(),
-      keyframes: vec![
-        Flux3Keyframe { image_url: "https://example.com/a.png".to_string(), frame_index: 0 },
-        Flux3Keyframe { image_url: "https://example.com/b.png".to_string(), frame_index: 120 },
-      ],
+      keyframes: vec![Flux3Keyframe { image_url: "https://example.com/a.png".to_string(), frame_index: 0 }, Flux3Keyframe { image_url: "https://example.com/b.png".to_string(), frame_index: 120 }],
       duration: Some(10),
       resolution: Some(Flux3Resolution::TenEightyP),
       aspect_ratio: Some(Flux3AspectRatio::SixteenByNine),
@@ -123,9 +113,7 @@ mod tests {
   fn raw_request_omits_unset_optionals() {
     let request = Flux3KeyframesToVideoRequest {
       prompt: "minimal".to_string(),
-      keyframes: vec![
-        Flux3Keyframe { image_url: "https://example.com/a.png".to_string(), frame_index: 0 },
-      ],
+      keyframes: vec![Flux3Keyframe { image_url: "https://example.com/a.png".to_string(), frame_index: 0 }],
       duration: None,
       resolution: None,
       aspect_ratio: None,
@@ -133,12 +121,15 @@ mod tests {
       safety_tolerance: None,
     };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
-    assert_eq!(json, serde_json::json!({
-      "prompt": "minimal",
-      "keyframes": [
-        { "image_url": "https://example.com/a.png", "frame_index": 0 },
-      ],
-    }));
+    assert_eq!(
+      json,
+      serde_json::json!({
+        "prompt": "minimal",
+        "keyframes": [
+          { "image_url": "https://example.com/a.png", "frame_index": 0 },
+        ],
+      })
+    );
   }
 
   #[test]

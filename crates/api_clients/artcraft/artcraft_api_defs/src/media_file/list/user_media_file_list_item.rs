@@ -43,24 +43,24 @@ pub struct MediaFileForUserListItem {
   /// Details where the media file came from.
   pub origin: MediaFileOriginDetails,
 
-  #[deprecated(note="Use MediaFileOriginDetails instead")]
+  #[deprecated(note = "Use MediaFileOriginDetails instead")]
   pub origin_category: MediaFileOriginCategory,
 
-  #[deprecated(note="Use MediaFileOriginDetails instead")]
+  #[deprecated(note = "Use MediaFileOriginDetails instead")]
   pub origin_product_category: MediaFileOriginProductCategory,
 
-  #[deprecated(note="Use MediaFileOriginDetails instead")]
+  #[deprecated(note = "Use MediaFileOriginDetails instead")]
   pub maybe_origin_model_type: Option<MediaFileOriginModelType>,
 
-  #[deprecated(note="Use MediaFileOriginDetails instead")]
+  #[deprecated(note = "Use MediaFileOriginDetails instead")]
   pub maybe_origin_model_token: Option<String>,
 
   /// (DEPRECATED) URL path to the media file
-  #[deprecated(note="This field doesn't point to the full URL. Use media_links instead to leverage the CDN.")]
+  #[deprecated(note = "This field doesn't point to the full URL. Use media_links instead to leverage the CDN.")]
   pub public_bucket_path: String,
 
   /// (DEPRECATED) Full URL to the media file
-  #[deprecated(note="This points to the bucket. Use media_links instead to leverage the CDN.")]
+  #[deprecated(note = "This points to the bucket. Use media_links instead to leverage the CDN.")]
   pub public_bucket_url: String,
 
   /// Rich CDN links to the media, including thumbnails, previews, and more.

@@ -79,44 +79,22 @@ pub struct AppStateLegacyPermissionFlags {
   pub can_delete_users: bool,
 }
 
-pub async fn dummy_app_state_handler(
-  server_state: web::Data<Arc<ServerState>>
-) -> Json<AppStateResponse> {
+pub async fn dummy_app_state_handler(server_state: web::Data<Arc<ServerState>>) -> Json<AppStateResponse> {
+  let maybe_category = server_state.flags.maybe_status_alert_category.as_deref().map(|category| category_to_enum(&category)).flatten();
 
-  let maybe_category = server_state
-      .flags
-      .maybe_status_alert_category
-      .as_deref()
-      .map(|category| category_to_enum(&category))
-      .flatten();
-
-  let maybe_message = server_state
-      .flags
-      .maybe_status_alert_custom_message
-      .as_deref()
-      .map(|message| message.trim().to_string());
+  let maybe_message = server_state.flags.maybe_status_alert_custom_message.as_deref().map(|message| message.trim().to_string());
 
   let maybe_alert = match (maybe_category, maybe_message) {
     (None, None) => None,
-    (category, message) => Some(AppStateStatusAlertInfo {
-      maybe_category: category,
-      maybe_message: message,
-    }),
+    (category, message) => Some(AppStateStatusAlertInfo { maybe_category: category, maybe_message: message }),
   };
 
   Json(AppStateResponse {
     success: true,
     refresh_interval_millis: REFRESH_INTERVAL.as_millis(),
     maybe_alert,
-    server_info: AppStateServerInfo {
-      build_sha: "aabbcc".to_string(),
-      build_sha_short: "aabbcc".to_string(),
-      hostname: "hostname".to_string(),
-    },
-    locale: AppStateUserLocale {
-      full_language_tags: vec!["en-US".to_string()],
-      language_codes: vec!["en".to_string()],
-    },
+    server_info: AppStateServerInfo { build_sha: "aabbcc".to_string(), build_sha_short: "aabbcc".to_string(), hostname: "hostname".to_string() },
+    locale: AppStateUserLocale { full_language_tags: vec!["en-US".to_string()], language_codes: vec!["en".to_string()] },
     is_logged_in: false,
     is_banned: false,
     maybe_user_info: None,

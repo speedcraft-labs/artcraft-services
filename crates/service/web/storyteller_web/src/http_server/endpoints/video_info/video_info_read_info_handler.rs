@@ -48,16 +48,12 @@ pub struct VideoInfoReadOnlyForm {
     ("request" = VideoInfoReadOnlyForm, description = "Multipart form with a single `file` video upload."),
   )
 )]
-pub async fn video_info_read_info_handler(
-  http_request: HttpRequest,
-  server_state: web::Data<Arc<ServerState>>,
-  MultipartForm(mut form): MultipartForm<VideoInfoReadOnlyForm>,
-) -> Result<Json<VideoInfoReadOnlyResponse>, CommonWebError> {
+pub async fn video_info_read_info_handler(http_request: HttpRequest, server_state: web::Data<Arc<ServerState>>, MultipartForm(mut form): MultipartForm<VideoInfoReadOnlyForm>) -> Result<Json<VideoInfoReadOnlyResponse>, CommonWebError> {
   // IP-based rate limit (1 req / 5s by default, configurable). Fails open.
   match server_state.redis_rate_limiters.video_info_read_only.rate_limit_request(&http_request).await {
-    Ok(()) => {}
+    Ok(()) => {},
     Err(RateLimiterError::RateLimitExceededError) => return Err(CommonWebError::TooManyRequests),
-    Err(RateLimiterError::ClientError) => {} // fail open
+    Err(RateLimiterError::ClientError) => {}, // fail open
   }
 
   let mut bytes = Vec::new();

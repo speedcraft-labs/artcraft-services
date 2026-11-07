@@ -22,20 +22,21 @@ pub enum FalCategory {
   ObjectGeneration,
 }
 
-pub struct InsertGenericInferenceForFalArgs<'e, 'c, E> 
-  where E: 'e + Executor<'c, Database = MySql>
+pub struct InsertGenericInferenceForFalArgs<'e, 'c, E>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   pub uuid_idempotency_token: &'e str,
 
   /// The external primary key identifier for the job.
   pub maybe_external_third_party_id: &'e str,
-  
+
   pub fal_category: FalCategory,
 
   pub maybe_model_type: Option<CommonModelType>,
 
   pub maybe_inference_args: Option<GenericInferenceArgs>,
-  
+
   pub maybe_prompt_token: Option<&'e PromptToken>,
 
   pub maybe_creator_user_token: Option<&'e UserToken>,
@@ -47,15 +48,15 @@ pub struct InsertGenericInferenceForFalArgs<'e, 'c, E>
   pub maybe_platform_type: Option<PlatformType>,
 
   pub mysql_executor: E,
-  
+
   // TODO: Not sure if this works to tell the compiler we need the lifetime annotation.
   //  See: https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-lifetime-parameters
   pub phantom: PhantomData<&'c E>,
 }
 
-pub async fn insert_generic_inference_job_for_fal_queue<'e, 'c : 'e, E>(args: InsertGenericInferenceForFalArgs<'e, 'c, E>)
-  -> Result<InferenceJobToken, DatabaseQueryError>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn insert_generic_inference_job_for_fal_queue<'e, 'c: 'e, E>(args: InsertGenericInferenceForFalArgs<'e, 'c, E>) -> Result<InferenceJobToken, DatabaseQueryError>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   let job_token = InferenceJobToken::generate();
 
@@ -79,5 +80,6 @@ pub async fn insert_generic_inference_job_for_fal_queue<'e, 'c : 'e, E>(args: In
     maybe_debug_log_event_token: None,
     mysql_executor: args.mysql_executor,
     phantom: args.phantom,
-  }).await
+  })
+  .await
 }

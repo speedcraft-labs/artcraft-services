@@ -5,10 +5,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use clap::Args;
 use log::info;
-use kinovi_web_client::billing::get_billing_payments_history::{
-  get_billing_payments_history, BillingPayment, GetBillingPaymentsHistoryArgs,
-  DEFAULT_BILLING_PAGE_LIMIT,
-};
+use kinovi_web_client::billing::get_billing_payments_history::{get_billing_payments_history, BillingPayment, GetBillingPaymentsHistoryArgs, DEFAULT_BILLING_PAGE_LIMIT};
 use kinovi_web_client::creds::kinovi_web_session::KinoviWebSession;
 
 use super::super::state::KinoviWebState;
@@ -40,8 +37,7 @@ pub async fn run(state: &KinoviWebState, args: AuditPaymentsArgs) -> anyhow::Res
   let session = KinoviWebSession::from_cookies_string(state.cookies.clone());
 
   let file_is_new = std::fs::metadata(&args.out).map(|m| m.len() == 0).unwrap_or(true);
-  let mut out = OpenOptions::new().create(true).append(true).open(&args.out)
-    .map_err(|err| anyhow!("Cannot open {}: {}", args.out, err))?;
+  let mut out = OpenOptions::new().create(true).append(true).open(&args.out).map_err(|err| anyhow!("Cannot open {}: {}", args.out, err))?;
   if file_is_new {
     writeln!(out, "account,payment_id,created_at,amount_usd,credits_earned,status,payment_type,product_name,transaction_id")?;
   }
@@ -53,14 +49,9 @@ pub async fn run(state: &KinoviWebState, args: AuditPaymentsArgs) -> anyhow::Res
   let mut last_reported_total = 0u64;
 
   for page_number in 1..=args.max_pages {
-    let page = get_billing_payments_history(GetBillingPaymentsHistoryArgs {
-      session: &session,
-      limit: DEFAULT_BILLING_PAGE_LIMIT,
-      offset,
-      host_override: None,
-    }).await
-      .map_err(|err| anyhow!(
-        "Error fetching payments page {} (offset {}): {:?}", page_number, offset, err))?;
+    let page = get_billing_payments_history(GetBillingPaymentsHistoryArgs { session: &session, limit: DEFAULT_BILLING_PAGE_LIMIT, offset, host_override: None })
+      .await
+      .map_err(|err| anyhow!("Error fetching payments page {} (offset {}): {:?}", page_number, offset, err))?;
 
     last_reported_total = page.total;
     if page.payments.is_empty() {
@@ -75,10 +66,7 @@ pub async fn run(state: &KinoviWebState, args: AuditPaymentsArgs) -> anyhow::Res
     }
     out.flush()?;
 
-    info!(
-      "Page {} (offset {}): {} payments; running ${:.2} / {} credits (server total {})",
-      page_number, offset, page.payments.len(), total_amount, total_credits, page.total,
-    );
+    info!("Page {} (offset {}): {} payments; running ${:.2} / {} credits (server total {})", page_number, offset, page.payments.len(), total_amount, total_credits, page.total,);
 
     offset += page.payments.len() as u64;
     tokio::time::sleep(Duration::from_millis(args.delay_ms)).await;
@@ -92,19 +80,7 @@ pub async fn run(state: &KinoviWebState, args: AuditPaymentsArgs) -> anyhow::Res
 }
 
 fn write_payment_row(out: &mut impl Write, account: &str, payment: &BillingPayment) -> anyhow::Result<()> {
-  writeln!(
-    out,
-    "{},{},{},{},{},{:?},{:?},{},{}",
-    account,
-    payment.id,
-    payment.created_at,
-    payment.amount_usd,
-    payment.credits_earned,
-    payment.status,
-    payment.payment_type,
-    csv_quote(&payment.product_name),
-    payment.transaction_id,
-  )?;
+  writeln!(out, "{},{},{},{},{},{:?},{:?},{},{}", account, payment.id, payment.created_at, payment.amount_usd, payment.credits_earned, payment.status, payment.payment_type, csv_quote(&payment.product_name), payment.transaction_id,)?;
   Ok(())
 }
 

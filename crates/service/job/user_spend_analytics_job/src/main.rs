@@ -2,12 +2,12 @@
 #![forbid(private_bounds)]
 #![forbid(private_interfaces)]
 #![forbid(unused_must_use)]
-
 // Always allow
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 use std::time::Duration;
 
@@ -68,10 +68,7 @@ async fn main() -> AnyhowResult<()> {
 
   info!("Connected to MySQL.");
 
-  let server_environment = ServerEnvironment::from_str(
-    &easyenv::get_env_string_required("SERVER_ENVIRONMENT")?,
-  )
-    .ok_or(anyhow!("invalid server environment"))?;
+  let server_environment = ServerEnvironment::from_str(&easyenv::get_env_string_required("SERVER_ENVIRONMENT")?).ok_or(anyhow!("invalid server environment"))?;
 
   // ---- Job timing / throttling ----
   let sleep_between_cycles = easyenv::get_env_duration_seconds_or_default(
@@ -79,27 +76,18 @@ async fn main() -> AnyhowResult<()> {
     Duration::from_secs(60 * 60 * 24), // daily
   );
   let query_delay = Duration::from_millis(easyenv::get_env_num("QUERY_DELAY_MILLIS", 50)?);
-  let error_recovery = easyenv::get_env_duration_seconds_or_default(
-    "ERROR_RECOVERY_SECONDS",
-    Duration::from_secs(30),
-  );
+  let error_recovery = easyenv::get_env_duration_seconds_or_default("ERROR_RECOVERY_SECONDS", Duration::from_secs(30));
   let summary_user_page_size: i64 = easyenv::get_env_num("SUMMARY_USER_PAGE_SIZE", 500)?;
 
   // ---- Daily-spends backfill window ----
-  let maybe_backfill_start_date: Option<NaiveDate> = easyenv::get_env_string_optional("BACKFILL_START_DATE")
-    .and_then(|s| NaiveDate::parse_from_str(s.trim(), "%Y-%m-%d").ok());
-  let maybe_backfill_days: Option<i64> = easyenv::get_env_string_optional("BACKFILL_DAYS")
-    .and_then(|s| s.trim().parse().ok());
+  let maybe_backfill_start_date: Option<NaiveDate> = easyenv::get_env_string_optional("BACKFILL_START_DATE").and_then(|s| NaiveDate::parse_from_str(s.trim(), "%Y-%m-%d").ok());
+  let maybe_backfill_days: Option<i64> = easyenv::get_env_string_optional("BACKFILL_DAYS").and_then(|s| s.trim().parse().ok());
 
   // ---- Reengagement score tunables ----
   let reengagement = ReengagementConfig {
-    value_cap_dollars: easyenv::get_env_string_optional("REENGAGEMENT_VALUE_CAP_DOLLARS")
-      .and_then(|s| s.trim().parse().ok())
-      .unwrap_or(1000.0),
+    value_cap_dollars: easyenv::get_env_string_optional("REENGAGEMENT_VALUE_CAP_DOLLARS").and_then(|s| s.trim().parse().ok()).unwrap_or(1000.0),
     active_threshold_days: easyenv::get_env_num("REENGAGEMENT_ACTIVE_THRESHOLD_DAYS", 14)?,
-    decay_days: easyenv::get_env_string_optional("REENGAGEMENT_DECAY_DAYS")
-      .and_then(|s| s.trim().parse().ok())
-      .unwrap_or(350.0),
+    decay_days: easyenv::get_env_string_optional("REENGAGEMENT_DECAY_DAYS").and_then(|s| s.trim().parse().ok()).unwrap_or(350.0),
   };
 
   let (pager, pager_worker) = build_pager(server_environment, &container_environment.hostname);
@@ -116,11 +104,7 @@ async fn main() -> AnyhowResult<()> {
   let job_stats = JobStats::new();
   let pager_for_shutdown = pager.clone();
 
-  let create_server_args = CreateServerArgs {
-    container_environment: container_environment.clone(),
-    job_stats: job_stats.clone(),
-    pager: pager.clone(),
-  };
+  let create_server_args = CreateServerArgs { container_environment: container_environment.clone(), job_stats: job_stats.clone(), pager: pager.clone() };
 
   let job_dependencies = JobDependencies {
     mysql_pool,
@@ -142,8 +126,7 @@ async fn main() -> AnyhowResult<()> {
     let actix_runtime = actix_web::rt::System::new();
     let http_server_handle = launch_http_server(create_server_args);
 
-    actix_runtime.block_on(http_server_handle)
-      .expect("HTTP server should not exit.");
+    actix_runtime.block_on(http_server_handle).expect("HTTP server should not exit.");
 
     warn!("HTTP server thread is shut down.");
   });
@@ -157,14 +140,14 @@ async fn main() -> AnyhowResult<()> {
       Err(err) => {
         warn!("Failed to install SIGTERM handler: {:?}", err);
         return;
-      }
+      },
     };
     let mut sigint = match signal(SignalKind::interrupt()) {
       Ok(stream) => stream,
       Err(err) => {
         warn!("Failed to install SIGINT handler: {:?}", err);
         return;
-      }
+      },
     };
     tokio::select! {
       _ = sigterm.recv() => info!("Received SIGTERM. Shutting down..."),

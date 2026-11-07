@@ -19,18 +19,7 @@ const FORBIDDEN_DATABASE_NAMES: [&str; 2] = ["storyteller", "artcraft"];
 
 /// Host substrings that indicate a managed/cloud database. A test database
 /// must never live on one of these.
-const FORBIDDEN_HOST_SUBSTRINGS: [&str; 10] = [
-  "digitalocean",
-  "aws",
-  "amazonaws",
-  "rds",
-  "gcp",
-  "googleapis",
-  "cloudsql",
-  "azure",
-  "planetscale",
-  "supabase",
-];
+const FORBIDDEN_HOST_SUBSTRINGS: [&str; 10] = ["digitalocean", "aws", "amazonaws", "rds", "gcp", "googleapis", "cloudsql", "azure", "planetscale", "supabase"];
 
 /// Panic unless `url` is a MySQL URL that names a test database on a
 /// non-cloud host. Returns the parsed (host, database name) on success so
@@ -81,11 +70,7 @@ fn parse_mysql_url(url: &str) -> Option<(String, String)> {
   };
 
   // Strip the port. IPv6 hosts are bracketed: mysql://u@[::1]:3306/db
-  let host = if let Some(bracketed) = host_and_port.strip_prefix('[') {
-    bracketed.split_once(']').map(|(h, _)| h)?
-  } else {
-    host_and_port.split(':').next()?
-  };
+  let host = if let Some(bracketed) = host_and_port.strip_prefix('[') { bracketed.split_once(']').map(|(h, _)| h)? } else { host_and_port.split(':').next()? };
 
   if host.is_empty() || database.is_empty() {
     return None;
@@ -137,9 +122,7 @@ mod tests {
 
     #[test]
     fn cloud_hosts_even_with_test_names() {
-      assert!(guard_panics(
-        "mysql://doadmin:x@mysql-do-user-1-0.d.db.ondigitalocean.com:20000/artcraft_test"
-      ));
+      assert!(guard_panics("mysql://doadmin:x@mysql-do-user-1-0.d.db.ondigitalocean.com:20000/artcraft_test"));
       assert!(guard_panics("mysql://u:p@db.abc123.us-east-1.rds.amazonaws.com/artcraft_test"));
       assert!(guard_panics("mysql://u:p@some-gcp-host.googleapis.com/artcraft_test"));
       assert!(guard_panics("mysql://u:p@my-db.azure.example/artcraft_test"));
@@ -158,22 +141,13 @@ mod tests {
 
     #[test]
     fn parses_host_and_database() {
-      assert_eq!(
-        parse_mysql_url("mysql://u:p@localhost:3306/artcraft_test?ssl-mode=DISABLED"),
-        Some(("localhost".to_string(), "artcraft_test".to_string())),
-      );
+      assert_eq!(parse_mysql_url("mysql://u:p@localhost:3306/artcraft_test?ssl-mode=DISABLED"), Some(("localhost".to_string(), "artcraft_test".to_string())),);
     }
 
     #[test]
     fn parses_password_containing_at_sign() {
-      assert_eq!(
-        parse_mysql_url("mysql://u:p%40ss@h.example:3306/artcraft_test"),
-        Some(("h.example".to_string(), "artcraft_test".to_string())),
-      );
-      assert_eq!(
-        parse_mysql_url("mysql://u:p@ss@h.example:3306/artcraft_test"),
-        Some(("h.example".to_string(), "artcraft_test".to_string())),
-      );
+      assert_eq!(parse_mysql_url("mysql://u:p%40ss@h.example:3306/artcraft_test"), Some(("h.example".to_string(), "artcraft_test".to_string())),);
+      assert_eq!(parse_mysql_url("mysql://u:p@ss@h.example:3306/artcraft_test"), Some(("h.example".to_string(), "artcraft_test".to_string())),);
     }
   }
 }

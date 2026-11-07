@@ -75,10 +75,7 @@ pub fn decode_app_entry(fields: &HashMap<String, String>) -> Option<SharedAppEnt
     return None;
   }
   let fetched = decode_fetch(fields);
-  let failure = time_field(fields, FIELD_FAILED_MS).map(|failed_at| SharedFailure {
-    failed_at,
-    consecutive_failures: fields.get(FIELD_FAILURES).and_then(|f| f.parse().ok()).unwrap_or(1).max(1),
-  });
+  let failure = time_field(fields, FIELD_FAILED_MS).map(|failed_at| SharedFailure { failed_at, consecutive_failures: fields.get(FIELD_FAILURES).and_then(|f| f.parse().ok()).unwrap_or(1).max(1) });
   Some(SharedAppEntry { fetched, failure })
 }
 
@@ -95,21 +92,12 @@ pub fn encode_fetch(latest_release: Option<&CraftAppRelease>, etag: Option<&str>
 
 /// The fields written for a `304`: only the time moves.
 pub fn encode_unchanged(fetched_at: DateTime<Utc>, by: &str) -> Vec<(&'static str, String)> {
-  vec![
-    (FIELD_VERSION, FORMAT_VERSION.to_string()),
-    (FIELD_FETCHED_MS, fetched_at.timestamp_millis().to_string()),
-    (FIELD_BY, by.to_string()),
-  ]
+  vec![(FIELD_VERSION, FORMAT_VERSION.to_string()), (FIELD_FETCHED_MS, fetched_at.timestamp_millis().to_string()), (FIELD_BY, by.to_string())]
 }
 
 /// The fields written for a failed request.
 pub fn encode_failure(failure: SharedFailure, by: &str) -> Vec<(&'static str, String)> {
-  vec![
-    (FIELD_VERSION, FORMAT_VERSION.to_string()),
-    (FIELD_FAILED_MS, failure.failed_at.timestamp_millis().to_string()),
-    (FIELD_FAILURES, failure.consecutive_failures.to_string()),
-    (FIELD_BY, by.to_string()),
-  ]
+  vec![(FIELD_VERSION, FORMAT_VERSION.to_string()), (FIELD_FAILED_MS, failure.failed_at.timestamp_millis().to_string()), (FIELD_FAILURES, failure.consecutive_failures.to_string()), (FIELD_BY, by.to_string())]
 }
 
 /// Reads the backoff hash; anything absent or unreadable is no backoff.
@@ -117,19 +105,11 @@ pub fn decode_backoff(fields: &HashMap<String, String>) -> Backoff {
   if fields.get(FIELD_VERSION).map(String::as_str) != Some(FORMAT_VERSION) {
     return Backoff::default();
   }
-  Backoff {
-    until: time_field(fields, FIELD_UNTIL_MS),
-    trouble: fields.get(FIELD_TROUBLE).and_then(|t| t.parse().ok()).unwrap_or(0),
-  }
+  Backoff { until: time_field(fields, FIELD_UNTIL_MS), trouble: fields.get(FIELD_TROUBLE).and_then(|t| t.parse().ok()).unwrap_or(0) }
 }
 
 pub fn encode_backoff(backoff: Backoff, by: &str) -> Vec<(&'static str, String)> {
-  vec![
-    (FIELD_VERSION, FORMAT_VERSION.to_string()),
-    (FIELD_UNTIL_MS, backoff.until.map(|u| u.timestamp_millis()).unwrap_or(0).to_string()),
-    (FIELD_TROUBLE, backoff.trouble.to_string()),
-    (FIELD_BY, by.to_string()),
-  ]
+  vec![(FIELD_VERSION, FORMAT_VERSION.to_string()), (FIELD_UNTIL_MS, backoff.until.map(|u| u.timestamp_millis()).unwrap_or(0).to_string()), (FIELD_TROUBLE, backoff.trouble.to_string()), (FIELD_BY, by.to_string())]
 }
 
 /// The fetch part of an app's hash; `None` unless the time, the ETag and the release all read.
@@ -137,11 +117,7 @@ fn decode_fetch(fields: &HashMap<String, String>) -> Option<SharedFetch> {
   let fetched_at = time_field(fields, FIELD_FETCHED_MS)?;
   let latest_release: Option<CraftAppRelease> = serde_json::from_str(fields.get(FIELD_RELEASE)?).ok()?;
   let etag = fields.get(FIELD_ETAG)?;
-  Some(SharedFetch {
-    latest_release,
-    etag: (!etag.is_empty()).then(|| etag.clone()),
-    fetched_at,
-  })
+  Some(SharedFetch { latest_release, etag: (!etag.is_empty()).then(|| etag.clone()), fetched_at })
 }
 
 /// A Unix-milliseconds field; `None` when absent, unreadable or zero.

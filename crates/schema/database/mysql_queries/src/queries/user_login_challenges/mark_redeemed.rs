@@ -24,8 +24,8 @@ WHERE id = ? AND status = ? AND expires_at > NOW() AND maybe_redeemed_user_sessi
     args.challenge_id,
     UserLoginChallengeStatus::Approved.to_str()
   )
-    .execute(args.mysql_executor)
-    .await?
-    .rows_affected();
+  .execute(args.mysql_executor)
+  .await?
+  .rows_affected();
   Ok(affected == 1)
 }

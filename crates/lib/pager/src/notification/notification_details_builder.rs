@@ -257,9 +257,7 @@ impl NotificationDetailsBuilder {
       session_user_token: self.session_user_token,
       // Auto-fill from the request's task-local so any page fired while
       // serving a request is correlated even if the caller never set it.
-      trace_id: self.trace_id.or_else(|| {
-        trace_id::current_trace_id().map(|t| t.to_string())
-      }),
+      trace_id: self.trace_id.or_else(|| trace_id::current_trace_id().map(|t| t.to_string())),
     }
   }
 
@@ -272,11 +270,7 @@ impl NotificationDetailsBuilder {
   /// 2. Error alone: "SomeError: details"
   /// 3. HTTP info alone: "POST /v1/foo - Unknown Error"
   /// 4. Nothing: "Unknown Error"
-  fn generate_title(
-    maybe_error: &Option<Arc<dyn std::error::Error + Send + Sync + 'static>>,
-    http_method: &Option<String>,
-    http_path: &Option<String>,
-  ) -> String {
+  fn generate_title(maybe_error: &Option<Arc<dyn std::error::Error + Send + Sync + 'static>>, http_method: &Option<String>, http_path: &Option<String>) -> String {
     let http_prefix = match (http_method, http_path) {
       (Some(method), Some(path)) => Some(format!("{} {}", method, path)),
       (None, Some(path)) => Some(path.clone()),
@@ -285,11 +279,7 @@ impl NotificationDetailsBuilder {
 
     let error_summary = maybe_error.as_ref().map(|err| {
       let msg = format!("{}", err);
-      if msg.len() > 150 {
-        format!("{}...", &msg[..147])
-      } else {
-        msg
-      }
+      if msg.len() > 150 { format!("{}...", &msg[..147]) } else { msg }
     });
 
     match (http_prefix, error_summary) {

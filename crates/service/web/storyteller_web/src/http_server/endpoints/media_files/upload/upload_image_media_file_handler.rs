@@ -89,14 +89,7 @@ pub struct UploadImageMediaFileSuccessResponse {
   pub media_file_token: MediaFileToken,
 }
 
-static ALLOWED_MIME_TYPES : Lazy<HashSet<&'static str>> = Lazy::new(|| {
-  HashSet::from([
-    "image/jpeg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-  ])
-});
+static ALLOWED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| HashSet::from(["image/jpeg", "image/png", "image/gif", "image/webp"]));
 
 /// This endpoint is for uploading image files.
 #[utoipa::path(
@@ -122,16 +115,12 @@ pub async fn upload_image_media_file_handler(
   server_state: web::Data<Arc<ServerState>>,
   MultipartForm(mut form): MultipartForm<UploadImageMediaFileForm>,
 ) -> Result<Json<UploadImageMediaFileSuccessResponse>, MediaFileUploadError> {
-
   validate_form(&form)?;
 
-  let mut mysql_connection = server_state.mysql_pool
-      .acquire()
-      .await
-      .map_err(|err| {
-        error!("MySql pool error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  let mut mysql_connection = server_state.mysql_pool.acquire().await.map_err(|err| {
+    error!("MySql pool error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   // ==================== READ SESSION ==================== //
 
@@ -141,9 +130,7 @@ pub async fn upload_image_media_file_handler(
 
   let maybe_user_token = session_auth.maybe_user_token();
 
-  let maybe_avt_token = server_state
-      .avt_cookie_manager
-      .get_avt_token_from_request(&http_request);
+  let maybe_avt_token = server_state.avt_cookie_manager.get_avt_token_from_request(&http_request);
 
   // ==================== RATE LIMIT ==================== //
 
@@ -168,21 +155,16 @@ pub async fn upload_image_media_file_handler(
     return Err(MediaFileUploadError::BadInput(reason));
   }
 
-  insert_idempotency_token(uuid_idempotency_token, &mut *mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Error inserting idempotency token: {:?}", err);
-        MediaFileUploadError::BadInput("invalid idempotency token".to_string())
-      })?;
+  insert_idempotency_token(uuid_idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    MediaFileUploadError::BadInput("invalid idempotency token".to_string())
+  })?;
 
   // ==================== UPLOAD METADATA ==================== //
 
   let maybe_title = form.maybe_title.map(|title| title.to_string());
 
-  let creator_set_visibility = form.maybe_visibility
-      .map(|visibility| visibility.0)
-      .or_else(|| session_auth.maybe_preferred_visibility())
-      .unwrap_or(Visibility::default());
+  let creator_set_visibility = form.maybe_visibility.map(|visibility| visibility.0).or_else(|| session_auth.maybe_preferred_visibility()).unwrap_or(Visibility::default());
 
   // ==================== USER DATA ==================== //
 
@@ -191,102 +173,73 @@ pub async fn upload_image_media_file_handler(
   // ==================== FILE VALIDATION ==================== //
 
   let mut file_bytes = Vec::new();
-  form.file.file.read_to_end(&mut file_bytes)
-      .map_err(|e| {
-        error!("Problem reading file: {:?}", e);
-        MediaFileUploadError::ServerError
-      })?;
+  form.file.file.read_to_end(&mut file_bytes).map_err(|e| {
+    error!("Problem reading file: {:?}", e);
+    MediaFileUploadError::ServerError
+  })?;
 
-  let mimetype = get_mimetype_for_bytes(file_bytes.as_ref())
-      .map(|mimetype| mimetype.to_string())
-      .ok_or_else(|| {
-        warn!("Could not determine mimetype for file");
-        MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
-      })?;
+  let mimetype = get_mimetype_for_bytes(file_bytes.as_ref()).map(|mimetype| mimetype.to_string()).ok_or_else(|| {
+    warn!("Could not determine mimetype for file");
+    MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
+  })?;
 
   if !ALLOWED_MIME_TYPES.contains(mimetype.as_str()) {
     // NB: Don't let our error message inject malicious strings
-    let filtered_mimetype = mimetype
-        .chars()
-        .filter(|c| c.is_ascii())
-        .filter(|c| c.is_alphanumeric() || *c == '/')
-        .collect::<String>();
+    let filtered_mimetype = mimetype.chars().filter(|c| c.is_ascii()).filter(|c| c.is_alphanumeric() || *c == '/').collect::<String>();
     return Err(MediaFileUploadError::BadInput(format!("unpermitted mime type: {}", &filtered_mimetype)));
   }
 
   // ==================== OTHER FILE METADATA ==================== //
 
-  let maybe_filename = form.file.file_name.as_deref()
-      .as_deref()
-      .map(|filename| PathBuf::from(filename));
+  let maybe_filename = form.file.file_name.as_deref().as_deref().map(|filename| PathBuf::from(filename));
 
   let extension = mimetype_to_extension(&mimetype)
-      .or_else(|| {
-        maybe_filename
+    .or_else(|| {
+      maybe_filename
             .as_ref()
             .and_then(|filename| filename.extension()) // TODO needs dot prefix
             .and_then(|ext| ext.to_str())
-      })
-      .ok_or_else(|| {
-        warn!("Could not determine file extension for mimetype: {}", &mimetype);
-        MediaFileUploadError::ServerError
-      })?;
+    })
+    .ok_or_else(|| {
+      warn!("Could not determine file extension for mimetype: {}", &mimetype);
+      MediaFileUploadError::ServerError
+    })?;
 
   let extension = format!(".{extension}"); // NB: needs dot prefix
 
   let file_size_bytes = file_bytes.len();
 
-  let hash = sha256_hash_bytes(&file_bytes)
-      .map_err(|io_error| {
-        error!("Problem hashing bytes: {:?}", io_error);
-        MediaFileUploadError::ServerError
-      })?;
+  let hash = sha256_hash_bytes(&file_bytes).map_err(|io_error| {
+    error!("Problem hashing bytes: {:?}", io_error);
+    MediaFileUploadError::ServerError
+  })?;
 
   // ==================== UPLOAD AND SAVE ==================== //
 
-  const PREFIX : Option<&str> = Some("image_");
+  const PREFIX: Option<&str> = Some("image_");
 
   let public_upload_path = MediaFileBucketPath::generate_new(PREFIX, Some(&extension));
 
   info!("Uploading media to bucket path: {}", public_upload_path.get_full_object_path_str());
 
-  server_state.public_bucket_client.upload_file_with_content_type(
-    public_upload_path.get_full_object_path_str(),
-    file_bytes.as_ref(),
-    &mimetype)
-      .await
-      .map_err(|e| {
-        warn!("Upload media bytes to bucket error: {:?}", e);
-        MediaFileUploadError::ServerError
-      })?;
+  server_state.public_bucket_client.upload_file_with_content_type(public_upload_path.get_full_object_path_str(), file_bytes.as_ref(), &mimetype).await.map_err(|e| {
+    warn!("Upload media bytes to bucket error: {:?}", e);
+    MediaFileUploadError::ServerError
+  })?;
 
-  let is_intermediate_system_file = form.is_intermediate_system_file
-      .map(|b| b.0)
-      .unwrap_or(false);
+  let is_intermediate_system_file = form.is_intermediate_system_file.map(|b| b.0).unwrap_or(false);
 
-  let maybe_prompt_token = form.maybe_prompt_token
-      .as_ref()
-      .map(|token| token.0.clone());
-  
-  let maybe_batch_token = form.maybe_batch_token
-      .as_ref()
-      .map(|token| token.0.clone());
+  let maybe_prompt_token = form.maybe_prompt_token.as_ref().map(|token| token.0.clone());
 
-  let maybe_generation_provider = form.maybe_generation_provider
-      .as_ref()
-      .and_then(|text| try_parse_generation_provider(text.as_ref()));
+  let maybe_batch_token = form.maybe_batch_token.as_ref().map(|token| token.0.clone());
 
-  let upload_type = if maybe_generation_provider.is_some() {
-    UploadType::ThirdPartyInference
-  } else {
-    UploadType::Filesystem
-  };
+  let maybe_generation_provider = form.maybe_generation_provider.as_ref().and_then(|text| try_parse_generation_provider(text.as_ref()));
+
+  let upload_type = if maybe_generation_provider.is_some() { UploadType::ThirdPartyInference } else { UploadType::Filesystem };
 
   let maybe_upload_filename = form.file.file_name.as_deref();
 
-  let media_file_type = MediaFileType::try_from_mime_type(&mimetype)
-      .or_else(|| maybe_upload_filename.and_then(MediaFileType::try_from_filename_or_extension))
-      .unwrap_or(MediaFileType::Image); // Coarse fallback for unrecognized files
+  let media_file_type = MediaFileType::try_from_mime_type(&mimetype).or_else(|| maybe_upload_filename.and_then(MediaFileType::try_from_filename_or_extension)).unwrap_or(MediaFileType::Image); // Coarse fallback for unrecognized files
 
   let (token, record_id) = insert_media_file_from_file_upload(InsertMediaFileFromUploadArgs {
     maybe_media_class: Some(MediaFileClass::Image),
@@ -316,18 +269,15 @@ pub async fn upload_image_media_file_handler(
     maybe_public_bucket_extension: Some(&extension),
     pool: &server_state.mysql_pool,
   })
-      .await
-      .map_err(|err| {
-        warn!("New file creation DB error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  .await
+  .map_err(|err| {
+    warn!("New file creation DB error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   info!("new media file id: {} token: {:?}", record_id, &token);
 
-  Ok(Json(UploadImageMediaFileSuccessResponse {
-    success: true,
-    media_file_token: token,
-  }))
+  Ok(Json(UploadImageMediaFileSuccessResponse { success: true, media_file_token: token }))
 }
 
 fn validate_form(form: &UploadImageMediaFileForm) -> Result<(), MediaFileUploadError> {
@@ -335,15 +285,10 @@ fn validate_form(form: &UploadImageMediaFileForm) -> Result<(), MediaFileUploadE
     return Err(MediaFileUploadError::BadInput("Idempotency token is required".to_string()));
   }
 
-  let is_intermediate_system_file = form.is_intermediate_system_file
-      .as_ref()
-      .map(|b| b.0)
-      .unwrap_or(false);
+  let is_intermediate_system_file = form.is_intermediate_system_file.as_ref().map(|b| b.0).unwrap_or(false);
 
   if is_intermediate_system_file && form.maybe_prompt_token.is_some() {
-    return Err(MediaFileUploadError::BadInput(
-      "Cannot set `is_intermediate_system_file` to true if `maybe_prompt_token` is provided."
-          .to_string()));
+    return Err(MediaFileUploadError::BadInput("Cannot set `is_intermediate_system_file` to true if `maybe_prompt_token` is provided.".to_string()));
   }
 
   Ok(())

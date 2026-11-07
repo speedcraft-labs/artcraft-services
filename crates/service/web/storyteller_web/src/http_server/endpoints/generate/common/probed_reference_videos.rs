@@ -55,7 +55,6 @@ use crate::http_server::endpoints::media_files::helpers::get_media_domain::get_m
 use crate::util::http_download_url_to_tempfile::http_download_url_to_tempfile;
 use crate::util::lookup::lookup_media_files_as_cdn_url_list_and_map::apply_media_cdn_override;
 
-
 /// Downloaded + ffprobed reference videos.
 ///
 /// Keep this alive until the provider upload completes — dropping it deletes
@@ -115,20 +114,14 @@ pub async fn fetch_reference_video_sources(
     }
   }
 
-  let media_files = batch_get_media_files_by_tokens_with_connection(
-    mysql_connection,
-    &unique_tokens,
-    CAN_SEE_DELETED,
-  ).await.map_err(|err| {
+  let media_files = batch_get_media_files_by_tokens_with_connection(mysql_connection, &unique_tokens, CAN_SEE_DELETED).await.map_err(|err| {
     error!("Error getting reference video media files by tokens: {:?}", err);
     CommonWebError::from_anyhow_error(err)
   })?;
 
   if media_files.len() != unique_tokens.len() {
-    warn!("Only {} of {} unique reference video media files could be found",
-      media_files.len(), unique_tokens.len());
-    return Err(CommonWebError::BadInputWithSimpleMessage(
-      "not all reference video media files could be found".to_string()));
+    warn!("Only {} of {} unique reference video media files could be found", media_files.len(), unique_tokens.len());
+    return Err(CommonWebError::BadInputWithSimpleMessage("not all reference video media files could be found".to_string()));
   }
 
   let media_domain = get_media_domain(http_request);
@@ -136,35 +129,17 @@ pub async fn fetch_reference_video_sources(
   let cdn_urls_by_token: HashMap<MediaFileToken, String> = media_files
     .into_iter()
     .map(|file| {
-      let bucket_path = MediaFileBucketPath::from_object_hash(
-        &file.public_bucket_directory_hash,
-        file.maybe_public_bucket_prefix.as_deref(),
-        file.maybe_public_bucket_extension.as_deref());
+      let bucket_path = MediaFileBucketPath::from_object_hash(&file.public_bucket_directory_hash, file.maybe_public_bucket_prefix.as_deref(), file.maybe_public_bucket_extension.as_deref());
 
-      let media_links = MediaLinksBuilder::from_media_path_and_env(
-        media_domain,
-        server_environment,
-        &bucket_path,
-        VideoThumbnailInfo::new(file.maybe_thumbnail_version, file.created_at));
+      let media_links = MediaLinksBuilder::from_media_path_and_env(media_domain, server_environment, &bucket_path, VideoThumbnailInfo::new(file.maybe_thumbnail_version, file.created_at));
 
-      let cdn_url = apply_media_cdn_override(
-        &media_links.cdn_url,
-        maybe_media_cdn_override_url,
-      );
+      let cdn_url = apply_media_cdn_override(&media_links.cdn_url, maybe_media_cdn_override_url);
 
       (file.token, cdn_url)
     })
     .collect();
 
-  Ok(video_tokens
-    .iter()
-    .filter_map(|token| {
-      cdn_urls_by_token.get(token).map(|cdn_url| ReferenceVideoSource {
-        media_token: token.clone(),
-        cdn_url: cdn_url.clone(),
-      })
-    })
-    .collect())
+  Ok(video_tokens.iter().filter_map(|token| cdn_urls_by_token.get(token).map(|cdn_url| ReferenceVideoSource { media_token: token.clone(), cdn_url: cdn_url.clone() })).collect())
 }
 
 /// Phase 2 (no DB): download each unique file once, ffprobe it, and sum the
@@ -175,9 +150,7 @@ pub async fn fetch_reference_video_sources(
 /// at the worst-case [`MAX_BILLED_INPUT_SECONDS`] rather than failing the
 /// generation, and its temp file isn't kept (the provider upload re-downloads
 /// files that aren't in the predownloaded map).
-pub async fn download_and_probe_reference_videos(
-  sources: &[ReferenceVideoSource],
-) -> ProbedReferenceVideos {
+pub async fn download_and_probe_reference_videos(sources: &[ReferenceVideoSource]) -> ProbedReferenceVideos {
   let mut temp_files: Vec<NamedTempFile> = Vec::new();
   let mut local_paths_by_url: HashMap<String, PathBuf> = HashMap::new();
   let mut seconds_by_url: HashMap<String, u64> = HashMap::new();
@@ -194,14 +167,11 @@ pub async fn download_and_probe_reference_videos(
         local_paths_by_url.insert(source.cdn_url.clone(), temp_file.path().to_path_buf());
         temp_files.push(temp_file);
         (duration_millis.div_ceil(1_000), Some(duration_millis))
-      }
+      },
       Err(err) => {
-        warn!(
-          "Failed to download/probe reference video {}; using the {}s billing fallback: {:?}",
-          source.media_token, MAX_BILLED_INPUT_SECONDS, err,
-        );
+        warn!("Failed to download/probe reference video {}; using the {}s billing fallback: {:?}", source.media_token, MAX_BILLED_INPUT_SECONDS, err,);
         (u64::from(MAX_BILLED_INPUT_SECONDS), None)
-      }
+      },
     };
 
     seconds_by_url.insert(source.cdn_url.clone(), billed_seconds);
@@ -210,30 +180,17 @@ pub async fn download_and_probe_reference_videos(
 
   let total_input_seconds = total_billed_seconds(sources, &seconds_by_url);
 
-  ProbedReferenceVideos {
-    total_input_seconds,
-    durations_millis: sources.iter().map(|source| durations_by_url[&source.cdn_url]).collect(),
-    local_paths_by_url,
-    _temp_files: temp_files,
-  }
+  ProbedReferenceVideos { total_input_seconds, durations_millis: sources.iter().map(|source| durations_by_url[&source.cdn_url]).collect(), local_paths_by_url, _temp_files: temp_files }
 }
 
 /// Sum per-reference (so duplicates bill per reference), saturating at
 /// `u16::MAX`.
-fn total_billed_seconds(
-  sources: &[ReferenceVideoSource],
-  seconds_by_url: &HashMap<String, u64>,
-) -> u16 {
-  let total: u64 = sources
-    .iter()
-    .filter_map(|source| seconds_by_url.get(&source.cdn_url))
-    .sum();
+fn total_billed_seconds(sources: &[ReferenceVideoSource], seconds_by_url: &HashMap<String, u64>) -> u16 {
+  let total: u64 = sources.iter().filter_map(|source| seconds_by_url.get(&source.cdn_url)).sum();
   u16::try_from(total).unwrap_or(u16::MAX)
 }
 
-async fn download_and_probe_one(
-  source: &ReferenceVideoSource,
-) -> Result<(NamedTempFile, u64), CommonWebError> {
+async fn download_and_probe_one(source: &ReferenceVideoSource) -> Result<(NamedTempFile, u64), CommonWebError> {
   let temp_file = download_reference_video(source).await?;
   let duration_millis = probe_video_duration_millis(source, &temp_file)?;
   Ok((temp_file, duration_millis))
@@ -245,31 +202,24 @@ async fn download_reference_video(source: &ReferenceVideoSource) -> Result<Named
     CommonWebError::server_error_with_message("failed to probe reference video duration")
   })?;
 
-  http_download_url_to_tempfile(&source.cdn_url, &mut temp_file)
-    .await
-    .map_err(|err| {
-      error!("Failed to download reference video {} for probing: {:?}", source.media_token, err);
-      CommonWebError::server_error_with_message("failed to probe reference video duration")
-    })?;
+  http_download_url_to_tempfile(&source.cdn_url, &mut temp_file).await.map_err(|err| {
+    error!("Failed to download reference video {} for probing: {:?}", source.media_token, err);
+    CommonWebError::server_error_with_message("failed to probe reference video duration")
+  })?;
 
   Ok(temp_file)
 }
 
-fn probe_video_duration_millis(
-  source: &ReferenceVideoSource,
-  temp_file: &NamedTempFile,
-) -> Result<u64, CommonWebError> {
+fn probe_video_duration_millis(source: &ReferenceVideoSource, temp_file: &NamedTempFile) -> Result<u64, CommonWebError> {
   let video_info = ffprobe_get_info(&temp_file.path()).map_err(|err| {
     error!("ffprobe failed for reference video {}: {:?}", source.media_token, err);
     CommonWebError::server_error_with_message("failed to probe reference video duration")
   })?;
 
-  video_info.duration
-    .map(|duration| duration.millis as u64)
-    .ok_or_else(|| {
-      error!("ffprobe returned no duration for reference video {}", source.media_token);
-      CommonWebError::server_error_with_message("failed to probe reference video duration")
-    })
+  video_info.duration.map(|duration| duration.millis as u64).ok_or_else(|| {
+    error!("ffprobe returned no duration for reference video {}", source.media_token);
+    CommonWebError::server_error_with_message("failed to probe reference video duration")
+  })
 }
 
 #[cfg(test)]
@@ -305,16 +255,10 @@ mod tests {
   }
 
   fn source(token: &str, url: &str) -> ReferenceVideoSource {
-    ReferenceVideoSource {
-      media_token: MediaFileToken::new(token.to_string()),
-      cdn_url: url.to_string(),
-    }
+    ReferenceVideoSource { media_token: MediaFileToken::new(token.to_string()), cdn_url: url.to_string() }
   }
 
   fn seconds_map(entries: &[(&str, u64)]) -> HashMap<String, u64> {
-    entries
-      .iter()
-      .map(|(url, millis)| (url.to_string(), millis.div_ceil(1_000)))
-      .collect()
+    entries.iter().map(|(url, millis)| (url.to_string(), millis.div_ceil(1_000))).collect()
   }
 }

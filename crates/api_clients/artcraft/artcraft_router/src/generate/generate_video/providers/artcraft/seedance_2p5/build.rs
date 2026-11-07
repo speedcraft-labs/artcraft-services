@@ -4,9 +4,7 @@ use crate::client::request_mismatch_mitigation_strategy::RequestMismatchMitigati
 use crate::errors::artcraft_router_error::ArtcraftRouterError;
 use crate::errors::client_error::ClientError;
 use crate::generate::generate_video::generate_video_request_builder::GenerateVideoRequestBuilder;
-use crate::generate::generate_video::providers::artcraft::build_common::{
-  build_artcraft_omni_video_request, SupportedResolutions, UltraWideSupport,
-};
+use crate::generate::generate_video::providers::artcraft::build_common::{build_artcraft_omni_video_request, SupportedResolutions, UltraWideSupport};
 use crate::generate::generate_video::providers::artcraft::seedance_2p5::request::ArtcraftSeedance2p5RequestState;
 use crate::generate::generate_video::video_generation_draft_or_request::VideoGenerationDraftOrRequest;
 use crate::generate::generate_video::video_generation_request::VideoGenerationRequest;
@@ -19,27 +17,16 @@ pub fn build_artcraft_seedance_2p5(mut builder: GenerateVideoRequestBuilder) -> 
   // character support. Erroring here keeps the billing estimate consistent
   // with the execution build.
   let has_keyframes = builder.start_frame.is_some() || builder.end_frame.is_some();
-  let has_references = builder.reference_images.is_some()
-    || builder.reference_videos.is_some()
-    || builder.reference_audio.is_some();
+  let has_references = builder.reference_images.is_some() || builder.reference_videos.is_some() || builder.reference_audio.is_some();
 
   if has_keyframes && has_references {
-    return Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption {
-      field: "reference_images",
-      value: "Seedance 2.5 cannot combine keyframes with reference media; send one or the other".to_string(),
-    }));
+    return Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption { field: "reference_images", value: "Seedance 2.5 cannot combine keyframes with reference media; send one or the other".to_string() }));
   }
   if builder.end_frame.is_some() && builder.start_frame.is_none() {
-    return Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption {
-      field: "end_frame",
-      value: "Seedance 2.5 requires a start frame when an end frame is set".to_string(),
-    }));
+    return Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption { field: "end_frame", value: "Seedance 2.5 requires a start frame when an end frame is set".to_string() }));
   }
   if builder.reference_character_tokens.is_some() {
-    return Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption {
-      field: "reference_character_tokens",
-      value: "Seedance 2.5 does not support character references".to_string(),
-    }));
+    return Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption { field: "reference_character_tokens", value: "Seedance 2.5 does not support character references".to_string() }));
   }
 
   // 2.5 allows 4-30 second durations (longer than the shared 4-15 range in
@@ -49,12 +36,7 @@ pub fn build_artcraft_seedance_2p5(mut builder: GenerateVideoRequestBuilder) -> 
   let total_input_seconds = builder.total_reference_video_input_seconds.take();
   let generate_audio = builder.generate_audio.take();
 
-  let mut request = build_artcraft_omni_video_request(
-    builder,
-    CommonVideoModelEnum::Seedance2p5,
-    SupportedResolutions::Full,
-    UltraWideSupport::Supported,
-  )?;
+  let mut request = build_artcraft_omni_video_request(builder, CommonVideoModelEnum::Seedance2p5, SupportedResolutions::Full, UltraWideSupport::Supported)?;
   request.duration_seconds = duration_seconds;
   request.generate_audio = generate_audio;
 
@@ -63,22 +45,14 @@ pub fn build_artcraft_seedance_2p5(mut builder: GenerateVideoRequestBuilder) -> 
 }
 
 // Seedance 2.5 supports durations of 4-30 seconds.
-fn plan_duration(
-  duration_seconds: Option<u16>,
-  strategy: RequestMismatchMitigationStrategy,
-) -> Result<Option<u16>, ArtcraftRouterError> {
+fn plan_duration(duration_seconds: Option<u16>, strategy: RequestMismatchMitigationStrategy) -> Result<Option<u16>, ArtcraftRouterError> {
   const MIN: u16 = 4;
   const MAX: u16 = 30;
   match duration_seconds {
     None => Ok(None),
     Some(d) if d >= MIN && d <= MAX => Ok(Some(d)),
     Some(d) => match strategy {
-      RequestMismatchMitigationStrategy::ErrorOut => {
-        Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption {
-          field: "duration_seconds",
-          value: format!("{}", d),
-        }))
-      }
+      RequestMismatchMitigationStrategy::ErrorOut => Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption { field: "duration_seconds", value: format!("{}", d) })),
       _ => Ok(Some(d.clamp(MIN, MAX))),
     },
   }
@@ -114,30 +88,40 @@ mod tests {
 
     #[test]
     fn duration_30_is_passed_through() {
-      let req = unwrap_request(builder_with(|b| { b.duration_seconds = Some(30); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.duration_seconds = Some(30);
+      }));
       assert_eq!(req.request.duration_seconds, Some(30));
     }
 
     #[test]
     fn duration_clamped_to_range() {
-      let req = unwrap_request(builder_with(|b| { b.duration_seconds = Some(99); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.duration_seconds = Some(99);
+      }));
       assert_eq!(req.request.duration_seconds, Some(30));
 
-      let req = unwrap_request(builder_with(|b| { b.duration_seconds = Some(2); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.duration_seconds = Some(2);
+      }));
       assert_eq!(req.request.duration_seconds, Some(4));
     }
 
     #[test]
     fn batch_counts_one_through_four_are_preserved() {
       for batch_count in 1..=4 {
-        let req = unwrap_request(builder_with(|b| { b.video_batch_count = Some(batch_count); }));
+        let req = unwrap_request(builder_with(|b| {
+          b.video_batch_count = Some(batch_count);
+        }));
         assert_eq!(req.request.video_batch_count, Some(batch_count));
       }
     }
 
     #[test]
     fn total_input_seconds_is_carried_through() {
-      let req = unwrap_request(builder_with(|b| { b.total_reference_video_input_seconds = Some(14); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.total_reference_video_input_seconds = Some(14);
+      }));
       assert_eq!(req.total_input_seconds, Some(14));
     }
   }
@@ -167,9 +151,7 @@ mod tests {
     fn keyframes_plus_references_error() {
       let result = build_artcraft_seedance_2p5(builder_with(|b| {
         b.start_frame = Some(ImageRef::MediaFileToken(MediaFileToken::new("mf_start".to_string())));
-        b.reference_images = Some(ImageListRef::MediaFileTokens(vec![
-          MediaFileToken::new("mf_ref".to_string()),
-        ]));
+        b.reference_images = Some(ImageListRef::MediaFileTokens(vec![MediaFileToken::new("mf_ref".to_string())]));
       }));
       assert!(result.is_err());
     }
@@ -177,9 +159,7 @@ mod tests {
     #[test]
     fn character_references_error() {
       let result = build_artcraft_seedance_2p5(builder_with(|b| {
-        b.reference_character_tokens = Some(CharacterListRef::CharacterTokens(vec![
-          CharacterToken::new("char_abc".to_string()),
-        ]));
+        b.reference_character_tokens = Some(CharacterListRef::CharacterTokens(vec![CharacterToken::new("char_abc".to_string())]));
       }));
       assert!(result.is_err());
     }
@@ -190,31 +170,31 @@ mod tests {
 
     #[test]
     fn res_480p() {
-      let req = unwrap_request(builder_with(|b| { b.resolution = Some(RouterResolution::FourEightyP); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.resolution = Some(RouterResolution::FourEightyP);
+      }));
       assert_eq!(req.request.resolution, Some(CommonResolutionEnum::FourEightyP));
     }
 
     #[test]
     fn res_1080p_maps_directly() {
-      let req = unwrap_request(builder_with(|b| { b.resolution = Some(RouterResolution::TenEightyP); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.resolution = Some(RouterResolution::TenEightyP);
+      }));
       assert_eq!(req.request.resolution, Some(CommonResolutionEnum::TenEightyP));
     }
 
     #[test]
     fn res_4k_downgrades_to_1080p() {
-      let req = unwrap_request(builder_with(|b| { b.resolution = Some(RouterResolution::FourK); }));
+      let req = unwrap_request(builder_with(|b| {
+        b.resolution = Some(RouterResolution::FourK);
+      }));
       assert_eq!(req.request.resolution, Some(CommonResolutionEnum::TenEightyP));
     }
   }
 
   fn builder_with(f: impl FnOnce(&mut GenerateVideoRequestBuilder)) -> GenerateVideoRequestBuilder {
-    let mut builder = GenerateVideoRequestBuilder {
-      model: RouterVideoModel::Seedance2p5,
-      provider: RouterProvider::Artcraft,
-      duration_seconds: Some(5),
-      video_batch_count: Some(1),
-      ..Default::default()
-    };
+    let mut builder = GenerateVideoRequestBuilder { model: RouterVideoModel::Seedance2p5, provider: RouterProvider::Artcraft, duration_seconds: Some(5), video_batch_count: Some(1), ..Default::default() };
     f(&mut builder);
     builder
   }

@@ -4,9 +4,7 @@ use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::error::fal_error_plus::FalErrorPlus;
-use crate::requests::api::video::text::flux_3::raw_request::{
-  Flux3TextToVideoInput, Flux3TextToVideoOutput,
-};
+use crate::requests::api::video::text::flux_3::raw_request::{Flux3TextToVideoInput, Flux3TextToVideoOutput};
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
 #[derive(Clone, Debug)]
@@ -95,15 +93,11 @@ impl<'de> Deserialize<'de> for Flux3Duration {
       }
 
       fn visit_u64<E: de::Error>(self, value: u64) -> Result<Flux3Duration, E> {
-        u8::try_from(value)
-          .map(Flux3Duration::Seconds)
-          .map_err(|_| E::invalid_value(de::Unexpected::Unsigned(value), &self))
+        u8::try_from(value).map(Flux3Duration::Seconds).map_err(|_| E::invalid_value(de::Unexpected::Unsigned(value), &self))
       }
 
       fn visit_i64<E: de::Error>(self, value: i64) -> Result<Flux3Duration, E> {
-        u8::try_from(value)
-          .map(Flux3Duration::Seconds)
-          .map_err(|_| E::invalid_value(de::Unexpected::Signed(value), &self))
+        u8::try_from(value).map(Flux3Duration::Seconds).map_err(|_| E::invalid_value(de::Unexpected::Signed(value), &self))
       }
     }
 
@@ -214,14 +208,8 @@ mod tests {
 
   #[test]
   fn raw_request_maps_all_fields() {
-    let request = Flux3TextToVideoRequest {
-      prompt: "p".to_string(),
-      duration: Some(Flux3Duration::Seconds(12)),
-      resolution: Some(Flux3Resolution::TenEightyP),
-      aspect_ratio: Some(Flux3AspectRatio::TwoByOne),
-      generate_audio: Some(false),
-      safety_tolerance: Some(4),
-    };
+    let request =
+      Flux3TextToVideoRequest { prompt: "p".to_string(), duration: Some(Flux3Duration::Seconds(12)), resolution: Some(Flux3Resolution::TenEightyP), aspect_ratio: Some(Flux3AspectRatio::TwoByOne), generate_audio: Some(false), safety_tolerance: Some(4) };
     let raw = request.to_raw_request().unwrap();
     assert_eq!(raw.prompt, "p");
     assert_eq!(raw.duration, Some(Flux3Duration::Seconds(12)));
@@ -233,14 +221,7 @@ mod tests {
 
   #[test]
   fn raw_request_omits_unset_optionals() {
-    let request = Flux3TextToVideoRequest {
-      prompt: "minimal".to_string(),
-      duration: None,
-      resolution: None,
-      aspect_ratio: None,
-      generate_audio: None,
-      safety_tolerance: None,
-    };
+    let request = Flux3TextToVideoRequest { prompt: "minimal".to_string(), duration: None, resolution: None, aspect_ratio: None, generate_audio: None, safety_tolerance: None };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
     assert_eq!(json, serde_json::json!({ "prompt": "minimal" }));
   }
@@ -260,10 +241,7 @@ mod tests {
 
   #[test]
   fn every_resolution_maps_to_wire_string() {
-    for (variant, expected, is_1080p) in [
-      (Flux3Resolution::SevenTwentyP, "720p", false),
-      (Flux3Resolution::TenEightyP, "1080p", true),
-    ] {
+    for (variant, expected, is_1080p) in [(Flux3Resolution::SevenTwentyP, "720p", false), (Flux3Resolution::TenEightyP, "1080p", true)] {
       assert_eq!(variant.to_str(), expected);
       assert_eq!(variant.is_1080p(), is_1080p);
     }

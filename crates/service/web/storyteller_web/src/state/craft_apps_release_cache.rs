@@ -73,15 +73,7 @@ impl CraftAppsReleaseCache {
   pub fn register_apps(&self, apps: &[(String, String, String)]) {
     let mut map = self.inner.write().unwrap_or_else(PoisonError::into_inner);
     for (key, name, repo) in apps {
-      map.entry(key.clone()).or_insert_with(|| CachedCraftApp {
-        name: name.clone(),
-        repo: repo.clone(),
-        latest_release: None,
-        app_last_fetched: None,
-        etag: None,
-        last_failed_at: None,
-        consecutive_failures: 0,
-      });
+      map.entry(key.clone()).or_insert_with(|| CachedCraftApp { name: name.clone(), repo: repo.clone(), latest_release: None, app_last_fetched: None, etag: None, last_failed_at: None, consecutive_failures: 0 });
     }
   }
 
@@ -162,17 +154,8 @@ impl CraftAppsReleaseCache {
   /// Everything, as the endpoint serves it: `apps` keyed by app key.
   pub fn snapshot(&self) -> CraftAppsReleaseInfo {
     let map = self.inner.read().unwrap_or_else(PoisonError::into_inner);
-    let apps: BTreeMap<String, CraftAppReleaseInfo> = map
-        .iter()
-        .map(|(key, app)| {
-          (key.clone(), CraftAppReleaseInfo {
-            name: app.name.clone(),
-            repo: app.repo.clone(),
-            latest_release: app.latest_release.clone(),
-            app_last_fetched: app.app_last_fetched,
-          })
-        })
-        .collect();
+    let apps: BTreeMap<String, CraftAppReleaseInfo> =
+      map.iter().map(|(key, app)| (key.clone(), CraftAppReleaseInfo { name: app.name.clone(), repo: app.repo.clone(), latest_release: app.latest_release.clone(), app_last_fetched: app.app_last_fetched })).collect();
     let last_fetched = least_recently_fetched(&apps);
     CraftAppsReleaseInfo { apps, last_fetched }
   }
@@ -211,10 +194,7 @@ mod tests {
   #[test]
   fn last_fetched_is_the_oldest_app_and_absent_until_all_are_fetched() {
     let cache = CraftAppsReleaseCache::new();
-    cache.register_apps(&[
-      ("photocraft".into(), "PhotoCraft".into(), "storytold/photocraft".into()),
-      ("filmcraft".into(), "FilmCraft".into(), "storytold/filmcraft".into()),
-    ]);
+    cache.register_apps(&[("photocraft".into(), "PhotoCraft".into(), "storytold/photocraft".into()), ("filmcraft".into(), "FilmCraft".into(), "storytold/filmcraft".into())]);
     assert_eq!(cache.snapshot().apps.len(), 2);
     assert_eq!(cache.snapshot().last_fetched, None);
 

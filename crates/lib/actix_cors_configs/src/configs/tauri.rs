@@ -34,12 +34,7 @@ mod tests {
     #[actix_rt::test]
     async fn production_rejects_origin_variants() {
       let cors = build_cors_config(ServerEnvironment::Production);
-      for origin in [
-        "https://tauri.localhost",
-        "http://tauri.localhost:8080",
-        "http://tauri.localhost.example.com",
-        "http://sub.tauri.localhost",
-      ] {
+      for origin in ["https://tauri.localhost", "http://tauri.localhost:8080", "http://tauri.localhost.example.com", "http://sub.tauri.localhost"] {
         assert_origin_invalid(&cors, origin).await;
       }
     }
@@ -56,13 +51,7 @@ mod tests {
     #[actix_rt::test]
     async fn production_rejects_origin_variants() {
       let cors = build_cors_config(ServerEnvironment::Production);
-      for origin in [
-        "http://localhost",
-        "https://localhost",
-        "tauri://localhost:8080",
-        "tauri://localhost.example.com",
-        "tauri://sub.localhost",
-      ] {
+      for origin in ["http://localhost", "https://localhost", "tauri://localhost:8080", "tauri://localhost.example.com", "tauri://sub.localhost"] {
         assert_origin_invalid(&cors, origin).await;
       }
     }
@@ -70,19 +59,12 @@ mod tests {
 
   async fn assert_requests_and_preflights_allow_credentials(origin: &str) {
     for environment in [ServerEnvironment::Production, ServerEnvironment::Development] {
-      let service = build_cors_config(environment)
-          .new_transform(test::ok_service())
-          .await
-          .unwrap();
+      let service = build_cors_config(environment).new_transform(test::ok_service()).await.unwrap();
 
       for method in [Method::GET, Method::POST, Method::OPTIONS] {
-        let mut request = TestRequest::default()
-            .uri("/v1/session")
-            .insert_header((header::ORIGIN, origin));
+        let mut request = TestRequest::default().uri("/v1/session").insert_header((header::ORIGIN, origin));
         if method == Method::OPTIONS {
-          request = request
-              .insert_header((header::ACCESS_CONTROL_REQUEST_METHOD, "POST"))
-              .insert_header((header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type,session,x-artcraft-version"));
+          request = request.insert_header((header::ACCESS_CONTROL_REQUEST_METHOD, "POST")).insert_header((header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type,session,x-artcraft-version"));
         }
         let response = test::call_service(&service, request.method(method).to_srv_request()).await;
         assert_eq!(response.status(), StatusCode::OK, "Origin: {}", origin);

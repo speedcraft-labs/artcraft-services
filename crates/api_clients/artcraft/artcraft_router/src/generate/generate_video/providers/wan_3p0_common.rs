@@ -19,9 +19,7 @@ pub enum Wan3p0Modality {
 }
 
 /// Materialize the same settings for execution and ArtCraft cost estimation.
-pub fn normalize_wan_3p0_builder(
-  mut builder: GenerateVideoRequestBuilder,
-) -> Result<GenerateVideoRequestBuilder, ArtcraftRouterError> {
+pub fn normalize_wan_3p0_builder(mut builder: GenerateVideoRequestBuilder) -> Result<GenerateVideoRequestBuilder, ArtcraftRouterError> {
   let strict = matches!(builder.request_mismatch_mitigation_strategy, RequestMismatchMitigationStrategy::ErrorOut);
   builder.reference_images = builder.reference_images.filter(|images| match images {
     ImageListRef::MediaFileTokens(items) => !items.is_empty(),
@@ -138,11 +136,7 @@ mod tests {
   use crate::api::router_video_model::RouterVideoModel;
 
   fn builder() -> GenerateVideoRequestBuilder {
-    GenerateVideoRequestBuilder {
-      model: RouterVideoModel::Wan3p0,
-      request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade,
-      ..Default::default()
-    }
+    GenerateVideoRequestBuilder { model: RouterVideoModel::Wan3p0, request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::PayMoreUpgrade, ..Default::default() }
   }
 
   #[test]
@@ -150,16 +144,10 @@ mod tests {
     let text = builder();
     assert_eq!(modality(&text), Wan3p0Modality::Text);
 
-    let keyframe = GenerateVideoRequestBuilder {
-      start_frame: Some(ImageRef::Url("https://example.com/start.png".to_string())),
-      ..text.clone()
-    };
+    let keyframe = GenerateVideoRequestBuilder { start_frame: Some(ImageRef::Url("https://example.com/start.png".to_string())), ..text.clone() };
     assert_eq!(modality(&keyframe), Wan3p0Modality::Image);
 
-    let reference = GenerateVideoRequestBuilder {
-      reference_images: Some(ImageListRef::Urls(vec!["https://example.com/ref.png".to_string()])),
-      ..text
-    };
+    let reference = GenerateVideoRequestBuilder { reference_images: Some(ImageListRef::Urls(vec!["https://example.com/ref.png".to_string()])), ..text };
     assert_eq!(modality(&reference), Wan3p0Modality::Reference);
   }
 
@@ -184,30 +172,18 @@ mod tests {
 
   #[test]
   fn strict_mode_rejects_unsupported_shape() {
-    let result = normalize_wan_3p0_builder(GenerateVideoRequestBuilder {
-      resolution: Some(RouterResolution::FourK),
-      request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::ErrorOut,
-      ..builder()
-    });
+    let result = normalize_wan_3p0_builder(GenerateVideoRequestBuilder { resolution: Some(RouterResolution::FourK), request_mismatch_mitigation_strategy: RequestMismatchMitigationStrategy::ErrorOut, ..builder() });
     assert!(result.is_err());
   }
 
   #[test]
   fn reference_video_budget_uses_measured_total_when_available() {
-    let result = normalize_wan_3p0_builder(GenerateVideoRequestBuilder {
-      duration_seconds: Some(20),
-      total_reference_video_input_seconds: Some(11),
-      reference_videos: Some(VideoListRef::Urls(vec!["https://example.com/ref.mp4".to_string()])),
-      ..builder()
-    });
+    let result =
+      normalize_wan_3p0_builder(GenerateVideoRequestBuilder { duration_seconds: Some(20), total_reference_video_input_seconds: Some(11), reference_videos: Some(VideoListRef::Urls(vec!["https://example.com/ref.mp4".to_string()])), ..builder() });
     assert!(result.is_err());
 
-    let result = normalize_wan_3p0_builder(GenerateVideoRequestBuilder {
-      duration_seconds: Some(20),
-      total_reference_video_input_seconds: Some(10),
-      reference_videos: Some(VideoListRef::Urls(vec!["https://example.com/ref.mp4".to_string()])),
-      ..builder()
-    });
+    let result =
+      normalize_wan_3p0_builder(GenerateVideoRequestBuilder { duration_seconds: Some(20), total_reference_video_input_seconds: Some(10), reference_videos: Some(VideoListRef::Urls(vec!["https://example.com/ref.mp4".to_string()])), ..builder() });
     assert!(result.is_ok());
   }
 }

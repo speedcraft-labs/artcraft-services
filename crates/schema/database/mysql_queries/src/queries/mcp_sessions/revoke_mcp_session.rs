@@ -16,9 +16,7 @@ where
 /// Terminate a session by its own private credential, stamping `maybe_deleted_at = NOW()`.
 /// An expired-but-undeleted session may still revoke itself (the end state is the same either
 /// way). Returns the number of rows affected (0 = unknown or already-terminated session).
-pub async fn revoke_mcp_session<'e, 'c: 'e, E>(
-  args: RevokeMcpSessionArgs<'e, 'c, E>,
-) -> Result<u64, sqlx::Error>
+pub async fn revoke_mcp_session<'e, 'c: 'e, E>(args: RevokeMcpSessionArgs<'e, 'c, E>) -> Result<u64, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -32,8 +30,8 @@ LIMIT 1
     "#,
     args.private_session_token.as_str(),
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
 
   Ok(result.rows_affected())
 }

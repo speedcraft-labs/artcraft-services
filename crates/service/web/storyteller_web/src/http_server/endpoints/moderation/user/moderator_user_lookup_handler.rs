@@ -4,16 +4,8 @@ use actix_web::web::Json;
 use actix_web::{web, HttpRequest};
 use log::warn;
 
-use artcraft_api_defs::moderation::user::user_lookup::{
-  ModeratorUserLookupRequest,
-  ModeratorUserLookupSuccessResponse,
-  ModeratorUserLookupUserDetails,
-};
-use mysql_queries::queries::users::user::get::lookup_user_for_moderation::{
-  lookup_user_for_moderation_by_email,
-  lookup_user_for_moderation_by_token,
-  lookup_user_for_moderation_by_username,
-};
+use artcraft_api_defs::moderation::user::user_lookup::{ModeratorUserLookupRequest, ModeratorUserLookupSuccessResponse, ModeratorUserLookupUserDetails};
+use mysql_queries::queries::users::user::get::lookup_user_for_moderation::{lookup_user_for_moderation_by_email, lookup_user_for_moderation_by_token, lookup_user_for_moderation_by_username};
 use tokens::tokens::users::UserToken;
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
@@ -34,21 +26,13 @@ const LEGACY_USER_TOKEN_PREFIX: &str = "U:";
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn moderator_user_lookup_handler(
-  http_request: HttpRequest,
-  request: Json<ModeratorUserLookupRequest>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<ModeratorUserLookupSuccessResponse>, CommonWebError> {
-
+pub async fn moderator_user_lookup_handler(http_request: HttpRequest, request: Json<ModeratorUserLookupRequest>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<ModeratorUserLookupSuccessResponse>, CommonWebError> {
   let _user_session = require_moderator(&http_request, &server_state.session_checker, &server_state.mysql_pool).await?;
 
   let search = request.search.trim();
 
   if search.is_empty() {
-    return Ok(Json(ModeratorUserLookupSuccessResponse {
-      success: true,
-      maybe_user: None,
-    }));
+    return Ok(Json(ModeratorUserLookupSuccessResponse { success: true, maybe_user: None }));
   }
 
   let maybe_result = if search.starts_with(UserToken::token_prefix()) || search.starts_with(LEGACY_USER_TOKEN_PREFIX) {
@@ -59,11 +43,10 @@ pub async fn moderator_user_lookup_handler(
     lookup_user_for_moderation_by_username(search, &server_state.mysql_pool).await
   };
 
-  let maybe_user = maybe_result
-    .map_err(|err| {
-      warn!("moderator_user_lookup error: {:?}", err);
-      CommonWebError::from_anyhow_error(err)
-    })?;
+  let maybe_user = maybe_result.map_err(|err| {
+    warn!("moderator_user_lookup error: {:?}", err);
+    CommonWebError::from_anyhow_error(err)
+  })?;
 
   let maybe_user_details = maybe_user.map(|user| ModeratorUserLookupUserDetails {
     token: user.user_token,
@@ -85,8 +68,5 @@ pub async fn moderator_user_lookup_handler(
     updated_at: user.updated_at,
   });
 
-  Ok(Json(ModeratorUserLookupSuccessResponse {
-    success: true,
-    maybe_user: maybe_user_details,
-  }))
+  Ok(Json(ModeratorUserLookupSuccessResponse { success: true, maybe_user: maybe_user_details }))
 }

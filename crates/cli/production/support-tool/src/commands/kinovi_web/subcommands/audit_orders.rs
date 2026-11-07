@@ -6,9 +6,7 @@ use anyhow::anyhow;
 use clap::Args;
 use log::{info, warn};
 use kinovi_web_client::creds::kinovi_web_session::KinoviWebSession;
-use kinovi_web_client::requests::poll_orders::poll_orders::{
-  poll_orders, OrderStatus, PollOrdersArgs, TaskStatus,
-};
+use kinovi_web_client::requests::poll_orders::poll_orders::{poll_orders, OrderStatus, PollOrdersArgs, TaskStatus};
 
 use super::super::state::KinoviWebState;
 
@@ -54,8 +52,7 @@ pub async fn run(state: &KinoviWebState, args: AuditOrdersArgs) -> anyhow::Resul
   let session = KinoviWebSession::from_cookies_string(state.cookies.clone());
 
   let file_is_new = std::fs::metadata(&args.out).map(|m| m.len() == 0).unwrap_or(true);
-  let mut out = OpenOptions::new().create(true).append(true).open(&args.out)
-    .map_err(|err| anyhow!("Cannot open {}: {}", args.out, err))?;
+  let mut out = OpenOptions::new().create(true).append(true).open(&args.out).map_err(|err| anyhow!("Cannot open {}: {}", args.out, err))?;
   if file_is_new {
     writeln!(out, "account,order_id,created_at,task_status,media_type,total_credits,result_count,fail_reason")?;
   }
@@ -64,13 +61,7 @@ pub async fn run(state: &KinoviWebState, args: AuditOrdersArgs) -> anyhow::Resul
   let mut stats = AuditStats::default();
 
   for page in 1..=args.max_pages {
-    let result = poll_orders(PollOrdersArgs {
-      session: &session,
-      cursor,
-      host_override: None,
-    }).await
-      .map_err(|err| anyhow!(
-        "Error polling page {} (resume with --cursor {:?}): {:?}", page, cursor, err))?;
+    let result = poll_orders(PollOrdersArgs { session: &session, cursor, host_override: None }).await.map_err(|err| anyhow!("Error polling page {} (resume with --cursor {:?}): {:?}", page, cursor, err))?;
 
     if result.orders.is_empty() {
       info!("Page {} returned no orders; stopping.", page);
@@ -95,10 +86,7 @@ pub async fn run(state: &KinoviWebState, args: AuditOrdersArgs) -> anyhow::Resul
     }
     out.flush()?;
 
-    info!(
-      "Page {}: {} orders ({} .. {}), written so far: {}, next cursor: {:?}",
-      page, result.orders.len(), newest, oldest, stats.written, result.next_cursor,
-    );
+    info!("Page {}: {} orders ({} .. {}), written so far: {}, next cursor: {:?}", page, result.orders.len(), newest, oldest, stats.written, result.next_cursor,);
 
     // The API pages newest-to-oldest: once the whole page predates the
     // window, everything after it will too.
@@ -147,18 +135,18 @@ impl AuditStats {
         if order.total_credits.is_none() {
           self.completed_missing_credits += 1;
         }
-      }
+      },
       TaskStatus::Failed => {
         self.failed += 1;
         self.failed_credits += credits;
         if credits > 0 {
           self.failed_with_nonzero_credits += 1;
         }
-      }
+      },
       _ => {
         self.in_flight += 1;
         self.in_flight_credits += credits;
-      }
+      },
     }
   }
 
@@ -166,10 +154,8 @@ impl AuditStats {
     // Final results are intentionally println: they ARE the tool's output.
     println!("── audit_orders summary [{}] ──", account);
     println!("orders written:           {}", self.written);
-    println!("  completed:              {} ({} credits; {} missing totalCredits)",
-      self.completed, self.completed_credits, self.completed_missing_credits);
-    println!("  failed:                 {} ({} credits; {} orders with credits > 0)",
-      self.failed, self.failed_credits, self.failed_with_nonzero_credits);
+    println!("  completed:              {} ({} credits; {} missing totalCredits)", self.completed, self.completed_credits, self.completed_missing_credits);
+    println!("  failed:                 {} ({} credits; {} orders with credits > 0)", self.failed, self.failed_credits, self.failed_with_nonzero_credits);
     println!("  pending/processing:     {} ({} credits)", self.in_flight, self.in_flight_credits);
     println!("skipped (newer than window): {}", self.skipped_after_window);
     println!("skipped (older than window): {}", self.skipped_before_window);
@@ -194,27 +180,10 @@ fn order_day(order: &OrderStatus) -> &str {
 }
 
 fn write_order_row(out: &mut impl Write, account: &str, order: &OrderStatus) -> anyhow::Result<()> {
-  let media_type = order.media_type.as_ref()
-    .map(|m| format!("{:?}", m))
-    .unwrap_or_default();
-  let total_credits = order.total_credits
-    .map(|c| c.to_string())
-    .unwrap_or_default();
-  let fail_reason = order.fail_reason.as_ref()
-    .map(|fr| fr.reason.as_str())
-    .unwrap_or("");
-  writeln!(
-    out,
-    "{},{},{},{:?},{},{},{},{}",
-    account,
-    order.order_id,
-    order.created_at,
-    order.task_status,
-    media_type,
-    total_credits,
-    order.results.len(),
-    csv_quote(fail_reason),
-  )?;
+  let media_type = order.media_type.as_ref().map(|m| format!("{:?}", m)).unwrap_or_default();
+  let total_credits = order.total_credits.map(|c| c.to_string()).unwrap_or_default();
+  let fail_reason = order.fail_reason.as_ref().map(|fr| fr.reason.as_str()).unwrap_or("");
+  writeln!(out, "{},{},{},{:?},{},{},{},{}", account, order.order_id, order.created_at, order.task_status, media_type, total_credits, order.results.len(), csv_quote(fail_reason),)?;
   Ok(())
 }
 

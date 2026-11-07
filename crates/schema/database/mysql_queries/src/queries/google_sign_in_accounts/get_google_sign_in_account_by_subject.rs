@@ -68,12 +68,9 @@ struct GoogleSignInAccountRaw {
   username_is_not_customized: Option<i8>,
 }
 
-pub async fn get_google_sign_in_account<'a, 'e, E>(
-  subject: &str,
-  mysql_executor: E,
-)
-  -> AnyhowResult<Option<GoogleSignInAccount>>
-where E: 'a + Executor<'e, Database = MySql>
+pub async fn get_google_sign_in_account<'a, 'e, E>(subject: &str, mysql_executor: E) -> AnyhowResult<Option<GoogleSignInAccount>>
+where
+  E: 'a + Executor<'e, Database = MySql>,
 {
   let record = select_record(subject, mysql_executor).await;
 
@@ -82,7 +79,7 @@ where E: 'a + Executor<'e, Database = MySql>
     Some(record) => record,
   };
 
-  Ok(Some(GoogleSignInAccount{
+  Ok(Some(GoogleSignInAccount {
     token: record.token,
     subject: record.subject,
     maybe_user_token: record.maybe_user_token,
@@ -100,16 +97,13 @@ where E: 'a + Executor<'e, Database = MySql>
   }))
 }
 
-async fn select_record<'a, 'e, E>(
-  subject: &str,
-  mysql_executor: E,
-)
-  -> Result<GoogleSignInAccountRaw, sqlx::Error>
-where E: 'a + Executor<'e, Database = MySql>
+async fn select_record<'a, 'e, E>(subject: &str, mysql_executor: E) -> Result<GoogleSignInAccountRaw, sqlx::Error>
+where
+  E: 'a + Executor<'e, Database = MySql>,
 {
   sqlx::query_as!(
-      GoogleSignInAccountRaw,
-        r#"
+    GoogleSignInAccountRaw,
+    r#"
 SELECT
     g.token as `token: tokens::tokens::google_sign_in_accounts::GoogleSignInAccountToken`,
 
@@ -139,8 +133,8 @@ LEFT OUTER JOIN users AS u
 WHERE
     g.subject = ?
         "#,
-     subject
-    )
-      .fetch_one(mysql_executor)
-      .await
+    subject
+  )
+  .fetch_one(mysql_executor)
+  .await
 }

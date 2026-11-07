@@ -5,13 +5,9 @@ use actix_web::web::Json;
 use actix_web::{web, HttpRequest};
 use log::warn;
 
-use artcraft_api_defs::mcp_sessions::create_mcp_session::{
-  CreateMcpSessionRequest, CreateMcpSessionSuccessResponse,
-};
+use artcraft_api_defs::mcp_sessions::create_mcp_session::{CreateMcpSessionRequest, CreateMcpSessionSuccessResponse};
 use http_server_common::request::get_request_ip::get_request_ip;
-use mysql_queries::queries::mcp_sessions::insert_mcp_session::{
-  insert_mcp_session, InsertMcpSessionArgs,
-};
+use mysql_queries::queries::mcp_sessions::insert_mcp_session::{insert_mcp_session, InsertMcpSessionArgs};
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 use crate::http_server::user_lookup::api_or_web_session::require_api_or_web_session::require_api_or_web_session;
@@ -34,22 +30,13 @@ const MAX_CLIENT_FIELD_LEN: usize = 255;
     (status = 500, body = CommonWebError),
   ),
 )]
-pub async fn create_mcp_session_handler(
-  http_request: HttpRequest,
-  request: Json<CreateMcpSessionRequest>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<CreateMcpSessionSuccessResponse>, CommonWebError> {
+pub async fn create_mcp_session_handler(http_request: HttpRequest, request: Json<CreateMcpSessionRequest>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<CreateMcpSessionSuccessResponse>, CommonWebError> {
   let mut conn = server_state.mysql_pool.acquire().await.map_err(|err| {
     warn!("MySQL pool error: {:?}", err);
     CommonWebError::from_error(err)
   })?;
 
-  let user_session = require_api_or_web_session(
-    &http_request,
-    &server_state.session_checker,
-    &server_state.avt_cookie_manager,
-    &mut *conn,
-  ).await?;
+  let user_session = require_api_or_web_session(&http_request, &server_state.session_checker, &server_state.avt_cookie_manager, &mut *conn).await?;
 
   let maybe_client_name = validated_client_field("client name", &request.maybe_mcp_client_name)?;
   let maybe_client_version = validated_client_field("client version", &request.maybe_mcp_client_version)?;
@@ -65,7 +52,9 @@ pub async fn create_mcp_session_handler(
     maybe_mcp_client_vendor: maybe_client_vendor.as_deref(),
     mysql_executor: &mut *conn,
     phantom: PhantomData,
-  }).await.map_err(|err| {
+  })
+  .await
+  .map_err(|err| {
     warn!("insert_mcp_session failed: {:?}", err);
     CommonWebError::from_error(err)
   })?;
@@ -81,10 +70,7 @@ pub async fn create_mcp_session_handler(
 
 /// Trim an optional client-supplied field; an empty (or whitespace-only) value becomes `None`,
 /// and an overlong value is a 400.
-fn validated_client_field(
-  field_name: &str,
-  maybe_value: &Option<String>,
-) -> Result<Option<String>, CommonWebError> {
+fn validated_client_field(field_name: &str, maybe_value: &Option<String>) -> Result<Option<String>, CommonWebError> {
   let trimmed = match maybe_value {
     Some(value) => value.trim(),
     None => return Ok(None),
@@ -94,9 +80,7 @@ fn validated_client_field(
     return Ok(None);
   }
   if trimmed.len() > MAX_CLIENT_FIELD_LEN {
-    return Err(CommonWebError::BadInputWithSimpleMessage(
-      format!("{} too long (max {} chars)", field_name, MAX_CLIENT_FIELD_LEN),
-    ));
+    return Err(CommonWebError::BadInputWithSimpleMessage(format!("{} too long (max {} chars)", field_name, MAX_CLIENT_FIELD_LEN)));
   }
 
   Ok(Some(trimmed.to_string()))

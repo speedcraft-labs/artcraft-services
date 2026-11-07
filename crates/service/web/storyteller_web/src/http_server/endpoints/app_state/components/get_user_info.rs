@@ -25,13 +25,10 @@ pub struct AppStateUserInfo {
 
   /// For users without a gravatar, we show one of our own avatars.
   pub default_avatar: UserDefaultAvatarInfo,
-
   // In the future, we'll also support user-uploaded avatars that we store on our servers.
 }
 
-pub fn get_user_info(
-  user: &UserSessionExtended
-) -> AppStateUserInfo {
+pub fn get_user_info(user: &UserSessionExtended) -> AppStateUserInfo {
   AppStateUserInfo {
     default_avatar: UserDefaultAvatarInfo::from_username(&user.user.username),
     user_token: user.user_token_typed.clone(),

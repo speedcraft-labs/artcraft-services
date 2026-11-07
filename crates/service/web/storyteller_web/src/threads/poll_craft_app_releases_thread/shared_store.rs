@@ -109,15 +109,15 @@ impl SharedStore {
   pub async fn read(&self, app_keys: &[String]) -> anyhow::Result<(Vec<Option<SharedAppEntry>>, Backoff)> {
     let keys: Vec<String> = app_keys.iter().map(|k| CraftAppReleaseRedisKey::new_for_app(k).to_string()).collect();
     let mut hashes: Vec<HashMap<String, String>> = self
-        .run(move |conn| {
-          let mut pipe = redis::pipe();
-          for key in &keys {
-            pipe.hgetall(key);
-          }
-          pipe.hgetall(CraftAppsReleaseBackoffRedisKey::new_for_fleet().as_str());
-          pipe.query(conn)
-        })
-        .await?;
+      .run(move |conn| {
+        let mut pipe = redis::pipe();
+        for key in &keys {
+          pipe.hgetall(key);
+        }
+        pipe.hgetall(CraftAppsReleaseBackoffRedisKey::new_for_fleet().as_str());
+        pipe.query(conn)
+      })
+      .await?;
     let backoff = hashes.pop().map(|fields| shared_entry::decode_backoff(&fields)).unwrap_or_default();
     let entries = hashes.iter().map(shared_entry::decode_app_entry).collect();
     Ok((entries, backoff))
@@ -127,30 +127,30 @@ impl SharedStore {
   /// within [`CLAIM_WINDOW`]: it is asking GitHub already, so this one doesn't. Not a lock: it
   /// is never released and simply lapses, so a crashed instance can't block anyone.
   pub async fn claim(&self, app_key: &str, now: DateTime<Utc>) -> anyhow::Result<bool> {
-    self.guarded_write(GuardedWrite {
-      key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
-      time_field: shared_entry::FIELD_CLAIMED_MS,
-      time: now,
-      min_gap: CLAIM_WINDOW,
-      required_etag: None,
-      fields: vec![
-        (shared_entry::FIELD_VERSION, shared_entry::FORMAT_VERSION.to_string()),
-        (shared_entry::FIELD_CLAIMED_MS, now.timestamp_millis().to_string()),
-        (shared_entry::FIELD_BY, self.hostname.clone()),
-      ],
-    }).await
+    self
+      .guarded_write(GuardedWrite {
+        key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
+        time_field: shared_entry::FIELD_CLAIMED_MS,
+        time: now,
+        min_gap: CLAIM_WINDOW,
+        required_etag: None,
+        fields: vec![(shared_entry::FIELD_VERSION, shared_entry::FORMAT_VERSION.to_string()), (shared_entry::FIELD_CLAIMED_MS, now.timestamp_millis().to_string()), (shared_entry::FIELD_BY, self.hostname.clone())],
+      })
+      .await
   }
 
   /// Shares a successful fetch, unless a newer one is already shared. Returns whether written.
   pub async fn write_fetched(&self, app_key: &str, latest_release: Option<&CraftAppRelease>, etag: Option<&str>, fetched_at: DateTime<Utc>) -> anyhow::Result<bool> {
-    self.guarded_write(GuardedWrite {
-      key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
-      time_field: shared_entry::FIELD_FETCHED_MS,
-      time: fetched_at,
-      min_gap: Duration::ZERO,
-      required_etag: None,
-      fields: shared_entry::encode_fetch(latest_release, etag, fetched_at, &self.hostname)?,
-    }).await
+    self
+      .guarded_write(GuardedWrite {
+        key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
+        time_field: shared_entry::FIELD_FETCHED_MS,
+        time: fetched_at,
+        min_gap: Duration::ZERO,
+        required_etag: None,
+        fields: shared_entry::encode_fetch(latest_release, etag, fetched_at, &self.hostname)?,
+      })
+      .await
   }
 
   /// Shares a `304` for the release with ETag `etag`: moves only the fetch time, and only if
@@ -159,26 +159,30 @@ impl SharedStore {
     if etag.is_empty() {
       return Ok(false);
     }
-    self.guarded_write(GuardedWrite {
-      key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
-      time_field: shared_entry::FIELD_FETCHED_MS,
-      time: fetched_at,
-      min_gap: Duration::ZERO,
-      required_etag: Some(etag.to_string()),
-      fields: shared_entry::encode_unchanged(fetched_at, &self.hostname),
-    }).await
+    self
+      .guarded_write(GuardedWrite {
+        key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
+        time_field: shared_entry::FIELD_FETCHED_MS,
+        time: fetched_at,
+        min_gap: Duration::ZERO,
+        required_etag: Some(etag.to_string()),
+        fields: shared_entry::encode_unchanged(fetched_at, &self.hostname),
+      })
+      .await
   }
 
   /// Shares a failed request, unless a newer failure is already shared. Returns whether written.
   pub async fn write_failure(&self, app_key: &str, failure: SharedFailure) -> anyhow::Result<bool> {
-    self.guarded_write(GuardedWrite {
-      key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
-      time_field: shared_entry::FIELD_FAILED_MS,
-      time: failure.failed_at,
-      min_gap: Duration::ZERO,
-      required_etag: None,
-      fields: shared_entry::encode_failure(failure, &self.hostname),
-    }).await
+    self
+      .guarded_write(GuardedWrite {
+        key: CraftAppReleaseRedisKey::new_for_app(app_key).to_string(),
+        time_field: shared_entry::FIELD_FAILED_MS,
+        time: failure.failed_at,
+        min_gap: Duration::ZERO,
+        required_etag: None,
+        fields: shared_entry::encode_failure(failure, &self.hostname),
+      })
+      .await
   }
 
   /// Shares the fleet's backoff; no trouble deletes it.
@@ -189,14 +193,7 @@ impl SharedStore {
     }
     let fields = shared_entry::encode_backoff(backoff, &self.hostname);
     let ttl_ms = CraftAppsReleaseBackoffRedisKey::get_redis_ttl().num_milliseconds();
-    self
-        .run(move |conn| {
-          redis::pipe()
-              .hset_multiple(&key, &fields).ignore()
-              .pexpire(&key, ttl_ms).ignore()
-              .query::<()>(conn)
-        })
-        .await
+    self.run(move |conn| redis::pipe().hset_multiple(&key, &fields).ignore().pexpire(&key, ttl_ms).ignore().query::<()>(conn)).await
   }
 
   /// Applies `write` with the script, or (once Redis has refused the script) with `WATCH`.
@@ -204,20 +201,20 @@ impl SharedStore {
     let ttl_ms = CraftAppReleaseRedisKey::get_redis_ttl().num_milliseconds();
     let scripts_refused = self.scripts_refused.clone();
     self
-        .run(move |conn| {
-          if !scripts_refused.load(Ordering::Relaxed) {
-            match guarded_write_with_script(conn, &write, ttl_ms) {
-              Err(err) if is_script_refusal(&err) => {
-                if !scripts_refused.swap(true, Ordering::Relaxed) {
-                  warn!("Craft app releases: Redis refused the guarded-write script ({err}); writing with WATCH/MULTI/EXEC instead.");
-                }
+      .run(move |conn| {
+        if !scripts_refused.load(Ordering::Relaxed) {
+          match guarded_write_with_script(conn, &write, ttl_ms) {
+            Err(err) if is_script_refusal(&err) => {
+              if !scripts_refused.swap(true, Ordering::Relaxed) {
+                warn!("Craft app releases: Redis refused the guarded-write script ({err}); writing with WATCH/MULTI/EXEC instead.");
               }
-              result => return result,
-            }
+            },
+            result => return result,
           }
-          guarded_write_with_watch(conn, &write, ttl_ms)
-        })
-        .await
+        }
+        guarded_write_with_watch(conn, &write, ttl_ms)
+      })
+      .await
   }
 
   /// Runs `call` on a pooled connection, off the async runtime, within [`CALL_TIMEOUT`].
@@ -244,11 +241,7 @@ impl SharedStore {
 /// works alone until Redis answers.
 pub fn build_poller_redis_pool(redis_url: &str) -> RedisResult<PollerRedisPool> {
   let manager = PollerRedisConnections { client: Client::open(redis_url)? };
-  Ok(Pool::builder()
-      .max_size(POOL_MAX_SIZE)
-      .min_idle(Some(0))
-      .connection_timeout(CONNECTION_TIMEOUT)
-      .build_unchecked(manager))
+  Ok(Pool::builder().max_size(POOL_MAX_SIZE).min_idle(Some(0)).connection_timeout(CONNECTION_TIMEOUT).build_unchecked(manager))
 }
 
 impl ManageConnection for PollerRedisConnections {
@@ -277,12 +270,7 @@ impl ManageConnection for PollerRedisConnections {
 /// [`GUARDED_HSET_LUA`] decides and writes on the server, in one step.
 fn guarded_write_with_script(conn: &mut Connection, write: &GuardedWrite, ttl_ms: i64) -> RedisResult<bool> {
   let mut invocation = GUARDED_HSET.key(&write.key);
-  invocation
-      .arg(write.time_field)
-      .arg(write.time.timestamp_millis())
-      .arg(write.min_gap.as_millis() as u64)
-      .arg(ttl_ms)
-      .arg(write.required_etag.as_deref().unwrap_or_default());
+  invocation.arg(write.time_field).arg(write.time.timestamp_millis()).arg(write.min_gap.as_millis() as u64).arg(ttl_ms).arg(write.required_etag.as_deref().unwrap_or_default());
   for (field, value) in &write.fields {
     invocation.arg(*field).arg(value);
   }
@@ -296,29 +284,21 @@ fn guarded_write_with_script(conn: &mut Connection, write: &GuardedWrite, ttl_ms
 fn guarded_write_with_watch(conn: &mut Connection, write: &GuardedWrite, ttl_ms: i64) -> RedisResult<bool> {
   for _ in 0..WATCH_ATTEMPTS {
     redis::cmd("WATCH").arg(&write.key).query::<()>(conn)?;
-    let stored: RedisResult<(Option<String>, Option<String>)> = redis::cmd("HMGET")
-        .arg(&write.key)
-        .arg(write.time_field)
-        .arg(shared_entry::FIELD_ETAG)
-        .query(conn);
+    let stored: RedisResult<(Option<String>, Option<String>)> = redis::cmd("HMGET").arg(&write.key).arg(write.time_field).arg(shared_entry::FIELD_ETAG).query(conn);
     let (stored_time, stored_etag) = match stored {
       Ok(stored) => stored,
       Err(err) => {
         // The connection goes back to the shared pool; don't leave it watching.
         let _ = redis::cmd("UNWATCH").query::<()>(conn);
         return Err(err);
-      }
+      },
     };
     if !write_wins(write, stored_time.as_deref(), stored_etag.as_deref()) {
       redis::cmd("UNWATCH").query::<()>(conn)?;
       return Ok(false);
     }
     // `EXEC` ends the watch either way; `None` means another write got in first.
-    let committed: Option<Value> = redis::pipe()
-        .atomic()
-        .hset_multiple(&write.key, &write.fields)
-        .pexpire(&write.key, ttl_ms)
-        .query(conn)?;
+    let committed: Option<Value> = redis::pipe().atomic().hset_multiple(&write.key, &write.fields).pexpire(&write.key, ttl_ms).query(conn)?;
     if committed.is_some() {
       return Ok(true);
     }
@@ -358,11 +338,10 @@ fn is_script_refusal(err: &RedisError) -> bool {
       }
       let detail = err.detail().unwrap_or_default().to_ascii_lowercase();
       detail.contains("unknown command") || detail.contains("eval") || detail.contains("script")
-    }
+    },
     _ => false,
   }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -412,8 +391,7 @@ mod tests {
       let user = format!("craft-test-{}", rand::random::<u32>());
       let password = format!("pw-{}", rand::random::<u64>());
       let mut conn = admin.get().unwrap();
-      redis::cmd("ACL").arg("SETUSER").arg(&user).arg("reset").arg("on").arg(format!(">{password}")).arg("~*").arg("&*").arg("+@all").arg("-@scripting")
-          .query::<()>(&mut *conn).unwrap();
+      redis::cmd("ACL").arg("SETUSER").arg(&user).arg("reset").arg("on").arg(format!(">{password}")).arg("~*").arg("&*").arg("+@all").arg("-@scripting").query::<()>(&mut *conn).unwrap();
 
       let mut url = Url::parse(&admin_url).unwrap();
       url.set_username(&user).unwrap();
@@ -595,14 +573,7 @@ mod tests {
   }
 
   fn guarded_write_at(time: DateTime<Utc>, min_gap: Duration, required_etag: Option<&str>) -> GuardedWrite {
-    GuardedWrite {
-      key: "craftApps:releases:app:test".to_string(),
-      time_field: shared_entry::FIELD_FETCHED_MS,
-      time,
-      min_gap,
-      required_etag: required_etag.map(str::to_string),
-      fields: Vec::new(),
-    }
+    GuardedWrite { key: "craftApps:releases:app:test".to_string(), time_field: shared_entry::FIELD_FETCHED_MS, time, min_gap, required_etag: required_etag.map(str::to_string), fields: Vec::new() }
   }
 
   /// Answers `+OK` to connection setup (`CLIENT SETINFO`, `SELECT`, `HELLO`), then keeps the

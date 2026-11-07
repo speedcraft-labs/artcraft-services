@@ -14,6 +14,6 @@ pub async fn search_term_only(search_term: &str, client: &Elasticsearch) -> Anyh
     sort_direction: None,
     minimum_score: None,
     client: &client,
-  }).await
+  })
+  .await
 }
-

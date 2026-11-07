@@ -32,17 +32,14 @@ pub async fn logout_handler(
   session_cookie_manager: web::Data<HttpUserSessionManager>,
   mysql_pool: web::Data<MySqlPool>,
   internal_session_cache_purge: web::Data<dyn InternalSessionCachePurge>,
-) -> Result<HttpResponse, CommonWebError>
-{
+) -> Result<HttpResponse, CommonWebError> {
   // Best effort to delete Redis session cache
   internal_session_cache_purge.best_effort_purge_session_cache(&http_request);
 
-  let maybe_session = session_cookie_manager
-      .decode_session_payload_from_request(&http_request)
-      .map_err(|e| {
-        warn!("Session cookie decode error: {:?}", e);
-        CommonWebError::from_error(e)
-      })?;
+  let maybe_session = session_cookie_manager.decode_session_payload_from_request(&http_request).map_err(|e| {
+    warn!("Session cookie decode error: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
 
   if let Some(session) = maybe_session {
     let _r = delete_user_session(&session.session_token, &mysql_pool).await;
@@ -52,23 +49,15 @@ pub async fn logout_handler(
     Some(cookie) => {
       cookie // delete this cookie
     },
-    None => {
-      session_cookie_manager.delete_cookie()
-    }
+    None => session_cookie_manager.delete_cookie(),
   };
 
-  let response = LogoutSuccessResponse {
-    success: true,
-  };
+  let response = LogoutSuccessResponse { success: true };
 
-  let body = serde_json::to_string(&response)
-    .map_err(CommonWebError::from_error)?;
+  let body = serde_json::to_string(&response).map_err(CommonWebError::from_error)?;
 
   // Mark cookie for deletion
   delete_cookie.make_removal();
 
-  Ok(HttpResponse::Ok()
-    .cookie(delete_cookie)
-    .content_type("application/json")
-    .body(body))
+  Ok(HttpResponse::Ok().cookie(delete_cookie).content_type("application/json").body(body))
 }

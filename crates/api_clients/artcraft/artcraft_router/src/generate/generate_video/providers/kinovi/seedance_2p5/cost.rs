@@ -1,7 +1,4 @@
-use kinovi_web_client::generate::video::generate_seedance_2p5::{
-  GenerateSeedance2p5Request, KinoviSeedance2p5BatchCount, KinoviSeedance2p5Modality, KinoviSeedance2p5OutputResolution,
-  MAX_BILLED_INPUT_SECONDS, MIN_BILLED_INPUT_SECONDS,
-};
+use kinovi_web_client::generate::video::generate_seedance_2p5::{GenerateSeedance2p5Request, KinoviSeedance2p5BatchCount, KinoviSeedance2p5Modality, KinoviSeedance2p5OutputResolution, MAX_BILLED_INPUT_SECONDS, MIN_BILLED_INPUT_SECONDS};
 use kinovi_web_client::pricing::kinovi_cost_calculator_trait::KinoviCostCalculatorTrait;
 
 use crate::api::video_list_ref::VideoListRef;
@@ -30,31 +27,16 @@ impl KinoviSeedance2p5CostState {
       KinoviSeedance2p5Modality::Reference { reference_video_urls: Some(urls), .. } if !urls.is_empty()
     );
 
-    Self {
-      resolution: request.request.output_resolution,
-      duration_seconds: request.request.duration_seconds,
-      batch_count: request.request.batch_count,
-      has_video_references,
-      total_input_seconds: request.request.total_input_seconds,
-    }
+    Self { resolution: request.request.output_resolution, duration_seconds: request.request.duration_seconds, batch_count: request.request.batch_count, has_video_references, total_input_seconds: request.request.total_input_seconds }
   }
 
   pub fn from_draft(draft: &KinoviSeedance2p5DraftState) -> Self {
-    let has_video_references = draft.unhandled_request_state
-      .as_ref()
-      .and_then(|remaining| remaining.reference_videos.as_ref())
-      .is_some_and(|videos| match videos {
-        VideoListRef::MediaFileTokens(tokens) => !tokens.is_empty(),
-        VideoListRef::Urls(urls) => !urls.is_empty(),
-      });
+    let has_video_references = draft.unhandled_request_state.as_ref().and_then(|remaining| remaining.reference_videos.as_ref()).is_some_and(|videos| match videos {
+      VideoListRef::MediaFileTokens(tokens) => !tokens.is_empty(),
+      VideoListRef::Urls(urls) => !urls.is_empty(),
+    });
 
-    Self {
-      resolution: draft.resolution,
-      duration_seconds: draft.duration_seconds,
-      batch_count: Some(draft.batch_count),
-      has_video_references,
-      total_input_seconds: draft.total_input_seconds,
-    }
+    Self { resolution: draft.resolution, duration_seconds: draft.duration_seconds, batch_count: Some(draft.batch_count), has_video_references, total_input_seconds: draft.total_input_seconds }
   }
 
   pub fn estimate_cost(&self) -> VideoGenerationCostEstimate {
@@ -62,30 +44,19 @@ impl KinoviSeedance2p5CostState {
     // request. Only the modality's video references, the resolution, the
     // duration, batch count, and the input seconds affect the price.
     let modality = if self.has_video_references {
-      KinoviSeedance2p5Modality::Reference {
-        aspect_ratio: None,
-        reference_image_urls: None,
-        reference_video_urls: Some(vec!["https://pricing-only.invalid/ref.mp4".to_string()]),
-        reference_audio_urls: None,
-      }
+      KinoviSeedance2p5Modality::Reference { aspect_ratio: None, reference_image_urls: None, reference_video_urls: Some(vec!["https://pricing-only.invalid/ref.mp4".to_string()]), reference_audio_urls: None }
     } else {
-      KinoviSeedance2p5Modality::Reference {
-        aspect_ratio: None,
-        reference_image_urls: None,
-        reference_video_urls: None,
-        reference_audio_urls: None,
-      }
+      KinoviSeedance2p5Modality::Reference { aspect_ratio: None, reference_image_urls: None, reference_video_urls: None, reference_audio_urls: None }
     };
 
     // NB: The kinovi calculator clamps measured values and bills the
     // worst-case maximum for unknown (None) or zero inputs. Zero passes
     // through unclamped so that worst-case fallback applies — clamping it up
     // to the minimum here would understate the cost.
-    let total_input_seconds = self.total_input_seconds
-      .map(|seconds| match seconds {
-        0 => 0,
-        measured => measured.clamp(MIN_BILLED_INPUT_SECONDS, MAX_BILLED_INPUT_SECONDS),
-      });
+    let total_input_seconds = self.total_input_seconds.map(|seconds| match seconds {
+      0 => 0,
+      measured => measured.clamp(MIN_BILLED_INPUT_SECONDS, MAX_BILLED_INPUT_SECONDS),
+    });
 
     let pricing_request = GenerateSeedance2p5Request {
       prompt: String::new(),
@@ -110,15 +81,7 @@ impl KinoviSeedance2p5CostState {
     let cost_in_credits = costs.kinovi_credits.round() as u64;
     let cost_in_usd_cents = costs.usd_cents_rounded_up;
 
-    VideoGenerationCostEstimate {
-      cost_in_credits: Some(cost_in_credits),
-      cost_in_usd_cents: Some(cost_in_usd_cents),
-      is_free: false,
-      is_unlimited: false,
-      is_rate_limited: false,
-      has_watermark: false,
-      failures_are_refunded: None,
-    }
+    VideoGenerationCostEstimate { cost_in_credits: Some(cost_in_credits), cost_in_usd_cents: Some(cost_in_usd_cents), is_free: false, is_unlimited: false, is_rate_limited: false, has_watermark: false, failures_are_refunded: None }
   }
 }
 
@@ -198,10 +161,7 @@ mod tests {
     fn input_seconds_clamp_to_max_billed_input_seconds() {
       // 200 input seconds clamp to 30: 30s output + 30 = 60 billed seconds.
       assert_eq!(credits(Some(KinoviOutputResolution::FourEightyP), 30, true, Some(200)), 16 * 60);
-      assert_eq!(
-        credits(Some(KinoviOutputResolution::FourEightyP), 30, true, Some(200)),
-        credits(Some(KinoviOutputResolution::FourEightyP), 30, true, Some(30)),
-      );
+      assert_eq!(credits(Some(KinoviOutputResolution::FourEightyP), 30, true, Some(200)), credits(Some(KinoviOutputResolution::FourEightyP), 30, true, Some(30)),);
     }
   }
 
@@ -228,24 +188,11 @@ mod tests {
 
   // ── Helpers ──
 
-  fn cost_state(
-    resolution: Option<KinoviOutputResolution>,
-    duration_seconds: u8,
-    has_video_references: bool,
-    total_input_seconds: Option<u8>,
-  ) -> KinoviSeedance2p5CostState {
+  fn cost_state(resolution: Option<KinoviOutputResolution>, duration_seconds: u8, has_video_references: bool, total_input_seconds: Option<u8>) -> KinoviSeedance2p5CostState {
     KinoviSeedance2p5CostState { batch_count: None, resolution, duration_seconds, has_video_references, total_input_seconds }
   }
 
-  fn credits(
-    resolution: Option<KinoviOutputResolution>,
-    duration_seconds: u8,
-    has_video_references: bool,
-    total_input_seconds: Option<u8>,
-  ) -> u64 {
-    cost_state(resolution, duration_seconds, has_video_references, total_input_seconds)
-      .estimate_cost()
-      .cost_in_credits
-      .unwrap()
+  fn credits(resolution: Option<KinoviOutputResolution>, duration_seconds: u8, has_video_references: bool, total_input_seconds: Option<u8>) -> u64 {
+    cost_state(resolution, duration_seconds, has_video_references, total_input_seconds).estimate_cost().cost_in_credits.unwrap()
   }
 }

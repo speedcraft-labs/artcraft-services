@@ -5,11 +5,7 @@ use std::time::{Duration, Instant};
 use futures::{stream, StreamExt};
 use log::{error, info, warn};
 
-use mysql_queries::queries::media_files::thumbnails::list_video_media_files_without_thumbnails_for_job::{
-  list_video_media_files_without_thumbnails_for_job,
-  ListVideoMediaFilesWithoutThumbnailsArgs,
-  VideoMediaFileWithoutThumbnail,
-};
+use mysql_queries::queries::media_files::thumbnails::list_video_media_files_without_thumbnails_for_job::{list_video_media_files_without_thumbnails_for_job, ListVideoMediaFilesWithoutThumbnailsArgs, VideoMediaFileWithoutThumbnail};
 
 use crate::job::alert_on_error::alert_pager_and_return_err;
 use crate::job_dependencies::JobDependencies;
@@ -30,7 +26,7 @@ pub async fn main_loop(deps: JobDependencies) {
           info!("Processed {} video thumbnail(s) this cycle.", count);
         }
         count > 0
-      }
+      },
       Err(err) => {
         error!("Error in video thumbnail batch cycle: {:?}", err);
         let _ = alert_pager_and_return_err::<()>(&deps.pager, "Video thumbnail batch cycle error", err);
@@ -39,7 +35,7 @@ pub async fn main_loop(deps: JobDependencies) {
         // Wait before retrying after a failure.
         tokio::time::sleep(Duration::from_millis(deps.query_failure_retry_delay_millis)).await;
         false
-      }
+      },
     };
 
     // If we didn't process anything, sleep for the poll interval before checking again.
@@ -64,21 +60,16 @@ async fn run_batch_cycle(deps: &JobDependencies, retry_cache: &mut RetryBackoff)
     }
 
     let query_started_at = Instant::now();
-    let result = list_video_media_files_without_thumbnails_for_job(
-      ListVideoMediaFilesWithoutThumbnailsArgs {
-        custom_max_lookback_hours: deps.custom_max_lookback_hours,
-        custom_page_size: deps.custom_page_size,
-        maybe_id_cursor: maybe_cursor,
-        executor: &deps.mysql_pool,
-      },
-    ).await?;
+    let result = list_video_media_files_without_thumbnails_for_job(ListVideoMediaFilesWithoutThumbnailsArgs {
+      custom_max_lookback_hours: deps.custom_max_lookback_hours,
+      custom_page_size: deps.custom_page_size,
+      maybe_id_cursor: maybe_cursor,
+      executor: &deps.mysql_pool,
+    })
+    .await?;
     let query_finished_at = Instant::now();
 
-    info!(
-      "thumbnail_page fetched_count={} database_query_ms={}",
-      result.media_files.len(),
-      query_finished_at.duration_since(query_started_at).as_millis(),
-    );
+    info!("thumbnail_page fetched_count={} database_query_ms={}", result.media_files.len(), query_finished_at.duration_since(query_started_at).as_millis(),);
 
     if result.media_files.is_empty() {
       break;
@@ -87,11 +78,7 @@ async fn run_batch_cycle(deps: &JobDependencies, retry_cache: &mut RetryBackoff)
     // Advance using the database page, even when every row is in backoff or
     // belongs to another shard. Otherwise failed files could hide older good files.
     maybe_cursor = result.next_cursor;
-    let media_files = result.media_files.into_iter().filter(|media_file| {
-      deps.shard_info.as_ref().is_none_or(|shard| {
-        (media_file.id as u64) % u64::from(shard.number_of_shards) == u64::from(shard.shard_index)
-      })
-    }).collect();
+    let media_files = result.media_files.into_iter().filter(|media_file| deps.shard_info.as_ref().is_none_or(|shard| (media_file.id as u64) % u64::from(shard.number_of_shards) == u64::from(shard.shard_index))).collect();
 
     total_processed += process_page(media_files, deps.worker_config.concurrency, retry_cache, |media_file| async move {
       // Already-running attempts are drained on shutdown; no new attempts start.
@@ -107,7 +94,8 @@ async fn run_batch_cycle(deps: &JobDependencies, retry_cache: &mut RetryBackoff)
         let _ = deps.job_stats.increment_failure_count();
       }
       Some(result)
-    }).await;
+    })
+    .await;
 
     if maybe_cursor.is_none() {
       break;
@@ -123,12 +111,7 @@ async fn run_batch_cycle(deps: &JobDependencies, retry_cache: &mut RetryBackoff)
 /// Only keep `concurrency` attempts in flight, including their download, FFmpeg,
 /// and upload work. Complete one before admitting another; never spawn a page of
 /// tasks that merely wait for a semaphore while retaining downloaded videos.
-async fn process_page<F, Fut>(
-  mut media_files: Vec<VideoMediaFileWithoutThumbnail>,
-  concurrency: NonZeroUsize,
-  retry_cache: &mut RetryBackoff,
-  process: F,
-) -> u64
+async fn process_page<F, Fut>(mut media_files: Vec<VideoMediaFileWithoutThumbnail>, concurrency: NonZeroUsize, retry_cache: &mut RetryBackoff, process: F) -> u64
 where
   F: Fn(VideoMediaFileWithoutThumbnail) -> Fut,
   Fut: Future<Output = Option<anyhow::Result<()>>>,
@@ -138,31 +121,27 @@ where
   media_files.retain(|file| retry_cache.is_ready(file.id, now));
   // Keep database ordering within each group, but let untried files precede retries.
   media_files.sort_by_key(|file| retry_cache.has_failed(file.id));
-  info!(
-    "thumbnail_dispatch eligible_count={} backoff_skipped_count={} concurrency={}",
-    media_files.len(), fetched_count - media_files.len(), concurrency,
-  );
+  info!("thumbnail_dispatch eligible_count={} backoff_skipped_count={} concurrency={}", media_files.len(), fetched_count - media_files.len(), concurrency,);
 
-  let mut pending = stream::iter(media_files).map(|file| {
-    let id = file.id;
-    let token = file.token.clone();
-    let future = process(file);
-    async move { (id, token, future.await) }
-  }).buffer_unordered(concurrency.get());
+  let mut pending = stream::iter(media_files)
+    .map(|file| {
+      let id = file.id;
+      let token = file.token.clone();
+      let future = process(file);
+      async move { (id, token, future.await) }
+    })
+    .buffer_unordered(concurrency.get());
   let mut completed = 0;
   while let Some((id, token, maybe_result)) = pending.next().await {
     match maybe_result {
       Some(Ok(())) => {
         retry_cache.record_success(id);
         completed += 1;
-      }
+      },
       Some(Err(err)) => {
         let retry = retry_cache.record_failure(id, Instant::now());
-        warn!(
-          "thumbnail_retry media_file_token={} failed_attempts={} retry_delay_ms={} error={:?}",
-          token.as_str(), retry.attempts, retry.delay.as_millis(), err,
-        );
-      }
+        warn!("thumbnail_retry media_file_token={} failed_attempts={} retry_delay_ms={} error={:?}", token.as_str(), retry.attempts, retry.delay.as_millis(), err,);
+      },
       None => {}, // Shutdown: this file was not attempted.
     }
   }
@@ -194,7 +173,8 @@ mod tests {
           tokio::task::yield_now().await;
           active.fetch_sub(1, Ordering::SeqCst);
           Some(Ok(()))
-        }).await;
+        })
+        .await;
         assert_eq!(completed, 20);
         assert_eq!(peak.load(Ordering::SeqCst), concurrency);
         assert_eq!(active.load(Ordering::SeqCst), 0);
@@ -209,7 +189,8 @@ mod tests {
       }
       let completed = process_page((1..=100).map(media_file).collect(), limit(2), &mut cache, |_| async {
         panic!("A file in backoff must not run");
-      }).await;
+      })
+      .await;
       assert_eq!(completed, 0);
       let completed = process_page(vec![media_file(101)], limit(2), &mut cache, |_| async { Some(Ok(())) }).await;
       assert_eq!(completed, 1);
@@ -226,7 +207,8 @@ mod tests {
           order.lock().unwrap().push(file.id);
           Some(if file.id == 1 { Err(anyhow::anyhow!("invalid video")) } else { Ok(()) })
         }
-      }).await;
+      })
+      .await;
       assert_eq!(completed, 1);
       assert_eq!(*order.lock().unwrap(), vec![2, 1]);
       assert!(!cache.is_ready(1, Instant::now()));

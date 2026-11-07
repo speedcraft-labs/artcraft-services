@@ -13,7 +13,10 @@ use crate::state::server_state::ServerState;
 use crate::util::lookup::lookup_image_urls_as_map::lookup_image_urls_as_map;
 use actix_web::web::Json;
 use actix_web::{web, HttpRequest};
-use artcraft_api_defs::generate::image::multi_function::gpt_image_1p5_multi_function_image_gen::{GptImage1p5MultiFunctionImageGenBackground, GptImage1p5MultiFunctionImageGenInputFidelity, GptImage1p5MultiFunctionImageGenNumImages, GptImage1p5MultiFunctionImageGenQuality, GptImage1p5MultiFunctionImageGenRequest, GptImage1p5MultiFunctionImageGenResponse, GptImage1p5MultiFunctionImageGenSize};
+use artcraft_api_defs::generate::image::multi_function::gpt_image_1p5_multi_function_image_gen::{
+  GptImage1p5MultiFunctionImageGenBackground, GptImage1p5MultiFunctionImageGenInputFidelity, GptImage1p5MultiFunctionImageGenNumImages, GptImage1p5MultiFunctionImageGenQuality, GptImage1p5MultiFunctionImageGenRequest,
+  GptImage1p5MultiFunctionImageGenResponse, GptImage1p5MultiFunctionImageGenSize,
+};
 use bucket_paths::legacy::typified_paths::public::media_files::bucket_file_path::MediaFileBucketPath;
 use enums::by_table::prompt_context_items::prompt_context_semantic_type::PromptContextSemanticType;
 use enums::by_table::prompts::prompt_type::PromptType;
@@ -24,8 +27,14 @@ use enums::common::generation::common_generation_mode::CommonGenerationMode;
 use enums::common::generation::common_aspect_ratio::CommonAspectRatio;
 use fal_client::creds::open_ai_api_key::OpenAiApiKey;
 use fal_client::requests::traits::fal_request_cost_calculator_trait::FalRequestCostCalculator;
-use fal_client::requests_old::webhook::image::edit::enqueue_gpt_image_1p5_edit_image_webhook::{enqueue_gpt_image_1p5_image_edit_webhook, EnqueueGptImage1p5EditImageArgs, EnqueueGptImage1p5EditImageBackground, EnqueueGptImage1p5EditImageInputFidelity, EnqueueGptImage1p5EditImageNumImages, EnqueueGptImage1p5EditImageQuality, EnqueueGptImage1p5EditImageRequest, EnqueueGptImage1p5EditImageSize};
-use fal_client::requests_old::webhook::image::text::enqueue_gpt_image_1p5_text_to_image_webhook::{enqueue_gpt_image_1p5_text_to_image_webhook, EnqueueGptImage1p5TextToImageArgs, EnqueueGptImage1p5TextToImageBackground, EnqueueGptImage1p5TextToImageNumImages, EnqueueGptImage1p5TextToImageQuality, EnqueueGptImage1p5TextToImageRequest, EnqueueGptImage1p5TextToImageSize};
+use fal_client::requests_old::webhook::image::edit::enqueue_gpt_image_1p5_edit_image_webhook::{
+  enqueue_gpt_image_1p5_image_edit_webhook, EnqueueGptImage1p5EditImageArgs, EnqueueGptImage1p5EditImageBackground, EnqueueGptImage1p5EditImageInputFidelity, EnqueueGptImage1p5EditImageNumImages, EnqueueGptImage1p5EditImageQuality,
+  EnqueueGptImage1p5EditImageRequest, EnqueueGptImage1p5EditImageSize,
+};
+use fal_client::requests_old::webhook::image::text::enqueue_gpt_image_1p5_text_to_image_webhook::{
+  enqueue_gpt_image_1p5_text_to_image_webhook, EnqueueGptImage1p5TextToImageArgs, EnqueueGptImage1p5TextToImageBackground, EnqueueGptImage1p5TextToImageNumImages, EnqueueGptImage1p5TextToImageQuality, EnqueueGptImage1p5TextToImageRequest,
+  EnqueueGptImage1p5TextToImageSize,
+};
 use http_server_common::request::get_request_ip::get_request_ip;
 use log::{error, info, warn};
 use mysql_queries::queries::generic_inference::api_providers::fal::insert_generic_inference_job_for_fal_queue::insert_generic_inference_job_for_fal_queue;
@@ -58,38 +67,29 @@ use utoipa::ToSchema;
 pub async fn gpt_image_1p5_multi_function_image_gen_handler(
   http_request: HttpRequest,
   request: Json<GptImage1p5MultiFunctionImageGenRequest>,
-  server_state: web::Data<Arc<ServerState>>
+  server_state: web::Data<Arc<ServerState>>,
 ) -> Result<Json<GptImage1p5MultiFunctionImageGenResponse>, CommonWebError> {
-  
   payments_error_test(&request.prompt.as_deref().unwrap_or(""))?;
 
   if let Err(reason) = validate_idempotency_token_format(&request.uuid_idempotency_token) {
     return Err(CommonWebError::BadInputWithSimpleMessage(reason));
   }
-  
-  let mut mysql_connection = server_state.mysql_pool
-      .acquire()
-      .await?;
-  
-  let maybe_user_session = server_state
-      .session_checker
-      .maybe_get_user_session_from_connection(&http_request, &mut mysql_connection)
-      .await
-      .map_err(|e| {
-        warn!("Session checker error: {:?}", e);
-        CommonWebError::from_error(e)
-      })?;
 
-  let maybe_avt_token = server_state
-      .avt_cookie_manager
-      .get_avt_token_from_request(&http_request);
+  let mut mysql_connection = server_state.mysql_pool.acquire().await?;
+
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session_from_connection(&http_request, &mut mysql_connection).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
+
+  let maybe_avt_token = server_state.avt_cookie_manager.get_avt_token_from_request(&http_request);
 
   let user_token = match maybe_user_session.as_ref() {
     Some(session) if session.is_banned => return Err(CommonWebError::NotAuthorized),
     Some(session) => &session.user_token,
     None => {
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   let mut query_media_tokens = None;
@@ -112,39 +112,27 @@ pub async fn gpt_image_1p5_multi_function_image_gen_handler(
     None => HashMap::new(),
     Some(media_tokens) => {
       info!("Looking up image media tokens: {:?}", media_tokens);
-      lookup_image_urls_as_map(
-        &http_request,
-        &mut mysql_connection,
-        server_state.server_environment,
-        &media_tokens,
-      ).await?
-    }
+      lookup_image_urls_as_map(&http_request, &mut mysql_connection, server_state.server_environment, &media_tokens).await?
+    },
   };
 
   let maybe_image_urls = match request.image_media_tokens.as_ref() {
     None => None,
     Some(tokens) => {
-      let urls = tokens.iter()
-          .filter_map(|token| image_urls_by_token.get(token))
-          .map(|url| url.to_string())
-          .collect::<Vec<_>>();
+      let urls = tokens.iter().filter_map(|token| image_urls_by_token.get(token)).map(|url| url.to_string()).collect::<Vec<_>>();
       Some(urls)
-    }
+    },
   };
 
   let maybe_mask_url = match request.mask_image_token.as_ref() {
     None => None,
-    Some(token) => {
-      image_urls_by_token.get(&token).map(|url| url.to_string())
-    }
+    Some(token) => image_urls_by_token.get(&token).map(|url| url.to_string()),
   };
 
-  insert_idempotency_token(&request.uuid_idempotency_token, &mut *mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Error inserting idempotency token: {:?}", err);
-        CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
-      })?;
+  insert_idempotency_token(&request.uuid_idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
+  })?;
 
   info!("Fal webhook URL: {}", server_state.inference_providers.fal.webhook_url);
 
@@ -206,28 +194,16 @@ pub async fn gpt_image_1p5_multi_function_image_gen_handler(
 
     let cost = edit_request.calculate_cost_in_cents();
 
-    let args = EnqueueGptImage1p5EditImageArgs {
-      request: edit_request,
-      webhook_url: &server_state.inference_providers.fal.webhook_url,
-      api_key: &server_state.inference_providers.fal.api_key,
-    };
+    let args = EnqueueGptImage1p5EditImageArgs { request: edit_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
     info!("Charging wallet: {}", cost);
 
-    attempt_wallet_deduction_else_common_web_error(
-      user_token,
-      Some(apriori_job_token.as_str()),
-      cost,
-      &mut mysql_connection,
-    ).await?;
+    attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-    fal_result = enqueue_gpt_image_1p5_image_edit_webhook(args)
-        .await
-        .map_err(|err| {
-          warn!("Error calling enqueue_gpt_image_1p5_image_edit_webhook: {:?}", err);
-          CommonWebError::from_error(err)
-        })?;
-
+    fal_result = enqueue_gpt_image_1p5_image_edit_webhook(args).await.map_err(|err| {
+      warn!("Error calling enqueue_gpt_image_1p5_image_edit_webhook: {:?}", err);
+      CommonWebError::from_error(err)
+    })?;
   } else {
     info!("gpt image 1.5 text-to-image");
     generation_mode = CommonGenerationMode::Text;
@@ -261,57 +237,35 @@ pub async fn gpt_image_1p5_multi_function_image_gen_handler(
       None => EnqueueGptImage1p5TextToImageQuality::High,
     };
 
-    let t2i_request = EnqueueGptImage1p5TextToImageRequest {
-      prompt: request.prompt.as_deref().unwrap_or("").to_string(),
-      num_images,
-      output_format: None,
-      image_size: Some(image_size),
-      background: Some(background),
-      quality: Some(quality),
-    };
+    let t2i_request = EnqueueGptImage1p5TextToImageRequest { prompt: request.prompt.as_deref().unwrap_or("").to_string(), num_images, output_format: None, image_size: Some(image_size), background: Some(background), quality: Some(quality) };
 
     let cost = t2i_request.calculate_cost_in_cents();
 
-    let args = EnqueueGptImage1p5TextToImageArgs {
-      request: t2i_request,
-      webhook_url: &server_state.inference_providers.fal.webhook_url,
-      api_key: &server_state.inference_providers.fal.api_key,
-    };
+    let args = EnqueueGptImage1p5TextToImageArgs { request: t2i_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
     info!("Charging wallet: {}", cost);
 
-    attempt_wallet_deduction_else_common_web_error(
-      user_token,
-      Some(apriori_job_token.as_str()),
-      cost,
-      &mut mysql_connection,
-    ).await?;
+    attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-    fal_result = enqueue_gpt_image_1p5_text_to_image_webhook(args)
-        .await
-        .map_err(|err| {
-          warn!("Error calling enqueue_gpt_image_1p5_text_to_image_webhook: {:?}", err);
-          CommonWebError::from_error(err)
-        })?;
+    fal_result = enqueue_gpt_image_1p5_text_to_image_webhook(args).await.map_err(|err| {
+      warn!("Error calling enqueue_gpt_image_1p5_text_to_image_webhook: {:?}", err);
+      CommonWebError::from_error(err)
+    })?;
   }
 
-  let external_job_id = fal_result.request_id
-      .ok_or_else(|| {
-        warn!("Fal request_id is None");
-        CommonWebError::server_error_with_message("Fal request_id is None")
-      })?;
+  let external_job_id = fal_result.request_id.ok_or_else(|| {
+    warn!("Fal request_id is None");
+    CommonWebError::server_error_with_message("Fal request_id is None")
+  })?;
 
   info!("Fal request_id: {}", external_job_id);
 
   let ip_address = get_request_ip(&http_request);
 
-  let mut transaction = mysql_connection
-      .begin()
-      .await
-      .map_err(|err| {
-        error!("Error starting MySQL transaction: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
+  let mut transaction = mysql_connection.begin().await.map_err(|err| {
+    error!("Error starting MySQL transaction: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   // NB: Don't fail the job if the query fails.
   let maybe_aspect_ratio = match request.image_size {
@@ -348,28 +302,25 @@ pub async fn gpt_image_1p5_multi_function_image_gen_handler(
     creator_ip_address: &ip_address,
     mysql_executor: &mut *transaction,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   let prompt_token = match prompt_result {
     Ok(token) => Some(token),
     Err(err) => {
       warn!("Error inserting prompt: {:?}", err);
       None // Don't fail the job if the prompt insertion fails.
-    }
+    },
   };
 
   if let Some(media_tokens) = &request.image_media_tokens {
     if let Some(token) = prompt_token.as_ref() {
       let result = insert_batch_prompt_context_items(InsertBatchArgs {
         prompt_token: token.clone(),
-        items: media_tokens.iter().map(|token| {
-          PromptContextItem {
-            media_token: token.clone(),
-            context_semantic_type: PromptContextSemanticType::Imgref,
-          }
-        }).collect(),
+        items: media_tokens.iter().map(|token| PromptContextItem { media_token: token.clone(), context_semantic_type: PromptContextSemanticType::Imgref }).collect(),
         transaction: &mut transaction,
-      }).await;
+      })
+      .await;
 
       if let Err(err) = result {
         // NB: Fail open.
@@ -396,28 +347,23 @@ pub async fn gpt_image_1p5_multi_function_image_gen_handler(
     starting_job_status_override: None,
     maybe_frontend_failure_category: None,
     maybe_failure_reason: None,
-      maybe_debug_log_event_token: None,
+    maybe_debug_log_event_token: None,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   let job_token = match db_result {
     Ok(token) => token,
     Err(err) => {
       warn!("Error inserting generic inference job for FAL queue: {:?}", err);
       return Err(CommonWebError::from_error(err));
-    }
+    },
   };
-  
-  let _r = transaction
-      .commit()
-      .await
-      .map_err(|err| {
-        error!("Error committing MySQL transaction: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
 
-  Ok(Json(GptImage1p5MultiFunctionImageGenResponse {
-    success: true,
-    inference_job_token: job_token,
-  }))
+  let _r = transaction.commit().await.map_err(|err| {
+    error!("Error committing MySQL transaction: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
+
+  Ok(Json(GptImage1p5MultiFunctionImageGenResponse { success: true, inference_job_token: job_token }))
 }

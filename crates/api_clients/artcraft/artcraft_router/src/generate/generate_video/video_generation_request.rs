@@ -224,7 +224,6 @@ pub enum VideoGenerationRequest {
 }
 
 impl VideoGenerationRequest {
-
   pub fn get_provider(&self) -> RouterProvider {
     match self {
       Self::ArtcraftGrokImagineVideo(_) => RouterProvider::Artcraft,
@@ -394,12 +393,8 @@ impl VideoGenerationRequest {
         let client_ref = client.get_artcraft_client_ref()?;
         request.send(client_ref).await
       },
-      VideoGenerationRequest::ArtcraftWan3p0(request) => {
-        request.send(client.get_artcraft_client_ref()?).await
-      },
-      VideoGenerationRequest::ArtcraftWan3p0Prime(request) => {
-        request.send(client.get_artcraft_client_ref()?).await
-      },
+      VideoGenerationRequest::ArtcraftWan3p0(request) => request.send(client.get_artcraft_client_ref()?).await,
+      VideoGenerationRequest::ArtcraftWan3p0Prime(request) => request.send(client.get_artcraft_client_ref()?).await,
       VideoGenerationRequest::ArtcraftHappyHorse1p0(request) => {
         let client_ref = client.get_artcraft_client_ref()?;
         request.send(client_ref).await
@@ -644,12 +639,8 @@ impl VideoGenerationRequest {
         let client_ref = client.get_grok_api_client_ref()?;
         request.send(client_ref).await
       },
-      VideoGenerationRequest::KinoviWan3p0(request) => {
-        request.send(client.get_kinovi_web_client_ref()?).await
-      },
-      VideoGenerationRequest::KinoviWan3p0Prime(request) => {
-        request.send(client.get_kinovi_web_client_ref()?).await
-      },
+      VideoGenerationRequest::KinoviWan3p0(request) => request.send(client.get_kinovi_web_client_ref()?).await,
+      VideoGenerationRequest::KinoviWan3p0Prime(request) => request.send(client.get_kinovi_web_client_ref()?).await,
       VideoGenerationRequest::KinoviHappyHorse1p0(request) => {
         let client_ref = client.get_kinovi_web_client_ref()?;
         request.send(client_ref).await

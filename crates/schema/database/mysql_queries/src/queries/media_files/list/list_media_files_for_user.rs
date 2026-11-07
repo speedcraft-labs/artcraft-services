@@ -61,9 +61,7 @@ pub struct ListMediaFileForUserArgs<'a, T> {
 
 /// Select a bounded page before joining potentially large prompt/metadata rows.
 /// `LIMIT` prevents MySQL from merging the derived table into the outer query.
-pub async fn list_media_files_for_user<'c, T>(
-  args: ListMediaFileForUserArgs<'_, T>,
-) -> Result<Vec<MediaFileListItem>, sqlx::Error>
+pub async fn list_media_files_for_user<'c, T>(args: ListMediaFileForUserArgs<'_, T>) -> Result<Vec<MediaFileListItem>, sqlx::Error>
 where
   T: Executor<'c, Database = MySql>,
 {

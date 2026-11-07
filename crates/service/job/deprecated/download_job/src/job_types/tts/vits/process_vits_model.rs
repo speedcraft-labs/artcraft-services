@@ -23,14 +23,7 @@ use crate::job_types::tts::vits::vits_model_check_command::{CheckArgs, Device};
 use crate::JobState;
 
 /// Returns the token of the entity.
-pub async fn process_vits_model<'a, 'b>(
-  job_state: &JobState,
-  job: &AvailableDownloadJob,
-  temp_dir: &TempDir,
-  download_filename: &str,
-  redis_logger: &'a mut RedisJobStatusLogger<'b>,
-) -> AnyhowResult<JobResults> {
-
+pub async fn process_vits_model<'a, 'b>(job_state: &JobState, job: &AvailableDownloadJob, temp_dir: &TempDir, download_filename: &str, redis_logger: &'a mut RedisJobStatusLogger<'b>) -> AnyhowResult<JobResults> {
   // ==================== RUN MODEL CHECK ==================== //
 
   info!("Checking that model is valid...");
@@ -144,16 +137,15 @@ pub async fn process_vits_model<'a, 'b>(
     creator_set_visibility: Visibility::Public, // TODO: All models default to public at start
     private_bucket_hash: &private_bucket_hash,
     private_bucket_object_name: "", // TODO: This should go away.
-    maybe_model_token: None, // NB: This parameter is for internal testing only
+    maybe_model_token: None,        // NB: This parameter is for internal testing only
     mysql_pool: &job_state.mysql_pool,
-  }).await?;
+  })
+  .await?;
 
-  job_state.badge_granter.maybe_grant_tts_model_uploads_badge(&job.creator_user_token)
-      .await
-      .map_err(|e| {
-        warn!("error maybe awarding badge: {:?}", e);
-        anyhow!("error maybe awarding badge")
-      })?;
+  job_state.badge_granter.maybe_grant_tts_model_uploads_badge(&job.creator_user_token).await.map_err(|e| {
+    warn!("error maybe awarding badge: {:?}", e);
+    anyhow!("error maybe awarding badge")
+  })?;
 
   Ok(JobResults {
     entity_token: Some(model_token.to_string()),

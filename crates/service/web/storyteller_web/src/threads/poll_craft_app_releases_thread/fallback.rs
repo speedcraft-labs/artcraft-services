@@ -30,7 +30,11 @@ pub struct RedisTroubleLog {
 impl PollMode {
   /// Coordinated only when coordination is on and the shared state could be read.
   pub fn choose(coordination_enabled: bool, shared_state_readable: bool) -> Self {
-    if coordination_enabled && shared_state_readable { Self::Coordinated } else { Self::Standalone }
+    if coordination_enabled && shared_state_readable {
+      Self::Coordinated
+    } else {
+      Self::Standalone
+    }
   }
 }
 
@@ -42,10 +46,7 @@ impl RedisTroubleLog {
       self.suppressed = self.suppressed.saturating_add(1);
       return false;
     }
-    warn!(
-      "Craft app releases: Redis unavailable ({:#}); polling GitHub on this instance alone until it is back ({} similar errors not logged).",
-      err, self.suppressed,
-    );
+    warn!("Craft app releases: Redis unavailable ({:#}); polling GitHub on this instance alone until it is back ({} similar errors not logged).", err, self.suppressed,);
     self.last_warned = Some(now);
     self.suppressed = 0;
     true

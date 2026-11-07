@@ -25,11 +25,7 @@ use crate::jobs::order_processing_job::is_job_status_terminal::is_job_status_ter
 const PREFIX: &str = "artcraft_";
 
 /// Download the completed video, upload to bucket, create media file record, and mark job done.
-pub async fn process_successful_video_job(
-  deps: &JobDependencies,
-  job: &PendingKinoviWebJob,
-  order: &OrderStatus,
-) -> AnyhowResult<()> {
+pub async fn process_successful_video_job(deps: &JobDependencies, job: &PendingKinoviWebJob, order: &OrderStatus) -> AnyhowResult<()> {
   // Get the video URL.
   let video_url = match &order.result_url {
     Some(url) => url.as_str(),
@@ -38,19 +34,13 @@ pub async fn process_successful_video_job(
       match order.results.first() {
         Some(result) => result.url.as_str(),
         None => {
-          return Err(anyhow!(
-            "Completed order {} has no result_url and no results",
-            order.order_id
-          ));
-        }
+          return Err(anyhow!("Completed order {} has no result_url and no results", order.order_id));
+        },
       }
-    }
+    },
   };
 
-  info!(
-    "Downloading video for order {} from: {}",
-    order.order_id, video_url
-  );
+  info!("Downloading video for order {} from: {}", order.order_id, video_url);
 
   // Download the video bytes.
   let video_bytes: Vec<u8> = match deps.download_client.get(video_url).send().await.and_then(|resp| resp.error_for_status()) {
@@ -58,84 +48,52 @@ pub async fn process_successful_video_job(
       Ok(bytes) => bytes.to_vec(),
       Err(err) => {
         error!("Error reading video bytes for order {}: {:?}", order.order_id, err);
-        return alert_pager_and_return_err(
-          &deps.pager,
-          "Kinovi video download failed",
-          anyhow!("error reading video bytes: {:?}", err),
-          Some(job),
-        );
-      }
+        return alert_pager_and_return_err(&deps.pager, "Kinovi video download failed", anyhow!("error reading video bytes: {:?}", err), Some(job));
+      },
     },
     Err(err) => {
       error!("Error downloading video for order {}: {:?}", order.order_id, err);
-      return alert_pager_and_return_err(
-        &deps.pager,
-        "Kinovi video download failed",
-        anyhow!("reqwest error downloading video: {:?}", err),
-        Some(job),
-      );
-    }
+      return alert_pager_and_return_err(&deps.pager, "Kinovi video download failed", anyhow!("reqwest error downloading video: {:?}", err), Some(job));
+    },
   };
 
-  info!(
-    "Downloaded {} bytes for order {}",
-    video_bytes.len(),
-    order.order_id
-  );
+  info!("Downloaded {} bytes for order {}", video_bytes.len(), order.order_id);
 
   let (suffix, mimetype, media_file_type) = video_metadata(&video_bytes)?;
   let (video_bytes, probe_result) = tokio::task::spawn_blocking(move || {
     let info = ffprobe_get_info_from_bytes(&video_bytes);
     (video_bytes, info)
-  }).await?;
+  })
+  .await?;
   let video_info = probe_result.unwrap_or_else(|err| {
     warn!("Could not probe video for order {}: {:?}", order.order_id, err);
     VideoInfo::default()
   });
 
   // Hash the video.
-  let checksum = sha256_hash_bytes(&video_bytes)
-    .map_err(|err| anyhow!("error hashing video: {:?}", err))?;
+  let checksum = sha256_hash_bytes(&video_bytes).map_err(|err| anyhow!("error hashing video: {:?}", err))?;
 
   // Build the bucket path.
   let bucket_path = MediaFileBucketPath::generate_new(Some(PREFIX), Some(suffix));
 
   let object_path = bucket_path.get_full_object_path_str();
 
-  info!(
-    "Uploading video to public bucket at path: {}",
-    object_path
-  );
+  info!("Uploading video to public bucket at path: {}", object_path);
 
   // Upload to public bucket.
-  let upload_result = deps
-    .public_bucket_client
-    .upload_file_with_content_type_process(object_path, &video_bytes, mimetype)
-    .await;
+  let upload_result = deps.public_bucket_client.upload_file_with_content_type_process(object_path, &video_bytes, mimetype).await;
 
   if let Err(err) = upload_result {
     error!("Error uploading video for order {}: {:?}", order.order_id, err);
-    return alert_pager_and_return_err(
-      &deps.pager,
-      "Kinovi bucket upload failed",
-      anyhow!("error uploading video to bucket: {:?}", err),
-      Some(job),
-    );
+    return alert_pager_and_return_err(&deps.pager, "Kinovi bucket upload failed", anyhow!("error uploading video to bucket: {:?}", err), Some(job));
   }
 
-  info!(
-    "Uploaded video for order {}. Creating media file record.",
-    order.order_id
-  );
+  info!("Uploaded video for order {}. Creating media file record.", order.order_id);
 
   // Prefer the downloaded file's dimensions; provider fields are a fallback.
   let maybe_result = order.results.iter().find(|result| result.url == video_url);
-  let maybe_frame_width = video_info.dimensions.as_ref()
-    .and_then(|d| u32::try_from(d.width).ok())
-    .or_else(|| maybe_result.and_then(|result| result.maybe_width));
-  let maybe_frame_height = video_info.dimensions.as_ref()
-    .and_then(|d| u32::try_from(d.height).ok())
-    .or_else(|| maybe_result.and_then(|result| result.maybe_height));
+  let maybe_frame_width = video_info.dimensions.as_ref().and_then(|d| u32::try_from(d.width).ok()).or_else(|| maybe_result.and_then(|result| result.maybe_width));
+  let maybe_frame_height = video_info.dimensions.as_ref().and_then(|d| u32::try_from(d.height).ok()).or_else(|| maybe_result.and_then(|result| result.maybe_height));
   let maybe_duration_millis = video_info.duration.map(|duration| u64::from(duration.millis));
 
   // Insert media file record.
@@ -166,21 +124,11 @@ pub async fn process_successful_video_job(
     Ok(token) => token,
     Err(err) => {
       error!("Error inserting media file record for order {}: {:?}", order.order_id, err);
-      return alert_pager_and_return_err(
-        &deps.pager,
-        "Kinovi media file insert failed",
-        anyhow!("error inserting media file record: {:?}", err),
-        Some(job),
-      );
-    }
+      return alert_pager_and_return_err(&deps.pager, "Kinovi media file insert failed", anyhow!("error inserting media file record: {:?}", err), Some(job));
+    },
   };
 
-  info!(
-    "Created media file {} for order {}. Finalizing job {}.",
-    media_file_token.as_str(),
-    order.order_id,
-    job.job_token.as_str()
-  );
+  info!("Created media file {} for order {}. Finalizing job {}.", media_file_token.as_str(), order.order_id, job.job_token.as_str());
 
   // Finalize inside a transaction: re-check the job is still pending under a row
   // lock, then mark it complete. This guards against a concurrent finalizer
@@ -190,19 +138,10 @@ pub async fn process_successful_video_job(
   finalize_success(deps, job, order, media_file_token.as_str()).await
 }
 
-async fn finalize_success(
-  deps: &JobDependencies,
-  job: &PendingKinoviWebJob,
-  order: &OrderStatus,
-  media_file_token: &str,
-) -> AnyhowResult<()> {
-  let mut transaction = deps.mysql_pool.begin().await.map_err(|err| {
-    anyhow!("error beginning finalize transaction for job {}: {:?}", job.job_token.as_str(), err)
-  })?;
+async fn finalize_success(deps: &JobDependencies, job: &PendingKinoviWebJob, order: &OrderStatus, media_file_token: &str) -> AnyhowResult<()> {
+  let mut transaction = deps.mysql_pool.begin().await.map_err(|err| anyhow!("error beginning finalize transaction for job {}: {:?}", job.job_token.as_str(), err))?;
 
-  let maybe_status = select_inference_job_status_for_update(&mut *transaction, &job.job_token)
-    .await
-    .map_err(|err| anyhow!("error locking job {} for finalize: {:?}", job.job_token.as_str(), err))?;
+  let maybe_status = select_inference_job_status_for_update(&mut *transaction, &job.job_token).await.map_err(|err| anyhow!("error locking job {} for finalize: {:?}", job.job_token.as_str(), err))?;
 
   // ── Terminal-state guard (do NOT remove) ──
   //
@@ -216,18 +155,18 @@ async fn finalize_success(
     Some(status) => status,
     None => {
       let _ = transaction.rollback().await;
-      return Err(anyhow!(
-        "Job {} vanished before finalize (order {})",
-        job.job_token.as_str(), order.order_id,
-      ));
-    }
+      return Err(anyhow!("Job {} vanished before finalize (order {})", job.job_token.as_str(), order.order_id,));
+    },
   };
 
   if is_job_status_terminal(status) {
     warn!(
       "Job {} is already terminal ({:?}); skipping mark-done (order {}). \
       Media file {} may be orphaned.",
-      job.job_token.as_str(), status, order.order_id, media_file_token,
+      job.job_token.as_str(),
+      status,
+      order.order_id,
+      media_file_token,
     );
     let _ = transaction.rollback().await;
     return Ok(());
@@ -235,29 +174,22 @@ async fn finalize_success(
 
   // Still pending — mark it done within the locked transaction.
 
-  if let Err(err) = mark_generic_inference_job_successfully_done_by_token_with_executor(
-    MarkGenericInferenceJobSuccessfullyDoneByTokenWithExecutorArgs {
-      executor: &mut *transaction,
-      token: &job.job_token,
-      maybe_entity_type: Some(InferenceResultType::MediaFile),
-      maybe_entity_token: Some(media_file_token),
-      total_job_duration: None,
-      inference_duration: None,
-    },
-  ).await {
+  if let Err(err) = mark_generic_inference_job_successfully_done_by_token_with_executor(MarkGenericInferenceJobSuccessfullyDoneByTokenWithExecutorArgs {
+    executor: &mut *transaction,
+    token: &job.job_token,
+    maybe_entity_type: Some(InferenceResultType::MediaFile),
+    maybe_entity_token: Some(media_file_token),
+    total_job_duration: None,
+    inference_duration: None,
+  })
+  .await
+  {
     let _ = transaction.rollback().await;
     error!("Error marking job {} done: {:?}", job.job_token.as_str(), err);
-    return alert_pager_and_return_err(
-      &deps.pager,
-      "Kinovi job completion update failed",
-      anyhow!("error marking job done: {:?}", err),
-      Some(job),
-    );
+    return alert_pager_and_return_err(&deps.pager, "Kinovi job completion update failed", anyhow!("error marking job done: {:?}", err), Some(job));
   }
 
-  transaction.commit().await.map_err(|err| {
-    anyhow!("error committing finalize transaction for job {}: {:?}", job.job_token.as_str(), err)
-  })?;
+  transaction.commit().await.map_err(|err| anyhow!("error committing finalize transaction for job {}: {:?}", job.job_token.as_str(), err))?;
 
   info!("Job {} completed successfully.", job.job_token.as_str());
 

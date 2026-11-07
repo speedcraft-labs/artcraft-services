@@ -30,8 +30,8 @@ LIMIT 1
     maybe_kinovi_asset_id,
     character_token.as_str(),
   )
-      .execute(pool)
-      .await?;
+  .execute(pool)
+  .await?;
 
   Ok(())
 }

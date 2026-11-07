@@ -6,7 +6,8 @@ use enums::common::generation::model_creator::ModelCreator;
 
 pub fn wan_video_models() -> Vec<OmniGenVideoModelDetails> {
   [(CommonVideoModel::Wan3p0, "Wan 3.0"), (CommonVideoModel::Wan3p0Prime, "Wan 3.0 Prime")]
-    .iter().copied()
+    .iter()
+    .copied()
     .map(|(model, name)| OmniGenVideoModelDetails {
       model,
       model_creator: Some(ModelCreator::Alibaba),
@@ -26,11 +27,7 @@ pub fn wan_video_models() -> Vec<OmniGenVideoModelDetails> {
       audio_references_max: Some(5),
       audio_references_max_total_duration_seconds: Some(15),
       show_generate_with_sound_toggle: Some(true),
-      aspect_ratio_options: Some(vec![
-        CommonAspectRatio::WideSixteenByNine, CommonAspectRatio::TallNineBySixteen,
-        CommonAspectRatio::WideFourByThree, CommonAspectRatio::TallThreeByFour,
-        CommonAspectRatio::Square,
-      ]),
+      aspect_ratio_options: Some(vec![CommonAspectRatio::WideSixteenByNine, CommonAspectRatio::TallNineBySixteen, CommonAspectRatio::WideFourByThree, CommonAspectRatio::TallThreeByFour, CommonAspectRatio::Square]),
       aspect_ratio_default: Some(CommonAspectRatio::WideSixteenByNine),
       resolution_options: Some(vec![CommonResolution::FourEightyP, CommonResolution::SevenTwentyP, CommonResolution::TenEightyP]),
       resolution_default: Some(CommonResolution::SevenTwentyP),
@@ -40,5 +37,6 @@ pub fn wan_video_models() -> Vec<OmniGenVideoModelDetails> {
       duration_seconds_max: Some(30),
       duration_seconds_default: Some(5),
       ..Default::default()
-    }).collect()
+    })
+    .collect()
 }

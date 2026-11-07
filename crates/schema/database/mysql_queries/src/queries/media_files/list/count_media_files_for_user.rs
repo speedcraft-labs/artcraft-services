@@ -13,8 +13,7 @@ pub async fn count_media_files_for_user<'c, T>(args: CountMediaFilesForUserArgs<
 where
   T: Executor<'c, Database = MySql>,
 {
-  let mut query =
-    QueryBuilder::<MySql>::new("SELECT COUNT(*) FROM media_files m FORCE INDEX (fk_maybe_creator_user_token)");
+  let mut query = QueryBuilder::<MySql>::new("SELECT COUNT(*) FROM media_files m FORCE INDEX (fk_maybe_creator_user_token)");
   args.filters.push_predicates(&mut query);
   query.build_query_scalar().fetch_one(args.mysql_executor).await
 }

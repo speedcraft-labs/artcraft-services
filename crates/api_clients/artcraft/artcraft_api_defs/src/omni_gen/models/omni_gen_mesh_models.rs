@@ -7,7 +7,7 @@ use serde_derive::Serialize;
 use utoipa::ToSchema;
 
 /// Mesh model to default to if none is specified
-const DEFAULT_MESH_MODEL : CommonMeshModel = CommonMeshModel::Hunyuan3d3;
+const DEFAULT_MESH_MODEL: CommonMeshModel = CommonMeshModel::Hunyuan3d3;
 
 /// Response body for the mesh models endpoint.
 #[derive(Serialize, ToSchema, Clone)]
@@ -38,7 +38,6 @@ pub struct OmniGenMeshProviderModelDetails {
 
 #[derive(Serialize, ToSchema, Clone)]
 pub struct OmniGenMeshModelDetails {
-
   pub model: CommonMeshModel,
 
   #[serde(skip_serializing_if = "Option::is_none")]

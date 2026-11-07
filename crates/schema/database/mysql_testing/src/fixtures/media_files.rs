@@ -21,11 +21,7 @@ use mysql_queries::queries::media_files::create::insert_builder::media_file_inse
 /// exercise the download + ffprobe billing path with exact durations. The
 /// STORED duration column is deliberately wrong (999_000 ms) to prove the
 /// database is never trusted for billing.
-pub async fn create_probeable_test_video_media_file(
-  pool: &MySqlPool,
-  owner: &UserToken,
-  duration_millis: u64,
-) -> anyhow::Result<MediaFileToken> {
+pub async fn create_probeable_test_video_media_file(pool: &MySqlPool, owner: &UserToken, duration_millis: u64) -> anyhow::Result<MediaFileToken> {
   let prefix = format!("dur{duration_millis}ms");
   let bucket_path = MediaFileBucketPath::generate_new(Some(&prefix), Some("mp4"));
 
@@ -51,11 +47,7 @@ pub async fn create_probeable_test_video_media_file(
 
 /// Insert a video media_files row owned by `owner`, with the given stored
 /// duration. Returns its token for use in `reference_video_media_tokens`.
-pub async fn create_test_video_media_file(
-  pool: &MySqlPool,
-  owner: &UserToken,
-  maybe_duration_millis: Option<u64>,
-) -> anyhow::Result<MediaFileToken> {
+pub async fn create_test_video_media_file(pool: &MySqlPool, owner: &UserToken, maybe_duration_millis: Option<u64>) -> anyhow::Result<MediaFileToken> {
   let bucket_path = MediaFileBucketPath::generate_new(None, Some("mp4"));
 
   MediaFileInsertBuilder::new()

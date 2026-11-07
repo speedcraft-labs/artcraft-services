@@ -44,21 +44,13 @@ pub struct EditUserFeatureFlagsRequest {
 #[derive(Deserialize, ToSchema)]
 pub enum EditUserFeatureFlagsOption {
   /// Add the following flags to the user, keeping any existing flags.
-  AddFlags {
-    flags: Vec<UserFeatureFlag>
-  },
+  AddFlags { flags: Vec<UserFeatureFlag> },
   /// Remove the following flags from the user, keeping any other existing flags not listed below.
-  RemoveFlags {
-    flags: Vec<UserFeatureFlag>
-  },
+  RemoveFlags { flags: Vec<UserFeatureFlag> },
   /// Keep only the following flags on the user, but only if they're already present.
-  KeepFlags {
-    flags: Vec<UserFeatureFlag>
-  },
+  KeepFlags { flags: Vec<UserFeatureFlag> },
   /// Set the exact set of flags below, discarding any existing state.
-  SetExactFlags {
-    flags: Vec<UserFeatureFlag>
-  },
+  SetExactFlags { flags: Vec<UserFeatureFlag> },
   /// Clear all flags from the user.
   ClearAllFlags,
 }
@@ -85,7 +77,6 @@ pub async fn moderator_edit_user_feature_flags_handler(
   server_state: Data<Arc<ServerState>>,
   redis_pool: Data<r2d2::Pool<Client>>,
 ) -> Result<Json<SimpleGenericJsonSuccess>, CommonWebError> {
-
   let user_session = require_moderator(&http_request, &server_state.session_checker, &server_state.mysql_pool).await?;
 
   let username_or_token = path.username_or_token.trim();
@@ -110,27 +101,26 @@ pub async fn moderator_edit_user_feature_flags_handler(
     })?
     .ok_or(CommonWebError::server_error_with_message("uncaught server error"))?;
 
-  let mut user_feature_flags =
-    UserSessionFeatureFlags::new(user_profile.maybe_feature_flags.as_deref());
+  let mut user_feature_flags = UserSessionFeatureFlags::new(user_profile.maybe_feature_flags.as_deref());
 
   match &request.action {
     EditUserFeatureFlagsOption::AddFlags { flags } => {
       user_feature_flags.add_flags(flags.iter().cloned());
-    }
+    },
     EditUserFeatureFlagsOption::RemoveFlags { flags } => {
       let flags = BTreeSet::from_iter(flags.iter().cloned());
       user_feature_flags.remove_flags(&flags);
-    }
+    },
     EditUserFeatureFlagsOption::KeepFlags { flags } => {
       let flags = BTreeSet::from_iter(flags.iter().cloned());
       user_feature_flags.keep_flags(&flags);
-    }
+    },
     EditUserFeatureFlagsOption::SetExactFlags { flags } => {
       user_feature_flags.set_flags(flags.iter().cloned());
-    }
+    },
     EditUserFeatureFlagsOption::ClearAllFlags => {
       user_feature_flags.clear_flags();
-    }
+    },
   }
 
   let ip_address = get_request_ip(&http_request);
@@ -142,26 +132,23 @@ pub async fn moderator_edit_user_feature_flags_handler(
     maybe_mod_user_token: Some(&user_session.user_token),
     ip_address: &ip_address,
     mysql_pool: &server_state.mysql_pool,
-  }).await
-    .map_err(|e| {
-      warn!("Could not set flags: {:?}", e);
-      CommonWebError::from_anyhow_error(e)
-    })?;
+  })
+  .await
+  .map_err(|e| {
+    warn!("Could not set flags: {:?}", e);
+    CommonWebError::from_anyhow_error(e)
+  })?;
 
   // Insert staff audit log.
-  let mut mysql_connection = server_state.mysql_pool.acquire()
-    .await
-    .map_err(|e| {
-      warn!("Could not acquire MySQL connection for audit log: {:?}", e);
-      CommonWebError::from_error(e)
-    })?;
+  let mut mysql_connection = server_state.mysql_pool.acquire().await.map_err(|e| {
+    warn!("Could not acquire MySQL connection for audit log: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
 
-  let mut transaction = mysql_connection.begin()
-    .await
-    .map_err(|e| {
-      warn!("Could not start transaction for audit log: {:?}", e);
-      CommonWebError::from_error(e)
-    })?;
+  let mut transaction = mysql_connection.begin().await.map_err(|e| {
+    warn!("Could not start transaction for audit log: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
 
   let _audit_token = insert_staff_audit_log(InsertStaffAuditLogArgs {
     audit_action: StaffAuditAction::EditUserFeatureFlags,
@@ -171,17 +158,17 @@ pub async fn moderator_edit_user_feature_flags_handler(
     actor_ip_address: &ip_address,
     mysql_executor: &mut *transaction,
     phantom: PhantomData,
-  }).await.map_err(|err| {
+  })
+  .await
+  .map_err(|err| {
     warn!("Failed to insert staff audit log: {:?}", err);
     CommonWebError::from_error(err)
   })?;
 
-  transaction.commit()
-    .await
-    .map_err(|e| {
-      warn!("Could not commit audit log transaction: {:?}", e);
-      CommonWebError::from_error(e)
-    })?;
+  transaction.commit().await.map_err(|e| {
+    warn!("Could not commit audit log transaction: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
 
   // Invalidate Redis cache for the user profile.
   if let Ok(mut redis) = redis_pool.get() {

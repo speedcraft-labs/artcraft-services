@@ -34,13 +34,13 @@ pub struct MediaFileInsertBuilder {
   creator_set_visibility: Visibility, // NB: Non-nullable field
 
   // Important database indices
-  media_file_class: MediaFileClass, // NB: Non-nullable field
+  media_file_class: MediaFileClass,       // NB: Non-nullable field
   media_file_type: Option<MediaFileType>, // NB: Non-nullable field
   is_user_upload: bool,
   is_intermediate_system_file: bool,
 
   // Product and other origination information
-  origin_category: Option<MediaFileOriginCategory>, // NB: Non-nullable field
+  origin_category: Option<MediaFileOriginCategory>,        // NB: Non-nullable field
   origin_product_category: MediaFileOriginProductCategory, // NB: Non-nullable field
   // maybe_origin_model_type: Option<MediaFileOriginModelType>,
   // maybe_origin_model_token: Option<&'a ModelWeightToken>,
@@ -54,7 +54,7 @@ pub struct MediaFileInsertBuilder {
   maybe_frame_width: Option<u32>,
   maybe_frame_height: Option<u32>,
   checksum_sha2: Option<String>, // NB: Non-nullable field
-  
+
   // File name
   maybe_title: Option<String>,
   maybe_origin_filename: Option<String>,
@@ -63,7 +63,7 @@ pub struct MediaFileInsertBuilder {
   maybe_engine_category: Option<MediaFileEngineCategory>, // TODO: Deprecate
 
   maybe_prompt_token: Option<PromptToken>,
-  
+
   // // User text information
   // maybe_title: Option<&'a str>,
   // maybe_text_transcript: Option<&'a str>,
@@ -218,7 +218,7 @@ impl MediaFileInsertBuilder {
 
   // TODO: maybe_audio_encoding
   // TODO: maybe_video_encoding
-  
+
   pub fn frame_width(mut self, frame_width: u32) -> Self {
     self.maybe_frame_width = Some(frame_width);
     self
@@ -233,7 +233,7 @@ impl MediaFileInsertBuilder {
     self.maybe_frame_height = Some(frame_height);
     self
   }
-  
+
   pub fn maybe_frame_height(mut self, maybe_frame_height: Option<u32>) -> Self {
     self.maybe_frame_height = maybe_frame_height;
     self
@@ -264,8 +264,7 @@ impl MediaFileInsertBuilder {
   // TODO: maybe_prompt_token
 
   pub fn maybe_batch_generation_token(mut self, maybe_batch_token: Option<&BatchGenerationToken>) -> Self {
-    self.maybe_batch_generation_token = maybe_batch_token
-        .map(|token| token.clone());
+    self.maybe_batch_generation_token = maybe_batch_token.map(|token| token.clone());
     self
   }
 
@@ -312,21 +311,13 @@ impl MediaFileInsertBuilder {
     A: Acquire<'a, Database = MySql> + Send,
     <A as Acquire<'a>>::Connection: Send,
   {
-    let media_file_type = self.media_file_type
-        .ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField(
-          "Media file type is required".to_string()))?;
+    let media_file_type = self.media_file_type.ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField("Media file type is required".to_string()))?;
 
-    let checksum_sha2 = self.checksum_sha2.as_ref()
-        .ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField(
-          "Checksum SHA2 is required".to_string()))?;
+    let checksum_sha2 = self.checksum_sha2.as_ref().ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField("Checksum SHA2 is required".to_string()))?;
 
-    let bucket_path = self.public_bucket_directory_hash.as_ref()
-        .ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField(
-          "Public bucket directory hash is required".to_string()))?;
+    let bucket_path = self.public_bucket_directory_hash.as_ref().ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField("Public bucket directory hash is required".to_string()))?;
 
-    let mut origin_category = self.origin_category
-        .ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField(
-          "Origin category is required".to_string()))?;
+    let mut origin_category = self.origin_category.ok_or_else(|| MediaFileInsertBuilderError::MissingRequiredField("Origin category is required".to_string()))?;
 
     let mut maybe_generation_provider_str = None;
     let is_intermediate_system_file = self.is_intermediate_system_file;
@@ -358,7 +349,7 @@ impl MediaFileInsertBuilder {
       is_intermediate_system_file,
       origin_category,
       origin_product_category: self.origin_product_category,
-      maybe_origin_model_type: None, // TODO
+      maybe_origin_model_type: None,  // TODO
       maybe_origin_model_token: None, // TODO
       maybe_origin_filename: self.maybe_origin_filename.clone(),
       maybe_mime_type: self.maybe_mime_type.as_deref(),
@@ -371,7 +362,7 @@ impl MediaFileInsertBuilder {
       maybe_engine_category: self.maybe_engine_category,
       checksum_sha2: checksum_sha2.as_str(),
       maybe_title: self.maybe_title.as_deref(),
-      maybe_text_transcript: None, // TODO
+      maybe_text_transcript: None,               // TODO
       maybe_scene_source_media_file_token: None, // TODO
       maybe_prompt_token: self.maybe_prompt_token.as_ref(),
       maybe_batch_token: self.maybe_batch_generation_token.as_ref(),
@@ -379,17 +370,18 @@ impl MediaFileInsertBuilder {
       public_bucket_directory_hash: bucket_path.get_object_hash(),
       maybe_public_bucket_prefix: bucket_path.get_optional_prefix(),
       maybe_public_bucket_extension: bucket_path.get_optional_extension(),
-      maybe_creator_file_synthetic_id_category: IdCategory::MediaFile, // TODO: Remove this
+      maybe_creator_file_synthetic_id_category: IdCategory::MediaFile,      // TODO: Remove this
       maybe_creator_category_synthetic_id_category: IdCategory::FileUpload, // TODO: Remove this
-      maybe_extra_media_info: None, // TODO
+      maybe_extra_media_info: None,                                         // TODO
       maybe_generation_provider: self.maybe_generation_provider,
       maybe_platform_type: self.maybe_platform_type,
       maybe_cover_image_media_file_token: self.maybe_cover_image_media_file_token.as_ref(),
       is_generated_on_prem: false, // TODO
-      generated_by_worker: None, // TODO
-      generated_by_cluster: None, // TODO
-      maybe_mod_user_token: None, // TODO
-    }).await;
+      generated_by_worker: None,   // TODO
+      generated_by_cluster: None,  // TODO
+      maybe_mod_user_token: None,  // TODO
+    })
+    .await;
 
     match result {
       Ok(result) => Ok(result.0),

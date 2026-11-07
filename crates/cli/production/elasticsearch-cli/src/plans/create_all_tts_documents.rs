@@ -17,15 +17,11 @@ use tokens::tokens::users::UserToken;
 pub async fn create_all_tts_documents(mysql: &Pool<MySql>, elasticsearch: &Elasticsearch) -> AnyhowResult<()> {
   info!("Create all TTS documents.");
 
-  const SCOPE_USERNAME : Option<&str> = None;
-  const REQUIRE_MOD_APPROVED : bool = false;
+  const SCOPE_USERNAME: Option<&str> = None;
+  const REQUIRE_MOD_APPROVED: bool = false;
 
   // TODO(bt,2023-10-26): Paginate this query (!!)
-  let all_tts_models = list_tts_models(
-    mysql,
-    SCOPE_USERNAME,
-    REQUIRE_MOD_APPROVED
-  ).await?;
+  let all_tts_models = list_tts_models(mysql, SCOPE_USERNAME, REQUIRE_MOD_APPROVED).await?;
 
   create_tts_model_index(&elasticsearch, true).await?;
 
@@ -52,26 +48,15 @@ async fn create_document_from_record(elasticsearch: &Elasticsearch, record: &Tts
     updated_at: record.updated_at,
   };
 
-  let op : BulkOperation<_> = BulkOperation::index(&document)
-      .id(document.get_document_id())
-      .into();
+  let op: BulkOperation<_> = BulkOperation::index(&document).id(document.get_document_id()).into();
 
-  let response = elasticsearch
-      .bulk(BulkParts::Index(TTS_MODEL_INDEX))
-      .body(vec![op])
-      .send()
-      .await?;
+  let response = elasticsearch.bulk(BulkParts::Index(TTS_MODEL_INDEX)).body(vec![op]).send().await?;
 
   let json: Value = response.json().await?;
 
   let had_errors = json["errors"].as_bool().unwrap_or(false);
   if had_errors {
-    let failed: Vec<&Value> = json["items"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|v| !v["error"].is_null())
-        .collect();
+    let failed: Vec<&Value> = json["items"].as_array().unwrap().iter().filter(|v| !v["error"].is_null()).collect();
 
     // TODO: retry failures
     error!("Errors during indexing. Failures: {}", failed.len());
@@ -82,22 +67,15 @@ async fn create_document_from_record(elasticsearch: &Elasticsearch, record: &Tts
 
 // NB: Adapted from elasticsearch crate examples source
 async fn create_tts_model_index(client: &Elasticsearch, _delete: bool) -> AnyhowResult<()> {
-
   info!("Creating TTS model index...");
 
-  let index_path = get_storyteller_rust_root()
-      .join("_database/elasticsearch/index_definitions/tts_models_v1.json");
+  let index_path = get_storyteller_rust_root().join("_database/elasticsearch/index_definitions/tts_models_v1.json");
 
   info!("Reading index file: {:?}", index_path);
 
   let index_definition = read_to_string(index_path)?;
 
-  create_index_if_not_exists(CreateIndexArgs {
-    client,
-    index_name: TTS_MODEL_INDEX,
-    index_definition: &index_definition,
-    delete_existing: true,
-  }).await?;
+  create_index_if_not_exists(CreateIndexArgs { client, index_name: TTS_MODEL_INDEX, index_definition: &index_definition, delete_existing: true }).await?;
 
   Ok(())
 }

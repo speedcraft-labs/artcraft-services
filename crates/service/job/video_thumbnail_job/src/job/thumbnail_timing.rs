@@ -26,16 +26,8 @@ struct LatencySnapshot {
 }
 
 impl<'a> ThumbnailTiming<'a> {
-  pub fn start(
-    media_file: &'a VideoMediaFileWithoutThumbnail,
-    query_started_at: Instant,
-    query_finished_at: Instant,
-  ) -> Self {
-    let timing = Self {
-      media_file,
-      clock: DatabaseClock { database_read_at: media_file.database_read_at, query_started_at, query_finished_at },
-      started_at: Instant::now(),
-    };
+  pub fn start(media_file: &'a VideoMediaFileWithoutThumbnail, query_started_at: Instant, query_finished_at: Instant) -> Self {
+    let timing = Self { media_file, clock: DatabaseClock { database_read_at: media_file.database_read_at, query_started_at, query_finished_at }, started_at: Instant::now() };
 
     timing.log_event("started", timing.started_at);
     timing
@@ -58,8 +50,7 @@ impl<'a> ThumbnailTiming<'a> {
   }
 
   fn log_event(&self, event: &str, now: Instant) {
-    let snapshot =
-      self.clock.snapshot_at(now, self.media_file.created_at, self.media_file.maybe_generation_completed_at);
+    let snapshot = self.clock.snapshot_at(now, self.media_file.created_at, self.media_file.maybe_generation_completed_at);
     let query_duration = self.clock.query_finished_at.duration_since(self.clock.query_started_at);
 
     info!(
@@ -84,12 +75,7 @@ impl<'a> ThumbnailTiming<'a> {
 }
 
 impl DatabaseClock {
-  fn snapshot_at(
-    &self,
-    now: Instant,
-    media_created_at: DateTime<Utc>,
-    maybe_generation_completed_at: Option<DateTime<Utc>>,
-  ) -> LatencySnapshot {
+  fn snapshot_at(&self, now: Instant, media_created_at: DateTime<Utc>, maybe_generation_completed_at: Option<DateTime<Utc>>) -> LatencySnapshot {
     // NOW(6) is sampled at statement start, somewhere between these two Instants.
     // Use the midpoint as an estimate with +/- half the query duration uncertainty.
     // This includes pool wait, execution, and network time; anchoring NOW() at the
@@ -97,15 +83,13 @@ impl DatabaseClock {
     // The completion/creation columns themselves have only whole-second precision.
     let query_duration = self.query_finished_at.duration_since(self.query_started_at);
     let midpoint = self.query_started_at + query_duration / 2;
-    let elapsed = TimeDelta::from_std(now.duration_since(midpoint))
-      .expect("thumbnail measurement duration fits in chrono::TimeDelta");
+    let elapsed = TimeDelta::from_std(now.duration_since(midpoint)).expect("thumbnail measurement duration fits in chrono::TimeDelta");
     let estimated_database_at = self.database_read_at + elapsed;
 
     LatencySnapshot {
       estimated_database_at,
       // Preserve missing and negative values instead of fabricating a zero delay.
-      maybe_since_generation_completed_ms: maybe_generation_completed_at
-        .map(|completed_at| (estimated_database_at - completed_at).num_milliseconds()),
+      maybe_since_generation_completed_ms: maybe_generation_completed_at.map(|completed_at| (estimated_database_at - completed_at).num_milliseconds()),
       since_media_created_ms: (estimated_database_at - media_created_at).num_milliseconds(),
     }
   }

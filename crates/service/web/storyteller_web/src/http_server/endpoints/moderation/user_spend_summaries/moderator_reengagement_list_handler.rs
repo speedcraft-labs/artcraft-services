@@ -5,12 +5,8 @@ use actix_web::web::{Json, Query};
 use actix_web::{web, HttpRequest};
 use log::warn;
 
-use artcraft_api_defs::moderation::user_spend_summaries::reengagement_list::{
-  ModeratorReengagementListQueryParams, ModeratorReengagementListResponse, ReengagementCandidateEntry,
-};
-use mysql_queries::queries::user_spend_summaries::list_reengagement_candidates::{
-  list_reengagement_candidates, ListReengagementCandidatesArgs,
-};
+use artcraft_api_defs::moderation::user_spend_summaries::reengagement_list::{ModeratorReengagementListQueryParams, ModeratorReengagementListResponse, ReengagementCandidateEntry};
+use mysql_queries::queries::user_spend_summaries::list_reengagement_candidates::{list_reengagement_candidates, ListReengagementCandidatesArgs};
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 use crate::http_server::endpoints::moderation::resolve_payments_namespace;
@@ -33,34 +29,20 @@ const PAGE_SIZE: i64 = 200;
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn moderator_reengagement_list_handler(
-  http_request: HttpRequest,
-  query: Query<ModeratorReengagementListQueryParams>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<ModeratorReengagementListResponse>, CommonWebError> {
+pub async fn moderator_reengagement_list_handler(http_request: HttpRequest, query: Query<ModeratorReengagementListQueryParams>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<ModeratorReengagementListResponse>, CommonWebError> {
   let _user_session = require_moderator(&http_request, &server_state.session_checker, &server_state.mysql_pool).await?;
 
   let payments_namespace = resolve_payments_namespace(query.payments_namespace.as_deref())?;
   let offset = query.offset.unwrap_or(0);
 
-  let rows = list_reengagement_candidates(ListReengagementCandidatesArgs {
-    payments_namespace: payments_namespace.to_str(),
-    limit: PAGE_SIZE,
-    offset: offset.min(i64::MAX as u64) as i64,
-    mysql_executor: &server_state.mysql_pool,
-    phantom: PhantomData,
-  })
-  .await
-  .map_err(|err| {
-    warn!("Failed to list reengagement candidates: {:?}", err);
-    CommonWebError::from_error(err)
-  })?;
+  let rows = list_reengagement_candidates(ListReengagementCandidatesArgs { payments_namespace: payments_namespace.to_str(), limit: PAGE_SIZE, offset: offset.min(i64::MAX as u64) as i64, mysql_executor: &server_state.mysql_pool, phantom: PhantomData })
+    .await
+    .map_err(|err| {
+      warn!("Failed to list reengagement candidates: {:?}", err);
+      CommonWebError::from_error(err)
+    })?;
 
-  let maybe_next_offset = if rows.len() as i64 == PAGE_SIZE {
-    Some(offset + PAGE_SIZE as u64)
-  } else {
-    None
-  };
+  let maybe_next_offset = if rows.len() as i64 == PAGE_SIZE { Some(offset + PAGE_SIZE as u64) } else { None };
 
   let candidates = rows
     .into_iter()
@@ -78,9 +60,5 @@ pub async fn moderator_reengagement_list_handler(
     })
     .collect();
 
-  Ok(Json(ModeratorReengagementListResponse {
-    success: true,
-    candidates,
-    maybe_next_offset,
-  }))
+  Ok(Json(ModeratorReengagementListResponse { success: true, candidates, maybe_next_offset }))
 }

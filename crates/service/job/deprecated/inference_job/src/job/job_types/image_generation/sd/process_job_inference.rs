@@ -29,35 +29,27 @@ use crate::job::job_loop::process_single_job_error::ProcessSingleJobError;
 use crate::job::job_types::image_generation::sd::process_job::{sd_args_from_job, StableDiffusionProcessArgs};
 use crate::job::job_types::image_generation::sd::sd_inference_command::InferenceArgs;
 
-pub async fn process_job_inference(
-  args: &StableDiffusionProcessArgs<'_>
-) -> Result<JobSuccessResult, ProcessSingleJobError> {
+pub async fn process_job_inference(args: &StableDiffusionProcessArgs<'_>) -> Result<JobSuccessResult, ProcessSingleJobError> {
   let job = args.job;
   let deps = args.job_dependencies;
   let mysql_pool = &deps.db.mysql_pool;
 
   let sd_args = sd_args_from_job(&args).await?;
-  let sd_deps: &crate::job::job_types::image_generation::sd::stable_diffusion_dependencies::StableDiffusionDependencies = match
-  &args.job_dependencies.job.job_specific_dependencies.maybe_stable_diffusion_dependencies
-  {
+  let sd_deps: &crate::job::job_types::image_generation::sd::stable_diffusion_dependencies::StableDiffusionDependencies = match &args.job_dependencies.job.job_specific_dependencies.maybe_stable_diffusion_dependencies {
     None => {
       return Err(ProcessSingleJobError::Other(anyhow!("Missing Job Specific Dependencies")));
-    }
-    Some(val) => { val }
+    },
+    Some(val) => val,
   };
 
-  let _job_progress_reporter = args.job_dependencies.clients.job_progress_reporter
-      .new_generic_inference(job.inference_job_token.as_str())
-      .map_err(|e| ProcessSingleJobError::Other(anyhow!(e)))?;
+  let _job_progress_reporter = args.job_dependencies.clients.job_progress_reporter.new_generic_inference(job.inference_job_token.as_str()).map_err(|e| ProcessSingleJobError::Other(anyhow!(e)))?;
 
   //==================== TEMP DIR ==================== //
 
   let work_temp_dir = format!("temp_stable_diffusion_inference_{}", job.id.0);
 
   //NB: TempDir exists until it goes out of scope, at which point it should delete from filesystem.
-  let work_temp_dir = args.job_dependencies.fs.scoped_temp_dir_creator_for_work
-      .new_tempdir(&work_temp_dir)
-      .map_err(|e| ProcessSingleJobError::from_io_error(e))?;
+  let work_temp_dir = args.job_dependencies.fs.scoped_temp_dir_creator_for_work.new_tempdir(&work_temp_dir).map_err(|e| ProcessSingleJobError::from_io_error(e))?;
 
   //let sd_checkpoint_path = work_temp_dir.path().join("sd_checkpoint.safetensors");
   let mut lora_path = work_temp_dir.path().join("lora.safetensors");
@@ -81,22 +73,14 @@ pub async fn process_job_inference(
     Some(ref token) => token,
   };
 
-  let sd_model_weight = get_weight_by_token(
-    sd_model_weight_token,
-    false,
-    &deps.db.mysql_pool,
-  ).await?;
+  let sd_model_weight = get_weight_by_token(sd_model_weight_token, false, &deps.db.mysql_pool).await?;
 
   let sd_model_weight = match sd_model_weight {
     None => return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("no record of sd model!"))),
     Some(record) => record,
   };
 
-  let sd_checkpoint_path = args.job_dependencies
-      .fs
-      .model_weights_cache_directory
-      .get_model_weight_from_cache_or_bucket(&sd_model_weight)
-      .await?;
+  let sd_checkpoint_path = args.job_dependencies.fs.model_weights_cache_directory.get_model_weight_from_cache_or_bucket(&sd_model_weight).await?;
 
   info!("sd_checkpoint_path: {:?}", sd_checkpoint_path);
 
@@ -107,11 +91,7 @@ pub async fn process_job_inference(
   let mut maybe_lora_record = None;
 
   if let Some(token) = lora_token {
-    maybe_lora_record = get_weight_by_token(
-      &token,
-      false,
-      &deps.db.mysql_pool,
-    ).await?;
+    maybe_lora_record = get_weight_by_token(&token, false, &deps.db.mysql_pool).await?;
   }
 
   let remote_cloud_file_client = RemoteCloudFileClient::get_remote_cloud_file_client().await?;
@@ -122,34 +102,25 @@ pub async fn process_job_inference(
   match maybe_lora_record {
     None => {
       lora_path.clear();
-    }
+    },
     Some(lora_record) => {
       lora_name = lora_record.title.to_string();
       lora_token = lora_record.token.to_string();
 
-      lora_path = args.job_dependencies
-          .fs
-          .model_weights_cache_directory
-          .get_model_weight_from_cache_or_bucket(&lora_record)
-          .await?;
-    }
+      lora_path = args.job_dependencies.fs.model_weights_cache_directory.get_model_weight_from_cache_or_bucket(&lora_record).await?;
+    },
   }
 
-  args.job_dependencies
-      .buckets
-      .public_bucket_client
-      .download_file_to_disk(&sd_deps.vae_bucket_path, &vae_path)
-      .await
-      .map_err(|err| {
-        error!("could not download VAE: {:?}", err);
-        ProcessSingleJobError::from_anyhow_error(anyhow!("could not download VAE: {:?}", err))
-      })?;
+  args.job_dependencies.buckets.public_bucket_client.download_file_to_disk(&sd_deps.vae_bucket_path, &vae_path).await.map_err(|err| {
+    error!("could not download VAE: {:?}", err);
+    ProcessSingleJobError::from_anyhow_error(anyhow!("could not download VAE: {:?}", err))
+  })?;
 
   let prompt = match sd_args.maybe_prompt {
     Some(val) => val,
     None => {
       return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("No Prompt provided!")));
-    }
+    },
   };
 
   let stderr_output_file = work_temp_dir.path().join("sd_err.txt");
@@ -237,22 +208,16 @@ pub async fn process_job_inference(
 
     println!("Upload File Path:{}", file_path);
 
-    let metadata = remote_cloud_file_client.upload_file(
-      Box::new(MediaImagePngDescriptor {}),
-      file_path.as_ref(),
-    ).await?;
+    let metadata = remote_cloud_file_client.upload_file(Box::new(MediaImagePngDescriptor {}), file_path.as_ref()).await?;
 
     let bucket_details = match metadata.bucket_details {
-      Some(val) => { val }
+      Some(val) => val,
       None => {
-        return Err(
-          ProcessSingleJobError::from_anyhow_error(anyhow!("no VAE? thats a problem."))
-        );
-      }
+        return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("no VAE? thats a problem.")));
+      },
     };
 
-    let media_type = MediaFileType::try_from_mime_type(metadata.mimetype.as_ref())
-        .unwrap_or(MediaFileType::Image); // Coarse fallback for unrecognized mimes
+    let media_type = MediaFileType::try_from_mime_type(metadata.mimetype.as_ref()).unwrap_or(MediaFileType::Image); // Coarse fallback for unrecognized mimes
 
     // extra_file_modification_info: todo!(), // JSON ENCODED STRUCT
     let (media_file_token, _id) = insert_media_file_generic_from_job(InsertFromJobArgs {
@@ -289,24 +254,20 @@ pub async fn process_job_inference(
       maybe_title: None,
       maybe_scene_source_media_file_token: None,
       is_intermediate_system_file: false,
-    }).await?;
+    })
+    .await?;
 
     if maybe_first_media_file_token.is_none() {
       maybe_first_media_file_token = Some(media_file_token.clone());
     }
 
-    let batch_generation_entity: BatchGenerationEntity = BatchGenerationEntity::MediaFile(
-      media_file_token
-    );
+    let batch_generation_entity: BatchGenerationEntity = BatchGenerationEntity::MediaFile(media_file_token);
 
     entries.push(batch_generation_entity);
   }
 
   // TODO(bt,2024-02-22): This transaction should wrap everything
-  let mut transaction = mysql_pool
-      .begin()
-      .await
-      .map_err(|e| ProcessSingleJobError::from_anyhow_error(anyhow!(e)))?;
+  let mut transaction = mysql_pool.begin().await.map_err(|e| ProcessSingleJobError::from_anyhow_error(anyhow!(e)))?;
 
   //let batch_token_result = insert_batch_generation_records(InsertBatchArgs {
   //  entries,
@@ -345,30 +306,19 @@ pub async fn process_job_inference(
     creator_ip_address: &job.creator_ip_address,
     mysql_executor: &mut *transaction,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   match prompt_result {
-    Ok(_token) => {}
+    Ok(_token) => {},
     Err(err) => {
       error!("No prompt result token? something has failed: {:?}", err);
       return Err(ProcessSingleJobError::from_anyhow_error(anyhow!("No prompt result token? something has failed.")));
-    }
+    },
   }
 
-  let _r = transaction
-      .commit()
-      .await
-      .map_err(|e| ProcessSingleJobError::from_anyhow_error(anyhow!(e)))?;
+  let _r = transaction.commit().await.map_err(|e| ProcessSingleJobError::from_anyhow_error(anyhow!(e)))?;
 
   // TODO(bt,2024-02-12): Return the batch token instead. (We're not ready for that.)
-  Ok(JobSuccessResult {
-    inference_duration,
-    maybe_result_entity: maybe_first_media_file_token
-        .map(|media_file_token| {
-          ResultEntity {
-            entity_type: InferenceResultType::MediaFile,
-            entity_token: media_file_token.to_string(),
-          }
-        }),
-  })
+  Ok(JobSuccessResult { inference_duration, maybe_result_entity: maybe_first_media_file_token.map(|media_file_token| ResultEntity { entity_type: InferenceResultType::MediaFile, entity_token: media_file_token.to_string() }) })
 }

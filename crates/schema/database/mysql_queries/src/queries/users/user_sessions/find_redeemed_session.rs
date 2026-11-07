@@ -26,6 +26,6 @@ WHERE s.id = ? AND s.user_token = ? AND s.maybe_creation_type = ?
     args.user_token,
     UserWebSessionCreationType::DeviceApproval.to_str()
   )
-    .fetch_optional(args.mysql_executor)
-    .await
+  .fetch_optional(args.mysql_executor)
+  .await
 }

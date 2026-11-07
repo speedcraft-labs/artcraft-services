@@ -2,11 +2,7 @@ use crate::creds::kinovi_web_session::KinoviWebSession;
 use crate::error::kinovi_web_error::KinoviWebError;
 use crate::pricing::cost::kinovi_generation_cost::KinoviGenerationCost;
 use crate::requests::kinovi_host::KinoviHost;
-use crate::requests::workflow_run_task::workflow_run_task::{
-  workflow_run_task, KinoviAspectRatioRaw, KinoviBatchCountRaw,
-  KinoviModelTypeRaw, KinoviOutputResolutionRaw, WorkflowRunTaskArgs
-  , WorkflowRunTaskRequest,
-};
+use crate::requests::workflow_run_task::workflow_run_task::{workflow_run_task, KinoviAspectRatioRaw, KinoviBatchCountRaw, KinoviModelTypeRaw, KinoviOutputResolutionRaw, WorkflowRunTaskArgs, WorkflowRunTaskRequest};
 
 // ── Args ──
 
@@ -112,9 +108,7 @@ pub struct GenerateHappyHorse1p0Response {
 
 // ── Entry point ──
 
-pub async fn generate_happy_horse_1p0(
-  args: GenerateHappyHorse1p0Args<'_>,
-) -> Result<GenerateHappyHorse1p0Response, KinoviWebError> {
+pub async fn generate_happy_horse_1p0(args: GenerateHappyHorse1p0Args<'_>) -> Result<GenerateHappyHorse1p0Response, KinoviWebError> {
   let req = args.request;
 
   let raw_request = WorkflowRunTaskRequest {
@@ -136,18 +130,9 @@ pub async fn generate_happy_horse_1p0(
     maybe_generate_audio: None,
   };
 
-  let raw_response = workflow_run_task(WorkflowRunTaskArgs {
-    request: raw_request,
-    session: args.session,
-    host_override: args.host_override,
-  }).await?;
+  let raw_response = workflow_run_task(WorkflowRunTaskArgs { request: raw_request, session: args.session, host_override: args.host_override }).await?;
 
-  Ok(GenerateHappyHorse1p0Response {
-    task_id: raw_response.task_id,
-    order_id: raw_response.order_id,
-    task_ids: raw_response.task_ids,
-    order_ids: raw_response.order_ids,
-  })
+  Ok(GenerateHappyHorse1p0Response { task_id: raw_response.task_id, order_id: raw_response.order_id, task_ids: raw_response.task_ids, order_ids: raw_response.order_ids })
 }
 
 // ── Mapping helpers ──
@@ -197,19 +182,8 @@ mod tests {
   mod pricing_tests {
     use super::*;
 
-    fn make_request(
-      duration_seconds: u8,
-      output_resolution: Option<KinoviHappyHorse1p0OutputResolution>,
-      batch_count: Option<KinoviHappyHorse1p0BatchCount>,
-    ) -> GenerateHappyHorse1p0Request {
-      GenerateHappyHorse1p0Request {
-        prompt: String::new(),
-        aspect_ratio: None,
-        output_resolution,
-        batch_count,
-        duration_seconds,
-        start_frame_url: None,
-      }
+    fn make_request(duration_seconds: u8, output_resolution: Option<KinoviHappyHorse1p0OutputResolution>, batch_count: Option<KinoviHappyHorse1p0BatchCount>) -> GenerateHappyHorse1p0Request {
+      GenerateHappyHorse1p0Request { prompt: String::new(), aspect_ratio: None, output_resolution, batch_count, duration_seconds, start_frame_url: None }
     }
 
     fn r720(dur: u8) -> GenerateHappyHorse1p0Request {
@@ -278,50 +252,24 @@ mod tests {
     mod batch_tests {
       use super::*;
 
-      const BATCHES: [KinoviHappyHorse1p0BatchCount; 4] = [
-        KinoviHappyHorse1p0BatchCount::One,
-        KinoviHappyHorse1p0BatchCount::Two,
-        KinoviHappyHorse1p0BatchCount::Three,
-        KinoviHappyHorse1p0BatchCount::Four,
-      ];
+      const BATCHES: [KinoviHappyHorse1p0BatchCount; 4] = [KinoviHappyHorse1p0BatchCount::One, KinoviHappyHorse1p0BatchCount::Two, KinoviHappyHorse1p0BatchCount::Three, KinoviHappyHorse1p0BatchCount::Four];
 
       #[test]
       fn fixed_five_second_batch_prices() {
         // Each pair is (credits, USD cents rounded up), for batches 1 through 4.
-        let cases = [
-          (KinoviHappyHorse1p0OutputResolution::SevenTwentyP, [
-            (165, 68), (330, 136), (495, 204), (660, 272),
-          ]),
-          (KinoviHappyHorse1p0OutputResolution::TenEightyP, [
-            (330, 136), (660, 272), (990, 408), (1320, 544),
-          ]),
-        ];
+        let cases = [(KinoviHappyHorse1p0OutputResolution::SevenTwentyP, [(165, 68), (330, 136), (495, 204), (660, 272)]), (KinoviHappyHorse1p0OutputResolution::TenEightyP, [(330, 136), (660, 272), (990, 408), (1320, 544)])];
         for (resolution, prices) in cases {
           for (batch, (credits, usd_cents)) in BATCHES.into_iter().zip(prices) {
             let cost = make_request(5, Some(resolution), Some(batch)).calculate_costs();
-            assert_eq!(
-              (cost.kinovi_credits, cost.usd_cents_rounded_up),
-              (credits, usd_cents),
-              "{resolution:?} {batch:?}",
-            );
+            assert_eq!((cost.kinovi_credits, cost.usd_cents_rounded_up), (credits, usd_cents), "{resolution:?} {batch:?}",);
           }
         }
       }
 
       #[test]
       fn all_batches_scale_every_resolution_and_round_the_total() {
-        let batches = [
-          (None, 1),
-          (Some(KinoviHappyHorse1p0BatchCount::One), 1),
-          (Some(KinoviHappyHorse1p0BatchCount::Two), 2),
-          (Some(KinoviHappyHorse1p0BatchCount::Three), 3),
-          (Some(KinoviHappyHorse1p0BatchCount::Four), 4),
-        ];
-        for resolution in [
-          None,
-          Some(KinoviHappyHorse1p0OutputResolution::SevenTwentyP),
-          Some(KinoviHappyHorse1p0OutputResolution::TenEightyP),
-        ] {
+        let batches = [(None, 1), (Some(KinoviHappyHorse1p0BatchCount::One), 1), (Some(KinoviHappyHorse1p0BatchCount::Two), 2), (Some(KinoviHappyHorse1p0BatchCount::Three), 3), (Some(KinoviHappyHorse1p0BatchCount::Four), 4)];
+        for resolution in [None, Some(KinoviHappyHorse1p0OutputResolution::SevenTwentyP), Some(KinoviHappyHorse1p0OutputResolution::TenEightyP)] {
           for duration in [3, 5, 15] {
             let single = make_request(duration, resolution, None).calculate_costs();
             for (batch, count) in batches {
@@ -329,10 +277,7 @@ mod tests {
               let context = format!("{resolution:?} {duration}s {batch:?}");
               let expected_credits = single.kinovi_credits * count;
               assert_eq!(batched.kinovi_credits, expected_credits, "{context}: credits");
-              assert!(
-                (batched.usd_cents_fractional - single.usd_cents_fractional * count as f64).abs() < 1e-8,
-                "{context}: fractional cents",
-              );
+              assert!((batched.usd_cents_fractional - single.usd_cents_fractional * count as f64).abs() < 1e-8, "{context}: fractional cents",);
               // Happy Horse currently uses the legacy 243 credits/dollar conversion.
               let numerator = expected_credits * 100;
               assert_eq!(batched.usd_cents_rounded_up, numerator.div_ceil(243), "{context}: rounded up");
@@ -464,27 +409,11 @@ mod tests {
     fn aspect_ratio_does_not_affect_credits() {
       let baseline = r720(5).calculate_costs().kinovi_credits;
 
-      let ratios = [
-        KinoviHappyHorse1p0AspectRatio::Landscape16x9,
-        KinoviHappyHorse1p0AspectRatio::Portrait9x16,
-        KinoviHappyHorse1p0AspectRatio::Square1x1,
-        KinoviHappyHorse1p0AspectRatio::Landscape4x3,
-        KinoviHappyHorse1p0AspectRatio::Portrait3x4,
-      ];
+      let ratios = [KinoviHappyHorse1p0AspectRatio::Landscape16x9, KinoviHappyHorse1p0AspectRatio::Portrait9x16, KinoviHappyHorse1p0AspectRatio::Square1x1, KinoviHappyHorse1p0AspectRatio::Landscape4x3, KinoviHappyHorse1p0AspectRatio::Portrait3x4];
 
       for ar in &ratios {
-        let req = GenerateHappyHorse1p0Request {
-          prompt: String::new(),
-          aspect_ratio: Some(*ar),
-          output_resolution: None,
-          batch_count: None,
-          duration_seconds: 5,
-          start_frame_url: None,
-        };
-        assert_eq!(
-          req.calculate_costs().kinovi_credits, baseline,
-          "Aspect ratio {:?} should not change credits from baseline {}", ar, baseline,
-        );
+        let req = GenerateHappyHorse1p0Request { prompt: String::new(), aspect_ratio: Some(*ar), output_resolution: None, batch_count: None, duration_seconds: 5, start_frame_url: None };
+        assert_eq!(req.calculate_costs().kinovi_credits, baseline, "Aspect ratio {:?} should not change credits from baseline {}", ar, baseline,);
       }
     }
   }
@@ -500,15 +429,9 @@ mod tests {
       let result = generate_happy_horse_1p0(GenerateHappyHorse1p0Args {
         session: &session,
         host_override: None,
-        request: GenerateHappyHorse1p0Request {
-          prompt: "A corgi and a shiba are playing chess against one another".to_string(),
-          aspect_ratio: None,
-          output_resolution: None,
-          batch_count: None,
-          duration_seconds: 4,
-          start_frame_url: None,
-        },
-      }).await?;
+        request: GenerateHappyHorse1p0Request { prompt: "A corgi and a shiba are playing chess against one another".to_string(), aspect_ratio: None, output_resolution: None, batch_count: None, duration_seconds: 4, start_frame_url: None },
+      })
+      .await?;
       println!("t2v default — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert!(!result.order_id.is_empty());
@@ -532,7 +455,8 @@ mod tests {
           duration_seconds: 5,
           start_frame_url: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("t2v 720p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -555,7 +479,8 @@ mod tests {
           duration_seconds: 4,
           start_frame_url: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("t2v 1080p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -572,15 +497,9 @@ mod tests {
       let result = generate_happy_horse_1p0(GenerateHappyHorse1p0Args {
         session: &session,
         host_override: None,
-        request: GenerateHappyHorse1p0Request {
-          prompt: format!("A cat sitting in a sunbeam ({})", label),
-          aspect_ratio: Some(ar),
-          output_resolution: None,
-          batch_count: None,
-          duration_seconds: 4,
-          start_frame_url: None,
-        },
-      }).await?;
+        request: GenerateHappyHorse1p0Request { prompt: format!("A cat sitting in a sunbeam ({})", label), aspect_ratio: Some(ar), output_resolution: None, batch_count: None, duration_seconds: 4, start_frame_url: None },
+      })
+      .await?;
       println!("{} — task_id={}, order_id={}", label, result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -640,7 +559,8 @@ mod tests {
           duration_seconds: 8,
           start_frame_url: Some(start_frame_url),
         },
-      }).await?;
+      })
+      .await?;
       println!("keyframe 720p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert!(!result.order_id.is_empty());
@@ -667,7 +587,8 @@ mod tests {
           duration_seconds: 15,
           start_frame_url: Some(start_frame_url),
         },
-      }).await?;
+      })
+      .await?;
       println!("keyframe 1080p square — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert!(!result.order_id.is_empty());
@@ -694,7 +615,8 @@ mod tests {
           duration_seconds: 5,
           start_frame_url: Some(start_frame_url),
         },
-      }).await?;
+      })
+      .await?;
       println!("keyframe landscape default res — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert!(!result.order_id.is_empty());
@@ -709,21 +631,11 @@ mod tests {
   }
 
   async fn upload_test_image(session: &KinoviWebSession) -> AnyhowResult<String> {
-    let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-      test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-    ).await?;
+    let image_bytes = crate::test_utils::http_download::http_download_to_bytes(test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL).await?;
 
-    let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-      session,
-      extension: "jpg".to_string(),
-      host_override: None,
-    }).await?;
+    let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session, extension: "jpg".to_string(), host_override: None }).await?;
 
-    let upload_result = upload_file(UploadFileArgs {
-      upload_url: prepare_result.upload_url,
-      file_bytes: image_bytes,
-      host_override: None,
-    }).await?;
+    let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
     Ok(upload_result.public_url)
   }

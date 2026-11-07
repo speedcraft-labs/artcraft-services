@@ -15,18 +15,9 @@ pub fn setup_dashboards() -> Dashboards {
   let daus_id = read_non_empty_env("DATABOX_DASHBOARD_DAUS");
   let daily_generations_id = read_non_empty_env("DATABOX_DASHBOARD_DAILY_GENERATIONS");
 
-  info!(
-    "Databox dashboards configured: daus={}, daily_generations={}",
-    daus_id.is_some(),
-    daily_generations_id.is_some(),
-  );
+  info!("Databox dashboards configured: daus={}, daily_generations={}", daus_id.is_some(), daily_generations_id.is_some(),);
 
-  Dashboards {
-    databox: DataboxDashboards {
-      daus_id,
-      daily_generations_id,
-    },
-  }
+  Dashboards { databox: DataboxDashboards { daus_id, daily_generations_id } }
 }
 
 /// Read an env var, treating unset or whitespace-only as absent.

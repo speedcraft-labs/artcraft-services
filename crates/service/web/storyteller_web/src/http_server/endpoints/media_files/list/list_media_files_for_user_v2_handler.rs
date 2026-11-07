@@ -3,15 +3,10 @@ use std::time::Instant;
 
 use actix_web::web::{Json, Path, Query};
 use actix_web::{web, HttpRequest};
-use artcraft_api_defs::media_file::list::list_media_files_for_user_v2::{
-  ListMediaFilesForUserV2PathInfo, ListMediaFilesForUserV2QueryParams,
-  ListMediaFilesForUserV2SuccessResponse, UserMediaFileV2Pagination,
-};
+use artcraft_api_defs::media_file::list::list_media_files_for_user_v2::{ListMediaFilesForUserV2PathInfo, ListMediaFilesForUserV2QueryParams, ListMediaFilesForUserV2SuccessResponse, UserMediaFileV2Pagination};
 use enums::common::view_as::ViewAs;
 use log::info;
-use mysql_queries::queries::media_files::list::list_media_files_for_user::{
-  list_media_files_for_user, ListMediaFileForUserArgs,
-};
+use mysql_queries::queries::media_files::list::list_media_files_for_user::{list_media_files_for_user, ListMediaFileForUserArgs};
 use mysql_queries::queries::media_files::list::user_media_file_filters::UserMediaFileFilters;
 
 use super::user_media_file_response::{build_user_media_file_response, UserMediaFileResponseArgs};
@@ -53,10 +48,7 @@ pub async fn list_media_files_for_user_v2_handler(
   query: Query<ListMediaFilesForUserV2QueryParams>,
   server_state: web::Data<Arc<ServerState>>,
 ) -> Result<Json<ListMediaFilesForUserV2SuccessResponse>, CommonWebError> {
-  let maybe_user_session = server_state
-    .session_checker
-    .maybe_get_user_session(&http_request, &server_state.mysql_pool)
-    .await?;
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session(&http_request, &server_state.mysql_pool).await?;
 
   let mut is_author = false;
   let mut is_mod = false;
@@ -65,24 +57,20 @@ pub async fn list_media_files_for_user_v2_handler(
   let is_allowed_studio_access = allowed_studio_access(maybe_user_session.as_ref(), &server_state.flags);
 
   match maybe_user_session {
-    None => {}
+    None => {},
     Some(session) => {
       is_author = session.username == path.username;
       is_mod = session.can_ban_users;
-    }
+    },
   };
 
   let sort_ascending = query.sort_ascending.unwrap_or(false);
   let page_size = query.page_size.unwrap_or_else(|| 25);
   let page_index = query.page_index.unwrap_or_else(|| 0);
   if !(1..=100).contains(&page_size) {
-    return Err(CommonWebError::BadInputWithSimpleMessage(
-      "page_size must be between 1 and 100".to_string(),
-    ));
+    return Err(CommonWebError::BadInputWithSimpleMessage("page_size must be between 1 and 100".to_string()));
   }
-  let offset = page_index
-    .checked_mul(page_size)
-    .ok_or_else(|| CommonWebError::BadInputWithSimpleMessage("page_index is too large".to_string()))?;
+  let offset = page_index.checked_mul(page_size).ok_or_else(|| CommonWebError::BadInputWithSimpleMessage("page_index is too large".to_string()))?;
 
   let view_as = if is_author {
     ViewAs::Author
@@ -105,34 +93,10 @@ pub async fn list_media_files_for_user_v2_handler(
     view_as,
   };
   let page_started = Instant::now();
-  let mut records = list_media_files_for_user(ListMediaFileForUserArgs {
-    filters,
-    limit: page_size + 1,
-    offset,
-    sort_ascending,
-    mysql_executor: &server_state.mysql_pool,
-  })
-  .await?;
+  let mut records = list_media_files_for_user(ListMediaFileForUserArgs { filters, limit: page_size + 1, offset, sort_ascending, mysql_executor: &server_state.mysql_pool }).await?;
   let has_more = records.len() > page_size;
   records.truncate(page_size);
-  info!(
-    "Listed list_v2 user media: username={} page={} page_ms={}",
-    path.username,
-    page_index,
-    page_started.elapsed().as_millis()
-  );
-  let results = build_user_media_file_response(UserMediaFileResponseArgs {
-    records,
-    is_allowed_studio_access,
-    media_domain: get_media_domain(&http_request),
-    server_environment: server_state.server_environment,
-  });
-  Ok(Json(ListMediaFilesForUserV2SuccessResponse {
-    success: true,
-    results,
-    pagination: UserMediaFileV2Pagination {
-      current: page_index,
-      has_more,
-    },
-  }))
+  info!("Listed list_v2 user media: username={} page={} page_ms={}", path.username, page_index, page_started.elapsed().as_millis());
+  let results = build_user_media_file_response(UserMediaFileResponseArgs { records, is_allowed_studio_access, media_domain: get_media_domain(&http_request), server_environment: server_state.server_environment });
+  Ok(Json(ListMediaFilesForUserV2SuccessResponse { success: true, results, pagination: UserMediaFileV2Pagination { current: page_index, has_more } }))
 }

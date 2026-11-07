@@ -7,9 +7,7 @@ use wreq::header::{ACCEPT, AUTHORIZATION, ETAG, IF_NONE_MATCH, RETRY_AFTER, USER
 use wreq::StatusCode;
 use serde_derive::Deserialize;
 
-use artcraft_api_defs::craft_apps::release_info::{
-  CraftAppArch, CraftAppAssetPlatform, CraftAppOs, CraftAppPackageType, CraftAppRelease, CraftAppReleaseAsset,
-};
+use artcraft_api_defs::craft_apps::release_info::{CraftAppArch, CraftAppAssetPlatform, CraftAppOs, CraftAppPackageType, CraftAppRelease, CraftAppReleaseAsset};
 
 const API_BASE: &str = "https://api.github.com";
 const MAX_NOTES_BYTES: usize = 64 * 1024;
@@ -30,10 +28,7 @@ pub enum FetchOutcome {
 }
 
 pub fn build_client() -> wreq::Result<wreq::Client> {
-  wreq::Client::builder()
-      .connect_timeout(Duration::from_secs(10))
-      .timeout(Duration::from_secs(30))
-      .build()
+  wreq::Client::builder().connect_timeout(Duration::from_secs(10)).timeout(Duration::from_secs(30)).build()
 }
 
 /// `GET /repos/{repo}/releases/latest`, revalidated with `etag`. `token` is optional: without
@@ -52,15 +47,13 @@ pub async fn fetch_latest_release(client: &wreq::Client, repo: &str, etag: Optio
     StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS => {
       let remaining = header("x-ratelimit-remaining");
       let reset = header("x-ratelimit-reset").and_then(|r| r.parse::<i64>().ok()).and_then(|s| DateTime::from_timestamp(s, 0));
-      let retry_after = header(RETRY_AFTER.as_str())
-          .and_then(|r| r.parse::<i64>().ok())
-          .map(|s| Utc::now() + chrono::Duration::seconds(s.clamp(0, 86_400)));
+      let retry_after = header(RETRY_AFTER.as_str()).and_then(|r| r.parse::<i64>().ok()).map(|s| Utc::now() + chrono::Duration::seconds(s.clamp(0, 86_400)));
       if status == StatusCode::TOO_MANY_REQUESTS || remaining.as_deref() == Some("0") || retry_after.is_some() {
         FetchOutcome::RateLimited { retry_at: retry_after.or(reset) }
       } else {
         FetchOutcome::Failed(format!("HTTP {status}"))
       }
-    }
+    },
     StatusCode::OK => {
       let etag = header(ETAG.as_str());
       let body = match response.bytes().await {
@@ -72,7 +65,7 @@ pub async fn fetch_latest_release(client: &wreq::Client, repo: &str, etag: Optio
         Ok(release) => FetchOutcome::Fetched { release: Some(release), etag },
         Err(err) => FetchOutcome::Failed(err),
       }
-    }
+    },
     other => FetchOutcome::Failed(format!("HTTP {other}")),
   }
 }
@@ -81,11 +74,7 @@ pub async fn fetch_latest_release(client: &wreq::Client, repo: &str, etag: Optio
 /// token (an authenticated `304` doesn't count against the rate limit); never an empty header.
 fn build_request(client: &wreq::Client, repo: &str, etag: Option<&str>, token: Option<&str>) -> wreq::RequestBuilder {
   let url = format!("{API_BASE}/repos/{repo}/releases/latest");
-  let mut request = client
-      .get(&url)
-      .header(USER_AGENT, "storyteller-web (craft apps release poller)")
-      .header(ACCEPT, "application/vnd.github+json")
-      .header("X-GitHub-Api-Version", "2022-11-28");
+  let mut request = client.get(&url).header(USER_AGENT, "storyteller-web (craft apps release poller)").header(ACCEPT, "application/vnd.github+json").header("X-GitHub-Api-Version", "2022-11-28");
   if let Some(etag) = etag {
     request = request.header(IF_NONE_MATCH, etag);
   }
@@ -140,17 +129,17 @@ pub fn parse_release(body: &[u8], repo: &str) -> Result<CraftAppRelease, String>
   let html_url = raw.html_url.filter(|u| u.starts_with(&releases_page)).unwrap_or_else(|| format!("{releases_page}tag/{tag}"));
   let download_prefix = format!("https://github.com/{repo}/releases/download/");
   let assets = raw
-      .assets
-      .into_iter()
-      .filter_map(|a| {
-        let name = a.name.filter(|n| valid_file_name(n))?;
-        let download_url = a.browser_download_url.filter(|u| u.starts_with(&download_prefix))?;
-        let sha256 = a.digest.as_deref().and_then(|d| d.strip_prefix("sha256:")).filter(|h| h.len() == 64 && h.bytes().all(|b| b.is_ascii_hexdigit())).map(str::to_ascii_lowercase);
-        let platform = parse_platform(&name);
-        Some(CraftAppReleaseAsset { name, size_bytes: a.size, download_url, sha256, platform })
-      })
-      .take(MAX_ASSETS)
-      .collect();
+    .assets
+    .into_iter()
+    .filter_map(|a| {
+      let name = a.name.filter(|n| valid_file_name(n))?;
+      let download_url = a.browser_download_url.filter(|u| u.starts_with(&download_prefix))?;
+      let sha256 = a.digest.as_deref().and_then(|d| d.strip_prefix("sha256:")).filter(|h| h.len() == 64 && h.bytes().all(|b| b.is_ascii_hexdigit())).map(str::to_ascii_lowercase);
+      let platform = parse_platform(&name);
+      Some(CraftAppReleaseAsset { name, size_bytes: a.size, download_url, sha256, platform })
+    })
+    .take(MAX_ASSETS)
+    .collect();
   Ok(CraftAppRelease {
     version: tag.strip_prefix(['v', 'V']).unwrap_or(&tag).to_string(),
     name: raw.name.filter(|n| !n.is_empty()).map(|n| truncate(&n, 200)).unwrap_or_else(|| tag.clone()),
@@ -206,10 +195,7 @@ pub fn parse_platform(name: &str) -> Option<CraftAppAssetPlatform> {
 }
 
 fn valid_file_name(name: &str) -> bool {
-  !name.is_empty()
-      && name.len() <= 200
-      && !name.starts_with('.')
-      && !name.chars().any(|c| c.is_control() || matches!(c, '/' | '\\' | ':' | '<' | '>' | '"' | '|' | '?' | '*'))
+  !name.is_empty() && name.len() <= 200 && !name.starts_with('.') && !name.chars().any(|c| c.is_control() || matches!(c, '/' | '\\' | ':' | '<' | '>' | '"' | '|' | '?' | '*'))
 }
 
 fn truncate(s: &str, max: usize) -> String {

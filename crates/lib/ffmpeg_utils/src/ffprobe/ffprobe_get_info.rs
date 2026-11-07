@@ -36,10 +36,7 @@ pub struct VideoFrameRate {
   pub fps_original: String,
 }
 
-pub fn ffprobe_get_info(
-  video_path: impl AsRef<Path>
-) -> AnyhowResult<VideoInfo>
-{
+pub fn ffprobe_get_info(video_path: impl AsRef<Path>) -> AnyhowResult<VideoInfo> {
   let result = ffprobe::ffprobe(video_path)?;
   Ok(info_from_probe(result))
 }
@@ -53,34 +50,21 @@ pub fn ffprobe_get_info_from_bytes(bytes: &[u8]) -> AnyhowResult<VideoInfo> {
 }
 
 fn info_from_probe(result: FfProbe) -> VideoInfo {
-  let Some(stream) = result.streams.iter().find(|stream| {
-    stream.codec_type.as_deref() == Some("video") && stream.disposition.attached_pic == 0
-  }) else {
+  let Some(stream) = result.streams.iter().find(|stream| stream.codec_type.as_deref() == Some("video") && stream.disposition.attached_pic == 0) else {
     return VideoInfo::default();
   };
 
   // MOV files can carry duration only at the container level. Keep dimensions
   // even when the stream-level duration is absent.
-  let dimensions = stream.width.zip(stream.height)
-    .filter(|(width, height)| *width > 0 && *height > 0)
-    .map(|(width, height)| VideoDimensions { width: width as u64, height: height as u64 });
-  let duration = [stream.duration.as_deref(), result.format.duration.as_deref()]
-    .into_iter().flatten()
-    .find_map(|seconds| parse_seconds(seconds).ok().map(|millis| VideoDuration {
-      millis,
-      seconds_original: seconds.to_string(),
-    }));
-  let frame_rate = [&stream.avg_frame_rate, &stream.r_frame_rate].into_iter()
-    .find_map(|rate| parse_fps(rate).ok()
-      .filter(|fps| fps.is_finite() && *fps > 0.0)
-      .map(|fps| VideoFrameRate { fps, fps_original: rate.to_string() }));
+  let dimensions = stream.width.zip(stream.height).filter(|(width, height)| *width > 0 && *height > 0).map(|(width, height)| VideoDimensions { width: width as u64, height: height as u64 });
+  let duration = [stream.duration.as_deref(), result.format.duration.as_deref()].into_iter().flatten().find_map(|seconds| parse_seconds(seconds).ok().map(|millis| VideoDuration { millis, seconds_original: seconds.to_string() }));
+  let frame_rate = [&stream.avg_frame_rate, &stream.r_frame_rate].into_iter().find_map(|rate| parse_fps(rate).ok().filter(|fps| fps.is_finite() && *fps > 0.0).map(|fps| VideoFrameRate { fps, fps_original: rate.to_string() }));
 
   VideoInfo { dimensions, duration, frame_rate }
 }
 
 fn parse_seconds(ffprobe_seconds: &str) -> AnyhowResult<u32> {
-  let (seconds, decimal_seconds) = ffprobe_seconds.split_once('.')
-      .unwrap_or_else(|| (ffprobe_seconds, ""));
+  let (seconds, decimal_seconds) = ffprobe_seconds.split_once('.').unwrap_or_else(|| (ffprobe_seconds, ""));
 
   let seconds = u32::from_str(seconds)?;
   let milliseconds = seconds.saturating_mul(1000);
@@ -111,11 +95,9 @@ pub mod tests {
 
   #[test]
   pub fn test_decode_mp4() {
-    let filename = test_file_path("test_data/video/mp4/golden_sun_garoh.mp4")
-        .expect("path should exist");
+    let filename = test_file_path("test_data/video/mp4/golden_sun_garoh.mp4").expect("path should exist");
 
-    let info = ffprobe_get_info(filename)
-        .expect("should be able to read with ffprobe");
+    let info = ffprobe_get_info(filename).expect("should be able to read with ffprobe");
 
     let dimensions = info.dimensions.expect("video should have dimensions");
 
@@ -134,15 +116,7 @@ pub mod tests {
     #[test]
     fn container_duration_does_not_discard_dimensions() {
       let info = info_from_probe(FfProbe {
-        streams: vec![Stream {
-          codec_type: Some("video".into()),
-          width: Some(320),
-          height: Some(180),
-          duration: None,
-          avg_frame_rate: "0/0".into(),
-          r_frame_rate: "24/1".into(),
-          ..Default::default()
-        }],
+        streams: vec![Stream { codec_type: Some("video".into()), width: Some(320), height: Some(180), duration: None, avg_frame_rate: "0/0".into(), r_frame_rate: "24/1".into(), ..Default::default() }],
         format: Format { duration: Some("1.250".into()), ..Default::default() },
       });
       let dimensions = info.dimensions.unwrap();
@@ -155,13 +129,34 @@ pub mod tests {
     fn probes_mov_with_pcm_audio_without_modifying_bytes() {
       let dir = TempDir::new("quicktime-metadata-test").unwrap();
       let path = dir.path().join("reference.mov");
-      let output = Command::new("ffmpeg").args([
-        "-hide_banner", "-loglevel", "error", "-nostdin",
-        "-f", "lavfi", "-i", "color=c=blue:s=160x90:r=24",
-        "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000",
-        "-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-c:a", "pcm_s16le", "-ac", "2",
-      ]).arg(&path).output().unwrap();
+      let output = Command::new("ffmpeg")
+        .args([
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-nostdin",
+          "-f",
+          "lavfi",
+          "-i",
+          "color=c=blue:s=160x90:r=24",
+          "-f",
+          "lavfi",
+          "-i",
+          "sine=frequency=440:sample_rate=48000",
+          "-t",
+          "1",
+          "-c:v",
+          "libx264",
+          "-pix_fmt",
+          "yuv420p",
+          "-c:a",
+          "pcm_s16le",
+          "-ac",
+          "2",
+        ])
+        .arg(&path)
+        .output()
+        .unwrap();
       assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
       let bytes = std::fs::read(&path).unwrap();
       let info = ffprobe_get_info_from_bytes(&bytes).unwrap();

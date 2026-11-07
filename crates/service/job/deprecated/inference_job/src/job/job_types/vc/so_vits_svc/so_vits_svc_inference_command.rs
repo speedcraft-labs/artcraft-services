@@ -115,17 +115,14 @@ impl SoVitsSvcInferenceCommand {
   }
 
   pub fn from_env() -> AnyhowResult<Self> {
-    let so_vits_svc_root_code_directory = easyenv::get_env_pathbuf_required(
-      "SO_VITS_SVC_INFERENCE_ROOT_DIRECTORY")?;
+    let so_vits_svc_root_code_directory = easyenv::get_env_pathbuf_required("SO_VITS_SVC_INFERENCE_ROOT_DIRECTORY")?;
 
     // NB: The command is installed (typically as `svc`) rather than called as a python script.
     // Lately we've had to call it as `python3 -m so_vits_svc_fork.fakeyou_infer`
-    let maybe_inference_command = easyenv::get_env_string_optional(
-      "SO_VITS_SVC_INFERENCE_COMMAND");
+    let maybe_inference_command = easyenv::get_env_string_optional("SO_VITS_SVC_INFERENCE_COMMAND");
 
     // Optional, eg. `./infer.py`. Typically we'll use the command form instead.
-    let maybe_inference_executable = easyenv::get_env_pathbuf_optional(
-      "SO_VITS_SVC_INFERENCE_EXECUTABLE");
+    let maybe_inference_executable = easyenv::get_env_pathbuf_optional("SO_VITS_SVC_INFERENCE_EXECUTABLE");
 
     let executable_or_command = match maybe_inference_command {
       Some(command) => ExecutableOrCommand::Command(command),
@@ -135,59 +132,44 @@ impl SoVitsSvcInferenceCommand {
       },
     };
 
-    let maybe_virtual_env_activation_command = easyenv::get_env_string_optional(
-      "SO_VITS_SVC_INFERENCE_MAYBE_VENV_COMMAND");
+    let maybe_virtual_env_activation_command = easyenv::get_env_string_optional("SO_VITS_SVC_INFERENCE_MAYBE_VENV_COMMAND");
 
-    let maybe_default_config_path = easyenv::get_env_pathbuf_optional(
-      "SO_VITS_SVC_INFERENCE_MAYBE_DEFAULT_CONFIG_PATH");
+    let maybe_default_config_path = easyenv::get_env_pathbuf_optional("SO_VITS_SVC_INFERENCE_MAYBE_DEFAULT_CONFIG_PATH");
 
-    let maybe_hubert_path =
-        easyenv::get_env_pathbuf_optional("HUBERT_PATH");
+    let maybe_hubert_path = easyenv::get_env_pathbuf_optional("HUBERT_PATH");
 
-    let maybe_huggingface_cache_dir =
-        easyenv::get_env_pathbuf_optional("HF_DATASETS_CACHE");
+    let maybe_huggingface_cache_dir = easyenv::get_env_pathbuf_optional("HF_DATASETS_CACHE");
 
-    let maybe_nltk_cache_dir =
-        easyenv::get_env_pathbuf_optional("NLTK_DATA");
+    let maybe_nltk_cache_dir = easyenv::get_env_pathbuf_optional("NLTK_DATA");
 
-    let enable_hacky_fix =
-        easyenv::get_env_bool_optional("SO_VITS_SVC_ENABLE_HACKY_FIX");
+    let enable_hacky_fix = easyenv::get_env_bool_optional("SO_VITS_SVC_ENABLE_HACKY_FIX");
 
-    let maybe_execution_timeout =
-        easyenv::get_env_duration_seconds_optional("SO_VITS_SVC_TIMEOUT_SECONDS");
+    let maybe_execution_timeout = easyenv::get_env_duration_seconds_optional("SO_VITS_SVC_TIMEOUT_SECONDS");
 
-    let maybe_docker_options = easyenv::get_env_string_optional(
-      "SO_VITS_SVC_INFERENCE_MAYBE_DOCKER_IMAGE")
-        .map(|image_name| {
-          let mut docker_env_vars = Vec::new();
+    let maybe_docker_options = easyenv::get_env_string_optional("SO_VITS_SVC_INFERENCE_MAYBE_DOCKER_IMAGE").map(|image_name| {
+      let mut docker_env_vars = Vec::new();
 
-          if let Some(cache_dir) = maybe_huggingface_cache_dir.as_deref() {
-            let cache_dir = cache_dir.to_string_lossy().to_string();
-            docker_env_vars.push(DockerEnvVar::new("HF_DATASETS_CACHE", &cache_dir));
-            docker_env_vars.push(DockerEnvVar::new("HF_HOME", &cache_dir));
-          }
+      if let Some(cache_dir) = maybe_huggingface_cache_dir.as_deref() {
+        let cache_dir = cache_dir.to_string_lossy().to_string();
+        docker_env_vars.push(DockerEnvVar::new("HF_DATASETS_CACHE", &cache_dir));
+        docker_env_vars.push(DockerEnvVar::new("HF_HOME", &cache_dir));
+      }
 
-          if let Some(cache_dir) = maybe_nltk_cache_dir.as_deref() {
-            let cache_dir = cache_dir.to_string_lossy().to_string();
-            docker_env_vars.push(DockerEnvVar::new("NLTK_DATA", &cache_dir));
-            docker_env_vars.push(DockerEnvVar::new("NLTK_DATA_PATH", &cache_dir));
-          }
+      if let Some(cache_dir) = maybe_nltk_cache_dir.as_deref() {
+        let cache_dir = cache_dir.to_string_lossy().to_string();
+        docker_env_vars.push(DockerEnvVar::new("NLTK_DATA", &cache_dir));
+        docker_env_vars.push(DockerEnvVar::new("NLTK_DATA_PATH", &cache_dir));
+      }
 
-          if let Some(hubert_path) = maybe_hubert_path.as_deref() {
-            let hubert_path = hubert_path.to_string_lossy().to_string();
-            docker_env_vars.push(DockerEnvVar::new("HUBERT_PATH", &hubert_path));
-          }
+      if let Some(hubert_path) = maybe_hubert_path.as_deref() {
+        let hubert_path = hubert_path.to_string_lossy().to_string();
+        docker_env_vars.push(DockerEnvVar::new("HUBERT_PATH", &hubert_path));
+      }
 
-          let maybe_environment_variables =
-              if docker_env_vars.is_empty() { None } else { Some(docker_env_vars) };
+      let maybe_environment_variables = if docker_env_vars.is_empty() { None } else { Some(docker_env_vars) };
 
-          DockerOptions {
-            image_name,
-            maybe_bind_mount: Some(DockerFilesystemMount::tmp_to_tmp()),
-            maybe_environment_variables,
-            maybe_gpu: Some(DockerGpu::All),
-          }
-        });
+      DockerOptions { image_name, maybe_bind_mount: Some(DockerFilesystemMount::tmp_to_tmp()), maybe_environment_variables, maybe_gpu: Some(DockerGpu::All) }
+    });
 
     Ok(Self {
       so_vits_svc_root_code_directory,
@@ -203,21 +185,14 @@ impl SoVitsSvcInferenceCommand {
     })
   }
 
-  pub fn execute_inference<P: AsRef<Path>>(
-    &self,
-    args: InferenceArgs<P>,
-  ) -> CommandExitStatus {
+  pub fn execute_inference<P: AsRef<Path>>(&self, args: InferenceArgs<P>) -> CommandExitStatus {
     match self.do_execute_inference(args) {
       Ok(exit_status) => exit_status,
       Err(error) => CommandExitStatus::FailureWithReason { reason: format!("error: {:?}", error) },
     }
   }
 
-  fn do_execute_inference<P: AsRef<Path>>(
-    &self,
-    args: InferenceArgs<P>,
-  ) -> AnyhowResult<CommandExitStatus> {
-
+  fn do_execute_inference<P: AsRef<Path>>(&self, args: InferenceArgs<P>) -> AnyhowResult<CommandExitStatus> {
     let mut command = String::new();
     command.push_str(&format!("cd {}", path_to_string(&self.so_vits_svc_root_code_directory)));
 
@@ -235,11 +210,11 @@ impl SoVitsSvcInferenceCommand {
       ExecutableOrCommand::Executable(ref executable) => {
         command.push_str(&path_to_string(executable));
         command.push_str(" infer ");
-      }
+      },
       ExecutableOrCommand::Command(ref cmd) => {
         command.push_str(cmd);
         command.push_str(" ");
-      }
+      },
     }
 
     // ===== Begin Python Args =====
@@ -254,7 +229,7 @@ impl SoVitsSvcInferenceCommand {
       None => match self.maybe_default_config_path.as_deref() {
         Some(path) => path.to_path_buf(),
         None => return Err(anyhow!("no config path supplied")),
-      }
+      },
     };
 
     command.push_str(" --config-path ");
@@ -281,7 +256,7 @@ impl SoVitsSvcInferenceCommand {
 
     if let Some(enable_hacky_fix) = self.enable_hacky_fix {
       command.push_str(" --hacky-fix ");
-      command.push_str(if enable_hacky_fix { "true" } else { "false" } );
+      command.push_str(if enable_hacky_fix { "true" } else { "false" });
       command.push_str(" ");
     }
 
@@ -298,11 +273,7 @@ impl SoVitsSvcInferenceCommand {
 
     info!("Command: {:?}", command);
 
-    let command_parts = [
-      "bash",
-      "-c",
-      &command
-    ];
+    let command_parts = ["bash", "-c", &command];
 
     let mut env_vars = get_filtered_env_vars();
 
@@ -310,10 +281,7 @@ impl SoVitsSvcInferenceCommand {
     // more generally when copying over all environment variables, but in local development
     // we're explicit since it may not be set outside of config files.
     if let Some(hubert_path) = self.maybe_hubert_path.as_deref() {
-      env_vars.push((
-        OsString::from("HUBERT_PATH"),
-        OsString::from(hubert_path),
-      ));
+      env_vars.push((OsString::from("HUBERT_PATH"), OsString::from(hubert_path)));
     }
 
     let mut config = PopenConfig::default();
@@ -336,7 +304,7 @@ impl SoVitsSvcInferenceCommand {
         let exit_status = p.wait()?;
         info!("Subprocess exit status: {:?}", exit_status);
         Ok(CommandExitStatus::from_exit_status(exit_status))
-      }
+      },
       Some(timeout) => {
         info!("Executing with timeout: {:?}", &timeout);
         let exit_status = p.wait_timeout(timeout)?;
@@ -347,13 +315,13 @@ impl SoVitsSvcInferenceCommand {
             info!("Subprocess didn't end after timeout: {:?}; terminating...", &timeout);
             let _r = p.terminate()?;
             Ok(CommandExitStatus::Timeout)
-          }
+          },
           Some(exit_status) => {
             info!("Subprocess timed wait exit status: {:?}", exit_status);
             Ok(CommandExitStatus::from_exit_status(exit_status))
-          }
+          },
         }
-      }
+      },
     }
   }
 }

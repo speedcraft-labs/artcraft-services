@@ -29,10 +29,7 @@ pub fn flux_video_models() -> Vec<OmniGenVideoModelDetails> {
       CommonAspectRatio::TallNineBySixteen,
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Auto),
-    resolution_options: Some(vec![
-      CommonResolution::SevenTwentyP,
-      CommonResolution::TenEightyP,
-    ]),
+    resolution_options: Some(vec![CommonResolution::SevenTwentyP, CommonResolution::TenEightyP]),
     resolution_default: Some(CommonResolution::SevenTwentyP),
     duration_seconds_min: Some(5),
     duration_seconds_max: Some(20),
@@ -60,9 +57,7 @@ pub fn flux_video_models() -> Vec<OmniGenVideoModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Auto),
     // Drafts always render 720p.
-    resolution_options: Some(vec![
-      CommonResolution::SevenTwentyP,
-    ]),
+    resolution_options: Some(vec![CommonResolution::SevenTwentyP]),
     resolution_default: Some(CommonResolution::SevenTwentyP),
     duration_seconds_min: Some(5),
     duration_seconds_max: Some(20),

@@ -72,16 +72,10 @@ impl CraftAppsPollConfig {
     let github_token = non_blank_token(easyenv::get_env_string_optional("CRAFT_APPS_RELEASE_GITHUB_TOKEN"));
     let has_token = github_token.is_some();
     let default_interval = default_interval_secs(has_token);
-    let requested_interval = easyenv::get_env_num::<u64>("CRAFT_APPS_RELEASE_POLL_INTERVAL_SECS", default_interval)
-        .unwrap_or(default_interval);
+    let requested_interval = easyenv::get_env_num::<u64>("CRAFT_APPS_RELEASE_POLL_INTERVAL_SECS", default_interval).unwrap_or(default_interval);
     let interval_secs = clamp_interval_secs(requested_interval, has_token);
-    let max_backoff_secs = easyenv::get_env_num::<u64>("CRAFT_APPS_RELEASE_MAX_BACKOFF_SECS", DEFAULT_MAX_BACKOFF_SECS)
-        .unwrap_or(DEFAULT_MAX_BACKOFF_SECS)
-        .max(interval_secs);
-    let apps = easyenv::get_env_string_optional("CRAFT_APPS_RELEASE_APPS")
-        .map(|v| parse_app_list(&v))
-        .filter(|apps| !apps.is_empty())
-        .unwrap_or_else(default_apps);
+    let max_backoff_secs = easyenv::get_env_num::<u64>("CRAFT_APPS_RELEASE_MAX_BACKOFF_SECS", DEFAULT_MAX_BACKOFF_SECS).unwrap_or(DEFAULT_MAX_BACKOFF_SECS).max(interval_secs);
+    let apps = easyenv::get_env_string_optional("CRAFT_APPS_RELEASE_APPS").map(|v| parse_app_list(&v)).filter(|apps| !apps.is_empty()).unwrap_or_else(default_apps);
     Self {
       enabled: easyenv::get_env_bool_or_default("CRAFT_APPS_RELEASE_POLLING_ENABLED", true),
       coordination_enabled: easyenv::get_env_bool_or_default("CRAFT_APPS_RELEASE_COORDINATION_ENABLED", true),
@@ -103,7 +97,11 @@ fn non_blank_token(value: Option<String>) -> Option<String> {
 }
 
 fn default_interval_secs(has_token: bool) -> u64 {
-  if has_token { DEFAULT_INTERVAL_SECS_WITH_TOKEN } else { DEFAULT_INTERVAL_SECS_WITHOUT_TOKEN }
+  if has_token {
+    DEFAULT_INTERVAL_SECS_WITH_TOKEN
+  } else {
+    DEFAULT_INTERVAL_SECS_WITHOUT_TOKEN
+  }
 }
 
 fn clamp_interval_secs(requested: u64, has_token: bool) -> u64 {
@@ -115,16 +113,16 @@ fn clamp_interval_secs(requested: u64, has_token: bool) -> u64 {
 /// entries are skipped.
 fn parse_app_list(value: &str) -> Vec<(String, String, String)> {
   value
-      .split(',')
-      .filter_map(|entry| {
-        let mut parts = entry.trim().splitn(3, '=');
-        let key = parts.next()?.trim().to_lowercase();
-        let name = parts.next()?.trim().to_string();
-        let repo = parts.next()?.trim().to_string();
-        let valid_repo = repo.split('/').count() == 2 && !repo.starts_with('/') && !repo.ends_with('/');
-        (!key.is_empty() && !name.is_empty() && valid_repo).then_some((key, name, repo))
-      })
-      .collect()
+    .split(',')
+    .filter_map(|entry| {
+      let mut parts = entry.trim().splitn(3, '=');
+      let key = parts.next()?.trim().to_lowercase();
+      let name = parts.next()?.trim().to_string();
+      let repo = parts.next()?.trim().to_string();
+      let valid_repo = repo.split('/').count() == 2 && !repo.starts_with('/') && !repo.ends_with('/');
+      (!key.is_empty() && !name.is_empty() && valid_repo).then_some((key, name, repo))
+    })
+    .collect()
 }
 
 #[cfg(test)]
@@ -134,10 +132,7 @@ mod tests {
   #[test]
   fn reads_an_app_list_and_skips_bad_entries() {
     let apps = parse_app_list(" PhotoCraft=PhotoCraft=storytold/photocraft, junk, x=X=noslash, k=K=org/repo ");
-    assert_eq!(apps, vec![
-      ("photocraft".to_string(), "PhotoCraft".to_string(), "storytold/photocraft".to_string()),
-      ("k".to_string(), "K".to_string(), "org/repo".to_string()),
-    ]);
+    assert_eq!(apps, vec![("photocraft".to_string(), "PhotoCraft".to_string(), "storytold/photocraft".to_string()), ("k".to_string(), "K".to_string(), "org/repo".to_string()),]);
   }
 
   #[test]

@@ -22,7 +22,7 @@ pub async fn edit_tts_model_moderator_details(
   maybe_custom_mel_multiply_factor: Option<f64>,
 ) -> Result<MySqlQueryResult, sqlx::Error> {
   sqlx::query!(
-        r#"
+    r#"
 UPDATE tts_models
 SET
     is_public_listing_approved = ?,
@@ -39,18 +39,18 @@ SET
 WHERE token = ?
 LIMIT 1
         "#,
-      is_public_listing_approved,
-      is_locked_from_user_modification,
-      is_locked_from_use,
-      maybe_mod_comments,
-      moderator_user_token,
-      is_front_page_featured,
-      is_twitch_featured,
-      maybe_suggested_unique_bot_command,
-      use_default_mel_multiply_factor,
-      maybe_custom_mel_multiply_factor,
-      tts_model_token
-    )
-      .execute(mysql_pool)
-      .await
+    is_public_listing_approved,
+    is_locked_from_user_modification,
+    is_locked_from_use,
+    maybe_mod_comments,
+    moderator_user_token,
+    is_front_page_featured,
+    is_twitch_featured,
+    maybe_suggested_unique_bot_command,
+    use_default_mel_multiply_factor,
+    maybe_custom_mel_multiply_factor,
+    tts_model_token
+  )
+  .execute(mysql_pool)
+  .await
 }

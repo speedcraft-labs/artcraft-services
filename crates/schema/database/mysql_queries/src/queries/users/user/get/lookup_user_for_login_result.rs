@@ -37,7 +37,7 @@ pub struct UserRecordForLogin {
 }
 
 #[derive(Debug)]
-pub (crate) struct UserRecordForLoginRaw {
+pub(crate) struct UserRecordForLoginRaw {
   pub token: UserToken,
   pub username: String,
   pub display_name: String,

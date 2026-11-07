@@ -20,9 +20,7 @@ use enums::common::platform_type::PlatformType;
 use http_server_common::request::get_request_ip::get_request_ip;
 use mysql_queries::queries::debug_logs::insert_debug_log::{insert_debug_log, InsertDebugLogArgs};
 use mysql_queries::queries::idepotency_tokens::insert_idempotency_token::insert_idempotency_token;
-use mysql_queries::queries::prompt_context_items::insert_batch_prompt_context_items::{
-  insert_batch_prompt_context_items, InsertBatchArgs, PromptContextItem,
-};
+use mysql_queries::queries::prompt_context_items::insert_batch_prompt_context_items::{insert_batch_prompt_context_items, InsertBatchArgs, PromptContextItem};
 use mysql_queries::queries::prompts::insert_prompt::{insert_prompt, InsertPromptArgs};
 use tokens::tokens::generic_inference_jobs::InferenceJobToken;
 use tokens::tokens::media_files::MediaFileToken;
@@ -59,12 +57,7 @@ use crate::util::lookup::lookup_media_files_as_cdn_url_list_and_map::lookup_medi
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn omni_gen_splat_generate_handler(
-  http_request: HttpRequest,
-  request: Json<OmniGenSplatCostAndGenerateRequest>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<OmniGenSplatGenerateResponse>, CommonWebError> {
-
+pub async fn omni_gen_splat_generate_handler(http_request: HttpRequest, request: Json<OmniGenSplatCostAndGenerateRequest>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<OmniGenSplatGenerateResponse>, CommonWebError> {
   info!("request: {:?}", request);
 
   // Reject doomed combos (e.g. video + images, panorama without exactly one
@@ -75,21 +68,14 @@ pub async fn omni_gen_splat_generate_handler(
 
   let debug_log_event_token = DebugLogEventToken::generate();
 
-  let maybe_prompt_model_type: Option<CommonModelType> = request.model
-    .as_ref()
-    .map(|m| m.to_common_model_type());
+  let maybe_prompt_model_type: Option<CommonModelType> = request.model.as_ref().map(|m| m.to_common_model_type());
 
   // ==================== SESSION ==================== //
 
   let mut mysql_connection = server_state.mysql_pool.acquire().await?;
 
   // An API-key or MCP-session user (Authorization header) or a web-session (cookie) user.
-  let session = require_any_session_or_key(
-    &http_request,
-    &server_state.session_checker,
-    &server_state.avt_cookie_manager,
-    &mut *mysql_connection,
-  ).await?;
+  let session = require_any_session_or_key(&http_request, &server_state.session_checker, &server_state.avt_cookie_manager, &mut *mysql_connection).await?;
 
   let user_token = &session.user_token;
 
@@ -98,20 +84,16 @@ pub async fn omni_gen_splat_generate_handler(
 
   // ==================== IDEMPOTENCY ==================== //
 
-  let idempotency_token = request.idempotency_token.as_deref()
-    .unwrap_or("")
-    .to_string();
+  let idempotency_token = request.idempotency_token.as_deref().unwrap_or("").to_string();
 
   if let Err(reason) = validate_idempotency_token_format(&idempotency_token) {
     return Err(CommonWebError::BadInputWithSimpleMessage(reason));
   }
 
-  insert_idempotency_token(&idempotency_token, &mut *mysql_connection)
-    .await
-    .map_err(|err| {
-      error!("Error inserting idempotency token: {:?}", err);
-      CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
-    })?;
+  insert_idempotency_token(&idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
+  })?;
 
   // ==================== RESOLVE MEDIA TOKENS ==================== //
 
@@ -128,13 +110,7 @@ pub async fn omni_gen_splat_generate_handler(
     None
   } else {
     info!("Resolving {} media file tokens to CDN URLs", all_tokens.len());
-    let resolved = lookup_media_files_as_cdn_url_list_and_map(
-      &http_request,
-      &mut mysql_connection,
-      server_state.server_environment,
-server_state.maybe_media_cdn_override_url.as_deref(),
-      &all_tokens,
-    ).await?;
+    let resolved = lookup_media_files_as_cdn_url_list_and_map(&http_request, &mut mysql_connection, server_state.server_environment, server_state.maybe_media_cdn_override_url.as_deref(), &all_tokens).await?;
     Some(resolved.token_to_url_map)
   };
 
@@ -157,7 +133,9 @@ server_state.maybe_media_cdn_override_url.as_deref(),
     message: &serde_json::to_string(&*request).unwrap_or_default(),
     mysql_executor: &mut *mysql_connection,
     phantom: Default::default(),
-  }).await {
+  })
+  .await
+  {
     warn!("Failed to insert HTTP request debug log: {:?}", err);
   }
 
@@ -166,21 +144,9 @@ server_state.maybe_media_cdn_override_url.as_deref(),
   // call — holding a pool slot across that call is what starves the pool and causes PoolTimedOut
   // on unrelated endpoints. We re-acquire below to write the result.
 
-  let debug_log_context = GenerationDebugLogContext {
-    event_token: &debug_log_event_token,
-    user_token,
-    ip_address: &ip_address,
-    request_url: &request_url,
-  };
+  let debug_log_context = GenerationDebugLogContext { event_token: &debug_log_event_token, user_token, ip_address: &ip_address, request_url: &request_url };
 
-  let pipeline_result = run_pipeline_v2(RunPipelineV2Args {
-    router_builder: &router_builder,
-    server_state: &server_state,
-    user_token,
-    media_file_to_url_map: &media_file_to_url_map,
-    debug_log_context: &debug_log_context,
-    mysql_connection,
-  }).await;
+  let pipeline_result = run_pipeline_v2(RunPipelineV2Args { router_builder: &router_builder, server_state: &server_state, user_token, media_file_to_url_map: &media_file_to_url_map, debug_log_context: &debug_log_context, mysql_connection }).await;
 
   // ==================== DEBUG LOG: PIPELINE ERROR ==================== //
 
@@ -199,12 +165,14 @@ server_state.maybe_media_cdn_override_url.as_deref(),
           message: &format!("Splat generation pipeline failed: {:?}", err),
           mysql_executor: &mut *error_log_connection,
           phantom: Default::default(),
-        }).await {
+        })
+        .await
+        {
           warn!("Failed to insert pipeline error debug log: {:?}", log_err);
         }
       }
       return Err(err);
-    }
+    },
   };
 
   let mut mysql_connection = server_state.mysql_pool.acquire().await?;
@@ -246,12 +214,14 @@ server_state.maybe_media_cdn_override_url.as_deref(),
     creator_ip_address: &ip_address,
     mysql_executor: &mut *transaction,
     phantom: Default::default(),
-  }).await {
+  })
+  .await
+  {
     Ok(token) => Some(token),
     Err(err) => {
       warn!("Error inserting prompt: {:?}", err);
       None
-    }
+    },
   };
 
   // -- Prompt context items --
@@ -261,25 +231,15 @@ server_state.maybe_media_cdn_override_url.as_deref(),
 
     if let Some(ref_tokens) = &request.reference_image_media_tokens {
       for media_token in ref_tokens {
-        context_items.push(PromptContextItem {
-          media_token: media_token.clone(),
-          context_semantic_type: PromptContextSemanticType::Imgref,
-        });
+        context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::Imgref });
       }
     }
     if let Some(video_token) = &request.reference_video_media_token {
-      context_items.push(PromptContextItem {
-        media_token: video_token.clone(),
-        context_semantic_type: PromptContextSemanticType::VidRef,
-      });
+      context_items.push(PromptContextItem { media_token: video_token.clone(), context_semantic_type: PromptContextSemanticType::VidRef });
     }
 
     if !context_items.is_empty() {
-      if let Err(err) = insert_batch_prompt_context_items(InsertBatchArgs {
-        prompt_token: token.clone(),
-        items: context_items,
-        transaction: &mut transaction,
-      }).await {
+      if let Err(err) = insert_batch_prompt_context_items(InsertBatchArgs { prompt_token: token.clone(), items: context_items, transaction: &mut transaction }).await {
         warn!("Error inserting batch prompt context items: {:?}", err);
       }
     }
@@ -287,86 +247,71 @@ server_state.maybe_media_cdn_override_url.as_deref(),
 
   // -- Inference job --
 
-  let (primary_job_token, all_job_tokens): (InferenceJobToken, Vec<InferenceJobToken>) =
-    match &pipeline_result.response {
-      GenerateSplatResponse::WorldLabs(payload) => {
-        info!("Inserting worldlabs splat job with token: {:?}", pipeline_result.billing.apriori_job_token);
+  let (primary_job_token, all_job_tokens): (InferenceJobToken, Vec<InferenceJobToken>) = match &pipeline_result.response {
+    GenerateSplatResponse::WorldLabs(payload) => {
+      info!("Inserting worldlabs splat job with token: {:?}", pipeline_result.billing.apriori_job_token);
 
-        let token = insert_worldlabs_job(InsertWorldlabsJobArgs {
-          operation_id: &payload.operation_id,
-          maybe_wallet_ledger_entry_token: pipeline_result.billing.maybe_wallet_ledger_entry_token.as_ref(),
-          shared: SharedJobArgs {
-            apriori_job_token: &pipeline_result.billing.apriori_job_token,
-            idempotency_token: &idempotency_token,
-            user_token,
-            maybe_avt_token: maybe_avt_token.as_ref(),
-            maybe_model_type: maybe_prompt_model_type,
-            maybe_prompt_token: prompt_token.as_ref(),
-            maybe_debug_log_event_token: Some(&debug_log_event_token),
-            maybe_platform_type,
-            maybe_cost_estimates: Some(pipeline_result.cost_estimates),
-            ip_address: &ip_address,
-            transaction: &mut transaction,
-          },
-        }).await?;
+      let token = insert_worldlabs_job(InsertWorldlabsJobArgs {
+        operation_id: &payload.operation_id,
+        maybe_wallet_ledger_entry_token: pipeline_result.billing.maybe_wallet_ledger_entry_token.as_ref(),
+        shared: SharedJobArgs {
+          apriori_job_token: &pipeline_result.billing.apriori_job_token,
+          idempotency_token: &idempotency_token,
+          user_token,
+          maybe_avt_token: maybe_avt_token.as_ref(),
+          maybe_model_type: maybe_prompt_model_type,
+          maybe_prompt_token: prompt_token.as_ref(),
+          maybe_debug_log_event_token: Some(&debug_log_event_token),
+          maybe_platform_type,
+          maybe_cost_estimates: Some(pipeline_result.cost_estimates),
+          ip_address: &ip_address,
+          transaction: &mut transaction,
+        },
+      })
+      .await?;
 
-        (
-          token.clone(),
-          vec![token],
-        )
-      }
-      GenerateSplatResponse::Fal(payload) => {
-        let external_id = payload.request_id.as_deref().ok_or_else(|| {
-          error!("Fal splat generation response missing request_id");
-          CommonWebError::server_error_with_message("Fal generation response missing request_id")
-        })?;
-        info!("Inserting fal splat job with token: {:?}", pipeline_result.billing.apriori_job_token);
+      (token.clone(), vec![token])
+    },
+    GenerateSplatResponse::Fal(payload) => {
+      let external_id = payload.request_id.as_deref().ok_or_else(|| {
+        error!("Fal splat generation response missing request_id");
+        CommonWebError::server_error_with_message("Fal generation response missing request_id")
+      })?;
+      info!("Inserting fal splat job with token: {:?}", pipeline_result.billing.apriori_job_token);
 
-        let token = insert_fal_job(InsertFalJobArgs {
-          external_job_id: external_id,
-          shared: SharedJobArgs {
-            apriori_job_token: &pipeline_result.billing.apriori_job_token,
-            idempotency_token: &idempotency_token,
-            user_token,
-            maybe_avt_token: maybe_avt_token.as_ref(),
-            maybe_model_type: maybe_prompt_model_type,
-            maybe_prompt_token: prompt_token.as_ref(),
-            maybe_debug_log_event_token: Some(&debug_log_event_token),
-            maybe_platform_type,
-            maybe_cost_estimates: Some(pipeline_result.cost_estimates),
-            ip_address: &ip_address,
-            transaction: &mut transaction,
-          },
-        }).await?;
+      let token = insert_fal_job(InsertFalJobArgs {
+        external_job_id: external_id,
+        shared: SharedJobArgs {
+          apriori_job_token: &pipeline_result.billing.apriori_job_token,
+          idempotency_token: &idempotency_token,
+          user_token,
+          maybe_avt_token: maybe_avt_token.as_ref(),
+          maybe_model_type: maybe_prompt_model_type,
+          maybe_prompt_token: prompt_token.as_ref(),
+          maybe_debug_log_event_token: Some(&debug_log_event_token),
+          maybe_platform_type,
+          maybe_cost_estimates: Some(pipeline_result.cost_estimates),
+          ip_address: &ip_address,
+          transaction: &mut transaction,
+        },
+      })
+      .await?;
 
-        (
-          token.clone(),
-          vec![token],
-        )
-      }
-      GenerateSplatResponse::Artcraft(payload) => {
-        (
-          payload.inference_job_token.clone(),
-          payload.all_inference_job_tokens.clone(),
-        )
-      }
-    };
+      (token.clone(), vec![token])
+    },
+    GenerateSplatResponse::Artcraft(payload) => (payload.inference_job_token.clone(), payload.all_inference_job_tokens.clone()),
+  };
 
   transaction.commit().await.map_err(|err| {
     error!("Error committing transaction: {:?}", err);
     CommonWebError::from_error(err)
   })?;
 
-  Ok(Json(OmniGenSplatGenerateResponse {
-    success: true,
-    inference_job_token: primary_job_token,
-    all_job_tokens,
-  }))
+  Ok(Json(OmniGenSplatGenerateResponse { success: true, inference_job_token: primary_job_token, all_job_tokens }))
 }
 
 fn determine_generation_mode(request: &OmniGenSplatCostAndGenerateRequest) -> CommonGenerationMode {
-  let has_reference = request.reference_image_media_tokens.as_ref().is_some_and(|t| !t.is_empty())
-    || request.reference_video_media_token.is_some();
+  let has_reference = request.reference_image_media_tokens.as_ref().is_some_and(|t| !t.is_empty()) || request.reference_video_media_token.is_some();
 
   if has_reference {
     return CommonGenerationMode::Reference;

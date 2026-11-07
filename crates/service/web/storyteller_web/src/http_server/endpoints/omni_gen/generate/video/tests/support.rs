@@ -26,16 +26,12 @@ use artcraft_api_defs::omni_gen::cost_and_generate_requests::omni_gen_video_cost
 use artcraft_api_keys::ArtcraftApiKey;
 use artcraft_api_defs::omni_gen::generate_response::omni_gen_video_generate_response::OmniGenVideoGenerateResponse;
 use billing_artcraft_component::utils::artcraft_stripe_config::ArtcraftStripeConfig;
-use billing_component::stripe::stripe_config::{
-  FullUrlOrPath, StripeCheckoutConfigs, StripeConfig, StripeCustomerPortalConfigs, StripeSecrets,
-};
+use billing_component::stripe::stripe_config::{FullUrlOrPath, StripeCheckoutConfigs, StripeConfig, StripeCustomerPortalConfigs, StripeSecrets};
 use cloud_storage::legacy_bucket_client::LegacyBucketClient;
 use elasticsearch::http::transport::Transport;
 use elasticsearch::Elasticsearch;
 use enums::common::generation::common_video_model::CommonVideoModel;
-use kinovi_web_client::requests::kinovi_host::{
-  ENV_KINOVI_CUSTOM_API_HOST, ENV_KINOVI_CUSTOM_CDN_HOST,
-};
+use kinovi_web_client::requests::kinovi_host::{ENV_KINOVI_CUSTOM_API_HOST, ENV_KINOVI_CUSTOM_CDN_HOST};
 use memory_caching::arc_ttl_sieve::ArcTtlSieve;
 use memory_caching::single_item_ttl_cache::SingleItemTtlCache;
 use mysql_queries::mediators::badge_granter::BadgeGranter;
@@ -56,19 +52,13 @@ use crate::http_server::user_lookup::user_session::session_utils::session_checke
 use crate::http_server::web_utils::scoped_temp_dir_creator::ScopedTempDirCreator;
 use crate::http_server::web_utils::web_opaque_cursor_encoder_v2::WebOpaqueCursorEncoderV2;
 use crate::http_server::web_utils::web_sort_key_crypto::WebSortKeyCrypto;
-use crate::startup::setup_inference_providers::{
-  BeebleData, FalData, GmiCloudData, GrokApiData, InferenceProviders, KinoviWebData, OpenAiData,
-  WorldLabsData,
-};
+use crate::startup::setup_inference_providers::{BeebleData, FalData, GmiCloudData, GrokApiData, InferenceProviders, KinoviWebData, OpenAiData, WorldLabsData};
 use crate::startup::setup_pager::build_pager;
 use crate::startup::setup_static_feature_flags::setup_static_feature_flags;
 use crate::state::certs::google_sign_in_cert::GoogleSignInCert;
 use crate::state::craft_apps_release_cache::CraftAppsReleaseCache;
 use crate::state::memory_cache::model_token_to_info_cache::ModelTokenToInfoCache;
-use crate::state::server_state::{
-  Dashboards, DataboxDashboards, DurableInMemoryCaches, EnvConfig, EphemeralInMemoryCaches,
-  InMemoryCaches, ResendData, ServerInfo, ServerState, StripeSettings, TrollBans,
-};
+use crate::state::server_state::{Dashboards, DataboxDashboards, DurableInMemoryCaches, EnvConfig, EphemeralInMemoryCaches, InMemoryCaches, ResendData, ServerInfo, ServerState, StripeSettings, TrollBans};
 use crate::threads::db_health_checker_thread::db_health_check_status::HealthCheckStatus;
 use crate::util::troll_user_bans::troll_user_ban_list::TrollUserBanList;
 
@@ -99,61 +89,31 @@ impl TestHarness {
     let pool = mysql_testing::pool::create_test_pool().await;
     let server_state = Arc::new(build_test_server_state(pool.clone(), stub_kinovi_base_url.clone()));
 
-    TestHarness {
-      pool,
-      server_state,
-      stub_kinovi_base_url,
-    }
+    TestHarness { pool, server_state, stub_kinovi_base_url }
   }
 
   /// Create a fixture user with a session and a wallet funded with `credits`.
   pub async fn create_funded_user(&self, credits: u64) -> TestUser {
-    let user = mysql_testing::fixtures::users::create_test_user(&self.pool)
-      .await
-      .expect("create test user");
-    mysql_testing::fixtures::wallets::fund_wallet_banked(&self.pool, &user.user_token, credits)
-      .await
-      .expect("fund wallet");
+    let user = mysql_testing::fixtures::users::create_test_user(&self.pool).await.expect("create test user");
+    mysql_testing::fixtures::wallets::fund_wallet_banked(&self.pool, &user.user_token, credits).await.expect("fund wallet");
     user
   }
 
   /// The user's current total wallet balance (banked + monthly).
   pub async fn wallet_balance(&self, user: &TestUser) -> u64 {
-    mysql_testing::fixtures::wallets::artcraft_wallet_balance(&self.pool, &user.user_token)
-      .await
-      .expect("read wallet balance")
-      .map(|balance| balance.total())
-      .unwrap_or(0)
+    mysql_testing::fixtures::wallets::artcraft_wallet_balance(&self.pool, &user.user_token).await.expect("read wallet balance").map(|balance| balance.total()).unwrap_or(0)
   }
 
   /// All ledger entries for the user's wallet, oldest first.
-  pub async fn ledger_entries(
-    &self,
-    user: &TestUser,
-  ) -> Vec<mysql_testing::fixtures::wallets::LedgerEntry> {
-    let wallet_token =
-      mysql_testing::fixtures::wallets::fund_wallet_banked(&self.pool, &user.user_token, 0)
-        .await
-        .expect("resolve wallet token");
-    mysql_testing::fixtures::wallets::wallet_ledger_entries(&self.pool, &wallet_token)
-      .await
-      .expect("read ledger")
+  pub async fn ledger_entries(&self, user: &TestUser) -> Vec<mysql_testing::fixtures::wallets::LedgerEntry> {
+    let wallet_token = mysql_testing::fixtures::wallets::fund_wallet_banked(&self.pool, &user.user_token, 0).await.expect("resolve wallet token");
+    mysql_testing::fixtures::wallets::wallet_ledger_entries(&self.pool, &wallet_token).await.expect("read ledger")
   }
 
   /// POST the request through the real generate handler as `user`.
-  pub async fn post_generate(
-    &self,
-    user: &TestUser,
-    request: OmniGenVideoCostAndGenerateRequest,
-  ) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
+  pub async fn post_generate(&self, user: &TestUser, request: OmniGenVideoCostAndGenerateRequest) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
     let http_request = self.authed_request(user);
-    omni_gen_video_generate_handler(
-      http_request,
-      Json(request),
-      Data::new(self.server_state.clone()),
-    )
-    .await
-    .map(Json::into_inner)
+    omni_gen_video_generate_handler(http_request, Json(request), Data::new(self.server_state.clone())).await.map(Json::into_inner)
   }
 
   /// Mint and insert an API key owned by `user`.
@@ -163,130 +123,59 @@ impl TestHarness {
     let entropy = user.user_token.as_str().trim_start_matches("user_").to_string();
     let api_key = ArtcraftApiKey::new_from_str(&format!("artcraft_api_test{entropy}"));
     let mut connection = self.pool.acquire().await.expect("acquire for api key");
-    insert_api_key(InsertApiKeyArgs {
-      owner_user_token: &user.user_token,
-      ip_address: "127.0.0.1",
-      name: "test key",
-      maybe_description: None,
-      api_key: &api_key,
-      mysql_executor: &mut *connection,
-      phantom: PhantomData,
-    })
-    .await
-    .expect("insert api key");
+    insert_api_key(InsertApiKeyArgs { owner_user_token: &user.user_token, ip_address: "127.0.0.1", name: "test key", maybe_description: None, api_key: &api_key, mysql_executor: &mut *connection, phantom: PhantomData }).await.expect("insert api key");
     api_key
   }
 
   /// Mint a live MCP session for `user` and return its private credential.
   pub async fn create_mcp_session(&self, user: &TestUser) -> McpSessionPrivateToken {
-    mysql_testing::fixtures::mcp_sessions::create_test_mcp_session(&self.pool, &user.user_token)
-      .await
-      .expect("create mcp session")
-      .private_session_token
+    mysql_testing::fixtures::mcp_sessions::create_test_mcp_session(&self.pool, &user.user_token).await.expect("create mcp session").private_session_token
   }
 
   /// POST the request through the omni_gen generate handler, authenticating
   /// with an MCP session credential in the Authorization header.
-  pub async fn post_generate_via_mcp_session(
-    &self,
-    private_session_token: &McpSessionPrivateToken,
-    request: OmniGenVideoCostAndGenerateRequest,
-  ) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
-    let http_request = TestRequest::post()
-      .uri("/v1/omni_gen/generate/video")
-      .insert_header(("Authorization", format!("Bearer {}", private_session_token.as_str())))
-      .peer_addr("127.0.0.1:9999".parse().expect("peer addr"))
-      .to_http_request();
+  pub async fn post_generate_via_mcp_session(&self, private_session_token: &McpSessionPrivateToken, request: OmniGenVideoCostAndGenerateRequest) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
+    let http_request = TestRequest::post().uri("/v1/omni_gen/generate/video").insert_header(("Authorization", format!("Bearer {}", private_session_token.as_str()))).peer_addr("127.0.0.1:9999".parse().expect("peer addr")).to_http_request();
 
-    omni_gen_video_generate_handler(
-      http_request,
-      Json(request),
-      Data::new(self.server_state.clone()),
-    )
-    .await
-    .map(Json::into_inner)
+    omni_gen_video_generate_handler(http_request, Json(request), Data::new(self.server_state.clone())).await.map(Json::into_inner)
   }
 
   /// POST the request through the omni_api (API-key only) generate handler,
   /// authenticating with `api_key` in the Authorization header. Token-based
   /// fields are mapped onto the omni_api request shape; URL fields stay None.
-  pub async fn post_generate_via_api_key(
-    &self,
-    api_key: &ArtcraftApiKey,
-    request: OmniGenVideoCostAndGenerateRequest,
-  ) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
+  pub async fn post_generate_via_api_key(&self, api_key: &ArtcraftApiKey, request: OmniGenVideoCostAndGenerateRequest) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
     self.post_omni_api_request(api_key, to_omni_api_request(request)).await
   }
 
   /// POST a raw omni_api request — URL input fields allowed — with API-key
   /// authentication. Use this to exercise the URL-ingestion path.
-  pub async fn post_omni_api_request(
-    &self,
-    api_key: &ArtcraftApiKey,
-    api_request: OmniApiVideoGenerateRequest,
-  ) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
-    let http_request = TestRequest::post()
-      .uri("/v1/omni_api/generate/video")
-      .insert_header(("Authorization", format!("Bearer {}", api_key.as_str_be_careful())))
-      .peer_addr("127.0.0.1:9999".parse().expect("peer addr"))
-      .to_http_request();
+  pub async fn post_omni_api_request(&self, api_key: &ArtcraftApiKey, api_request: OmniApiVideoGenerateRequest) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
+    let http_request = TestRequest::post().uri("/v1/omni_api/generate/video").insert_header(("Authorization", format!("Bearer {}", api_key.as_str_be_careful()))).peer_addr("127.0.0.1:9999".parse().expect("peer addr")).to_http_request();
 
-    omni_api_video_generate_handler(
-      http_request,
-      Json(api_request),
-      Data::new(self.server_state.clone()),
-    )
-    .await
-    .map(Json::into_inner)
+    omni_api_video_generate_handler(http_request, Json(api_request), Data::new(self.server_state.clone())).await.map(Json::into_inner)
   }
 
   /// POST through the omni_api handler with a SESSION COOKIE and no API key.
   /// The endpoint is API-key only, so this must fail — the test asserting
   /// that lives in `omni_api_parity_tests`.
-  pub async fn post_generate_via_session_cookie_on_omni_api(
-    &self,
-    user: &TestUser,
-    request: OmniGenVideoCostAndGenerateRequest,
-  ) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
-    let cookie = self
-      .server_state
-      .session_cookie_manager
-      .create_cookie(&user.session_token, &user.user_token)
-      .expect("create session cookie");
+  pub async fn post_generate_via_session_cookie_on_omni_api(&self, user: &TestUser, request: OmniGenVideoCostAndGenerateRequest) -> Result<OmniGenVideoGenerateResponse, CommonWebError> {
+    let cookie = self.server_state.session_cookie_manager.create_cookie(&user.session_token, &user.user_token).expect("create session cookie");
     let cookie = Cookie::new("session", cookie.value().to_string());
 
-    let http_request = TestRequest::post()
-      .uri("/v1/omni_api/generate/video")
-      .cookie(cookie)
-      .peer_addr("127.0.0.1:9999".parse().expect("peer addr"))
-      .to_http_request();
+    let http_request = TestRequest::post().uri("/v1/omni_api/generate/video").cookie(cookie).peer_addr("127.0.0.1:9999".parse().expect("peer addr")).to_http_request();
 
     let api_request = to_omni_api_request(request);
 
-    omni_api_video_generate_handler(
-      http_request,
-      Json(api_request),
-      Data::new(self.server_state.clone()),
-    )
-    .await
-    .map(Json::into_inner)
+    omni_api_video_generate_handler(http_request, Json(api_request), Data::new(self.server_state.clone())).await.map(Json::into_inner)
   }
 
   /// A dummy HTTP request carrying the user's session cookie.
   fn authed_request(&self, user: &TestUser) -> HttpRequest {
-    let cookie = self
-      .server_state
-      .session_cookie_manager
-      .create_cookie(&user.session_token, &user.user_token)
-      .expect("create session cookie");
+    let cookie = self.server_state.session_cookie_manager.create_cookie(&user.session_token, &user.user_token).expect("create session cookie");
     // TestRequest wants an owned cookie with a 'static-compatible lifetime.
     let cookie = Cookie::new("session", cookie.value().to_string());
 
-    TestRequest::post()
-      .uri("/v1/omni_gen/generate/video")
-      .cookie(cookie)
-      .peer_addr("127.0.0.1:9999".parse().expect("peer addr"))
-      .to_http_request()
+    TestRequest::post().uri("/v1/omni_gen/generate/video").cookie(cookie).peer_addr("127.0.0.1:9999".parse().expect("peer addr")).to_http_request()
   }
 }
 
@@ -339,10 +228,7 @@ fn uuid_v4_like() -> String {
   use std::sync::atomic::{AtomicU64, Ordering};
   static COUNTER: AtomicU64 = AtomicU64::new(0);
   let count = COUNTER.fetch_add(1, Ordering::Relaxed);
-  let nanos = std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .expect("clock")
-    .as_nanos();
+  let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("clock").as_nanos();
   format!("{:016x}{:016x}", nanos as u64, count)
 }
 
@@ -398,10 +284,7 @@ fn spawn_stub_server() -> String {
   // on the external third-party id — and the test database PERSISTS across
   // runs, so ids must be unique across processes, not just within one.
   static ORDER_COUNTER: AtomicU64 = AtomicU64::new(1);
-  let process_prefix = std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .expect("clock")
-    .as_nanos() as u64;
+  let process_prefix = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("clock").as_nanos() as u64;
 
   let listener = TcpListener::bind("127.0.0.1:0").expect("bind stub server");
   let port = listener.local_addr().expect("local addr").port();
@@ -410,7 +293,9 @@ fn spawn_stub_server() -> String {
 
   std::thread::spawn(move || {
     for stream in listener.incoming() {
-      let Ok(mut stream) = stream else { continue };
+      let Ok(mut stream) = stream else {
+        continue;
+      };
       let base_url = base_url_for_thread.clone();
       std::thread::spawn(move || {
         let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
@@ -422,67 +307,59 @@ fn spawn_stub_server() -> String {
               read_total += n;
               if let Some(header_end) = buffer[..read_total].windows(4).position(|w| w == b"\r\n\r\n") {
                 let headers = String::from_utf8_lossy(&buffer[..header_end]);
-                let content_length = headers.lines().find_map(|line| {
-                  let (name, value) = line.split_once(':')?;
-                  name.eq_ignore_ascii_case("content-length").then(|| value.trim().parse::<usize>().ok()).flatten()
-                }).unwrap_or(0);
+                let content_length = headers
+                  .lines()
+                  .find_map(|line| {
+                    let (name, value) = line.split_once(':')?;
+                    name.eq_ignore_ascii_case("content-length").then(|| value.trim().parse::<usize>().ok()).flatten()
+                  })
+                  .unwrap_or(0);
                 if read_total >= header_end + 4 + content_length {
                   break;
                 }
               }
-            }
+            },
             _ => break,
           }
         }
         let head = String::from_utf8_lossy(&buffer[..read_total]).to_string();
         let request_line = head.lines().next().unwrap_or_default().to_string();
-        let body_start = buffer[..read_total].windows(4).position(|w| w == b"\r\n\r\n")
-          .map(|index| index + 4).unwrap_or(read_total);
+        let body_start = buffer[..read_total].windows(4).position(|w| w == b"\r\n\r\n").map(|index| index + 4).unwrap_or(read_total);
         let request_body = &buffer[body_start..read_total];
-        let filename = request_line.split_whitespace().nth(1).unwrap_or("")
-          .split('?').next().unwrap_or("").rsplit('/').next().unwrap_or("").to_string();
+        let filename = request_line.split_whitespace().nth(1).unwrap_or("").split('?').next().unwrap_or("").rsplit('/').next().unwrap_or("").to_string();
         let maybe_uploaded = stub_traffic().lock().unwrap().uploads.get(&filename).cloned();
 
+        let (status, content_type, body): (&str, &str, Vec<u8>) = if request_line.starts_with("GET") && maybe_uploaded.is_some() {
+          let mime = if filename.ends_with(".mov") { "video/quicktime" } else { "video/mp4" };
+          ("200 OK", mime, maybe_uploaded.unwrap())
+        } else if request_line.starts_with("GET") {
+          match extract_fixture_duration_millis(&request_line) {
+            Some(millis) => ("200 OK", "video/mp4", fixture_video_bytes(millis)),
+            // URL-ingested uploads land under the `video_` bucket prefix
+            // (see MediaUploadKind::bucket_prefix); serve those a default
+            // 5s fixture. Token-fixture paths without a prefix stay 404 —
+            // the charge-then-refund tests depend on that.
+            None if request_line.contains("/video_") => ("200 OK", "video/mp4", fixture_video_bytes(5_000)),
+            None => ("404 Not Found", "text/plain", b"not found".to_vec()),
+          }
+        } else if request_line.starts_with("PUT") {
+          stub_traffic().lock().unwrap().uploads.insert(filename, request_body.to_vec());
+          ("200 OK", "text/plain", Vec::new())
+        } else if request_line.contains("uploads.signedUploadUrl") {
+          let extension = if head.contains("mov") { "mov" } else { "mp4" };
+          let upload_url = format!("{base_url}/upload-target/materials/test/fixture.{extension}");
+          let json = format!(r#"[{{"result":{{"data":{{"json":"{upload_url}"}}}}}}]"#);
+          ("200 OK", "application/json", json.into_bytes())
+        } else {
+          if let Ok(payload) = serde_json::from_slice(request_body) {
+            stub_traffic().lock().unwrap().workflows.push(payload);
+          }
+          let order_number = ORDER_COUNTER.fetch_add(1, Ordering::Relaxed);
+          let json = format!(r#"[{{"result":{{"data":{{"json":{{"taskId":"task_test_{process_prefix:016x}_{order_number:04}","orderId":"ord_test_{process_prefix:016x}_{order_number:04}","violationWarning":false}}}}}}}}]"#,);
+          ("200 OK", "application/json", json.into_bytes())
+        };
 
-        let (status, content_type, body): (&str, &str, Vec<u8>) =
-          if request_line.starts_with("GET") && maybe_uploaded.is_some() {
-            let mime = if filename.ends_with(".mov") { "video/quicktime" } else { "video/mp4" };
-            ("200 OK", mime, maybe_uploaded.unwrap())
-          } else if request_line.starts_with("GET") {
-            match extract_fixture_duration_millis(&request_line) {
-              Some(millis) => ("200 OK", "video/mp4", fixture_video_bytes(millis)),
-              // URL-ingested uploads land under the `video_` bucket prefix
-              // (see MediaUploadKind::bucket_prefix); serve those a default
-              // 5s fixture. Token-fixture paths without a prefix stay 404 —
-              // the charge-then-refund tests depend on that.
-              None if request_line.contains("/video_") => {
-                ("200 OK", "video/mp4", fixture_video_bytes(5_000))
-              }
-              None => ("404 Not Found", "text/plain", b"not found".to_vec()),
-            }
-          } else if request_line.starts_with("PUT") {
-            stub_traffic().lock().unwrap().uploads.insert(filename, request_body.to_vec());
-            ("200 OK", "text/plain", Vec::new())
-          } else if request_line.contains("uploads.signedUploadUrl") {
-            let extension = if head.contains("mov") { "mov" } else { "mp4" };
-            let upload_url = format!("{base_url}/upload-target/materials/test/fixture.{extension}");
-            let json = format!(r#"[{{"result":{{"data":{{"json":"{upload_url}"}}}}}}]"#);
-            ("200 OK", "application/json", json.into_bytes())
-          } else {
-            if let Ok(payload) = serde_json::from_slice(request_body) {
-              stub_traffic().lock().unwrap().workflows.push(payload);
-            }
-            let order_number = ORDER_COUNTER.fetch_add(1, Ordering::Relaxed);
-            let json = format!(
-              r#"[{{"result":{{"data":{{"json":{{"taskId":"task_test_{process_prefix:016x}_{order_number:04}","orderId":"ord_test_{process_prefix:016x}_{order_number:04}","violationWarning":false}}}}}}}}]"#,
-            );
-            ("200 OK", "application/json", json.into_bytes())
-          };
-
-        let response = format!(
-          "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-          body.len(),
-        );
+        let response = format!("HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len(),);
         let _ = stream.write_all(response.as_bytes());
         let _ = stream.write_all(&body);
         let _ = stream.shutdown(std::net::Shutdown::Both);
@@ -516,28 +393,24 @@ fn fixture_video_bytes(duration_millis: u64) -> Vec<u8> {
   if !cache_path.exists() {
     let _guard = GENERATION_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     if !cache_path.exists() {
-      let scratch_path = cache_dir.join(format!(
-        "fixture_{duration_millis}.partial.{}.mp4",
-        std::process::id(),
-      ));
+      let scratch_path = cache_dir.join(format!("fixture_{duration_millis}.partial.{}.mp4", std::process::id(),));
       let seconds = duration_millis as f64 / 1_000.0;
       let status = std::process::Command::new("ffmpeg")
         .args([
           "-y",
-          "-f", "lavfi",
+          "-f",
+          "lavfi",
           // Rate INSIDE the filter so the frame count (and thus the container
           // duration) is exact; output retiming via `-r` pads the duration.
-          "-i", &format!("color=c=black:s=64x64:r=10:d={seconds}"),
-          "-pix_fmt", "yuv420p",
+          "-i",
+          &format!("color=c=black:s=64x64:r=10:d={seconds}"),
+          "-pix_fmt",
+          "yuv420p",
         ])
         .arg(&scratch_path)
         .output()
         .expect("ffmpeg must be installed to generate fixture videos for database tests");
-      assert!(
-        status.status.success(),
-        "ffmpeg failed generating a {duration_millis}ms fixture video: {}",
-        String::from_utf8_lossy(&status.stderr),
-      );
+      assert!(status.status.success(), "ffmpeg failed generating a {duration_millis}ms fixture video: {}", String::from_utf8_lossy(&status.stderr),);
       std::fs::rename(&scratch_path, &cache_path).expect("land fixture video");
     }
   }
@@ -550,22 +423,16 @@ fn fixture_video_bytes(duration_millis: u64) -> Vec<u8> {
 /// Redis/Elasticsearch/Stripe/bucket clients are constructed lazily and are
 /// never called on the video generate path.
 pub(crate) fn build_test_server_state(pool: MySqlPool, media_cdn_override_url: String) -> ServerState {
-  let session_cookie_manager = HttpUserSessionManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET)
-    .expect("session cookie manager");
-  let avt_cookie_manager =
-    AvtCookieManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET).expect("avt cookie manager");
+  let session_cookie_manager = HttpUserSessionManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET).expect("session cookie manager");
+  let avt_cookie_manager = AvtCookieManager::new(TEST_COOKIE_DOMAIN, TEST_COOKIE_SECRET).expect("avt cookie manager");
   // NB: `new` (not `new_with_cache`) keeps Redis out of session checks.
   let session_checker = SessionChecker::new(&session_cookie_manager);
 
   let firehose_publisher = FirehosePublisher { mysql_pool: pool.clone() };
-  let badge_granter = BadgeGranter {
-    mysql_pool: pool.clone(),
-    firehose_publisher: firehose_publisher.clone(),
-  };
+  let badge_granter = BadgeGranter { mysql_pool: pool.clone(), firehose_publisher: firehose_publisher.clone() };
 
   // Lazy client: never connects unless used (it isn't on this path).
-  let redis_pool = r2d2::Pool::builder()
-    .build_unchecked(redis::Client::open("redis://127.0.0.1:1/").expect("redis client"));
+  let redis_pool = r2d2::Pool::builder().build_unchecked(redis::Client::open("redis://127.0.0.1:1/").expect("redis client"));
   let redis_ttl_cache = RedisTtlCache::new_with_ttl(redis_pool.clone(), 60);
 
   let server_environment = ServerEnvironment::Development;
@@ -584,70 +451,42 @@ pub(crate) fn build_test_server_state(pool: MySqlPool, media_cdn_override_url: S
     redis_rate_limiters: crate::state::server_state::RedisRateLimiters,
   }
   static DUMMIES: OnceLock<ExpensiveDummies> = OnceLock::new();
-  let dummies = DUMMIES.get_or_init(|| retry_keychain_flake(|| {
-    // Bucket uploads (e.g. URL-input ingestion) PUT to the stub, which
-    // accepts anything; downloads then come back through the media CDN
-    // override, also the stub.
-    let dummy_bucket = || {
-      LegacyBucketClient::create(
-        "test-access-key",
-        "test-secret-key",
-        "auto",
-        "test-bucket",
-        &media_cdn_override_url,
-        None,
-        Some(Duration::from_secs(5)),
-      )
-      .expect("bucket client")
-    };
-    ExpensiveDummies {
-      stripe: StripeSettings {
-        config: StripeConfig {
-          checkout: StripeCheckoutConfigs {
-            success_url: FullUrlOrPath::Path("/success".to_string()),
-            cancel_url: FullUrlOrPath::Path("/cancel".to_string()),
+  let dummies = DUMMIES.get_or_init(|| {
+    retry_keychain_flake(|| {
+      // Bucket uploads (e.g. URL-input ingestion) PUT to the stub, which
+      // accepts anything; downloads then come back through the media CDN
+      // override, also the stub.
+      let dummy_bucket = || LegacyBucketClient::create("test-access-key", "test-secret-key", "auto", "test-bucket", &media_cdn_override_url, None, Some(Duration::from_secs(5))).expect("bucket client");
+      ExpensiveDummies {
+        stripe: StripeSettings {
+          config: StripeConfig {
+            checkout: StripeCheckoutConfigs { success_url: FullUrlOrPath::Path("/success".to_string()), cancel_url: FullUrlOrPath::Path("/cancel".to_string()) },
+            portal: StripeCustomerPortalConfigs { return_url: FullUrlOrPath::Path("/portal".to_string()), default_portal_config_id: "bpc_test".to_string() },
+            secrets: StripeSecrets { publishable_key: None, secret_key: "sk_test_dummy".to_string(), secret_webhook_signing_key: "whsec_test_dummy".to_string() },
           },
-          portal: StripeCustomerPortalConfigs {
-            return_url: FullUrlOrPath::Path("/portal".to_string()),
-            default_portal_config_id: "bpc_test".to_string(),
-          },
-          secrets: StripeSecrets {
-            publishable_key: None,
-            secret_key: "sk_test_dummy".to_string(),
-            secret_webhook_signing_key: "whsec_test_dummy".to_string(),
-          },
+          client: stripe::Client::new("sk_test_dummy"),
+          stripe_account_id: "acct_test".to_string(),
         },
-        client: stripe::Client::new("sk_test_dummy"),
-        stripe_account_id: "acct_test".to_string(),
-      },
-      stripe_artcraft: ArtcraftStripeConfig {
-        stripe_account_id: "acct_test".to_string(),
-        secret_key: "sk_test_dummy".to_string(),
-        secret_webhook_signing_key: "whsec_test_dummy".to_string(),
-        checkout_success_url: "http://localhost/success".to_string(),
-        checkout_cancel_url: "http://localhost/cancel".to_string(),
-        portal_return_url: "http://localhost/portal".to_string(),
+        stripe_artcraft: ArtcraftStripeConfig {
+          stripe_account_id: "acct_test".to_string(),
+          secret_key: "sk_test_dummy".to_string(),
+          secret_webhook_signing_key: "whsec_test_dummy".to_string(),
+          checkout_success_url: "http://localhost/success".to_string(),
+          checkout_cancel_url: "http://localhost/cancel".to_string(),
+          portal_return_url: "http://localhost/portal".to_string(),
+        }
+        .to_config_with_client(),
+        elasticsearch: Elasticsearch::new(Transport::single_node("http://127.0.0.1:1").expect("es transport")),
+        private_bucket_client: dummy_bucket(),
+        public_bucket_client: dummy_bucket(),
+        auto_gc_bucket_client: dummy_bucket(),
+        redis_rate_limiters: configure_redis_rate_limiters().expect("rate limiters"),
       }
-      .to_config_with_client(),
-      elasticsearch: Elasticsearch::new(
-        Transport::single_node("http://127.0.0.1:1").expect("es transport"),
-      ),
-      private_bucket_client: dummy_bucket(),
-      public_bucket_client: dummy_bucket(),
-      auto_gc_bucket_client: dummy_bucket(),
-      redis_rate_limiters: configure_redis_rate_limiters().expect("rate limiters"),
-    }
-  }));
+    })
+  });
 
   ServerState {
-    env_config: EnvConfig {
-      num_workers: 1,
-      bind_address: "127.0.0.1:0".to_string(),
-      cookie_domain: TEST_COOKIE_DOMAIN.to_string(),
-      cookie_secure: false,
-      cookie_http_only: true,
-      website_homepage_redirect: "http://localhost/".to_string(),
-    },
+    env_config: EnvConfig { num_workers: 1, bind_address: "127.0.0.1:0".to_string(), cookie_domain: TEST_COOKIE_DOMAIN.to_string(), cookie_secure: false, cookie_http_only: true, website_homepage_redirect: "http://localhost/".to_string() },
     server_info: ServerInfo { build_sha: "test".to_string() },
     stripe: dummies.stripe.clone(),
     stripe_artcraft: dummies.stripe_artcraft.clone(),
@@ -675,25 +514,11 @@ pub(crate) fn build_test_server_state(pool: MySqlPool, media_cdn_override_url: S
     auto_gc_bucket_client: dummies.auto_gc_bucket_client.clone(),
     seedance_video_bucket: None,
     inference_providers: InferenceProviders {
-      fal: FalData {
-        api_key: fal_client::creds::fal_api_key::FalApiKey::new("test".to_string()),
-        webhook_url: "http://localhost/webhook".to_string(),
-      },
-      gmicloud: GmiCloudData {
-        api_key: gmicloud_client::creds::gmicloud_api_key::GmiCloudApiKey::new("test".to_string()),
-      },
-      grok_api: GrokApiData {
-        api_key: grok_api_client::creds::grok_api_key::GrokApiKey::new("test".to_string()),
-      },
-      beeble: BeebleData {
-        api_key: beeble_client::creds::beeble_api_key::BeebleApiKey::new("test".to_string()),
-        webhook_url: "http://localhost/webhook".to_string(),
-      },
-      kinovi_web: KinoviWebData {
-        cookies_volcengine: "test_cookie_volcengine=1".to_string(),
-        cookies_byteplus: "test_cookie_byteplus=1".to_string(),
-        cookies_byteplus_ultra: "test_cookie_byteplus_ultra=1".to_string(),
-      },
+      fal: FalData { api_key: fal_client::creds::fal_api_key::FalApiKey::new("test".to_string()), webhook_url: "http://localhost/webhook".to_string() },
+      gmicloud: GmiCloudData { api_key: gmicloud_client::creds::gmicloud_api_key::GmiCloudApiKey::new("test".to_string()) },
+      grok_api: GrokApiData { api_key: grok_api_client::creds::grok_api_key::GrokApiKey::new("test".to_string()) },
+      beeble: BeebleData { api_key: beeble_client::creds::beeble_api_key::BeebleApiKey::new("test".to_string()), webhook_url: "http://localhost/webhook".to_string() },
+      kinovi_web: KinoviWebData { cookies_volcengine: "test_cookie_volcengine=1".to_string(), cookies_byteplus: "test_cookie_byteplus=1".to_string(), cookies_byteplus_ultra: "test_cookie_byteplus_ultra=1".to_string() },
       openai: OpenAiData { api_key: "test".to_string() },
       worldlabs: WorldLabsData { api_key: "test".to_string() },
     },
@@ -705,36 +530,22 @@ pub(crate) fn build_test_server_state(pool: MySqlPool, media_cdn_override_url: S
     ip_ban_list: IpBanList::new(),
     craft_apps_release_cache: CraftAppsReleaseCache::new(),
     cidr_ban_set: BannedCidrSet::new(),
-    troll_bans: TrollBans {
-      user_tokens: TrollUserBanList::new(),
-      ip_addresses: IpBanList::new(),
-    },
+    troll_bans: TrollBans { user_tokens: TrollUserBanList::new(), ip_addresses: IpBanList::new() },
     static_api_token_set: StaticApiTokenSet::from_file("/nonexistent/static_api_tokens.toml"),
     internal_api_keys: HashSet::new(),
     caches: InMemoryCaches {
-      durable: DurableInMemoryCaches {
-        model_token_info: ModelTokenToInfoCache::new(),
-      },
+      durable: DurableInMemoryCaches { model_token_info: ModelTokenToInfoCache::new() },
       ephemeral: EphemeralInMemoryCaches {
         tts_model_list: SingleItemTtlCache::create_with_duration(Duration::from_secs(60)),
         database_tts_category_list: SingleItemTtlCache::create_with_duration(Duration::from_secs(60)),
         tts_model_category_assignments: SingleItemTtlCache::create_with_duration(Duration::from_secs(60)),
         inference_queue_length: SingleItemTtlCache::create_with_duration(Duration::from_secs(60)),
-        featured_media_files_sieve: ArcTtlSieve::with_capacity_and_ttl_duration(
-          25,
-          Duration::from_secs(60),
-        )
-        .expect("sieve"),
+        featured_media_files_sieve: ArcTtlSieve::with_capacity_and_ttl_duration(25, Duration::from_secs(60)).expect("sieve"),
       },
     },
     google_sign_in_cert: GoogleSignInCert::new(),
     temp_dir_creator: ScopedTempDirCreator::auto_setup(),
-    dashboards: Dashboards {
-      databox: DataboxDashboards {
-        daus_id: None,
-        daily_generations_id: None,
-      },
-    },
+    dashboards: Dashboards { databox: DataboxDashboards { daus_id: None, daily_generations_id: None } },
   }
 }
 
@@ -756,31 +567,15 @@ pub async fn assert_successful_generation_charges(
   request.duration_seconds = Some(duration_seconds);
   request.video_batch_count = Some(batch_count);
 
-  let response = harness
-    .post_generate(&user, request)
-    .await
-    .unwrap_or_else(|err| {
-      panic!("{:?} {:?} {}s x{}: generation failed: {:?}", model, resolution, duration_seconds, batch_count, err)
-    });
+  let response = harness.post_generate(&user, request).await.unwrap_or_else(|err| panic!("{:?} {:?} {}s x{}: generation failed: {:?}", model, resolution, duration_seconds, batch_count, err));
   assert!(response.success);
 
   let balance = harness.wallet_balance(&user).await;
-  assert_eq!(
-    STARTING_CREDITS - balance,
-    expected_credits,
-    "{:?} {:?} {}s x{}: wrong wallet debit", model, resolution, duration_seconds, batch_count,
-  );
+  assert_eq!(STARTING_CREDITS - balance, expected_credits, "{:?} {:?} {}s x{}: wrong wallet debit", model, resolution, duration_seconds, batch_count,);
 
   let entries = harness.ledger_entries(&user).await;
-  let debit = entries
-    .iter()
-    .find(|entry| entry.credits_delta < 0)
-    .unwrap_or_else(|| panic!("{:?}: no debit ledger entry found", model));
-  assert_eq!(
-    -debit.credits_delta,
-    expected_credits as i64,
-    "{:?} {:?} {}s x{}: wrong ledger debit", model, resolution, duration_seconds, batch_count,
-  );
+  let debit = entries.iter().find(|entry| entry.credits_delta < 0).unwrap_or_else(|| panic!("{:?}: no debit ledger entry found", model));
+  assert_eq!(-debit.credits_delta, expected_credits as i64, "{:?} {:?} {}s x{}: wrong ledger debit", model, resolution, duration_seconds, batch_count,);
   assert!(!debit.is_refunded, "{:?}: successful generation must not be refunded", model);
 }
 
@@ -798,13 +593,7 @@ pub async fn assert_reference_video_charge_then_refund(
 ) {
   let user = harness.create_funded_user(STARTING_CREDITS).await;
 
-  let video_token = mysql_testing::fixtures::media_files::create_test_video_media_file(
-    &harness.pool,
-    &user.user_token,
-    Some(6_000),
-  )
-  .await
-  .expect("create video media file fixture");
+  let video_token = mysql_testing::fixtures::media_files::create_test_video_media_file(&harness.pool, &user.user_token, Some(6_000)).await.expect("create video media file fixture");
 
   let mut request = base_generate_request(model);
   request.resolution = resolution;
@@ -815,40 +604,19 @@ pub async fn assert_reference_video_charge_then_refund(
   // The upload of the (unreachable) reference video fails after billing, so
   // the endpoint errors and the charge is refunded.
   let result = harness.post_generate(&user, request).await;
-  assert!(
-    result.is_err(),
-    "{:?}: generation with unreachable reference media should fail", model,
-  );
+  assert!(result.is_err(), "{:?}: generation with unreachable reference media should fail", model,);
 
   let entries = harness.ledger_entries(&user).await;
-  let debit = entries
-    .iter()
-    .find(|entry| entry.credits_delta < 0)
-    .unwrap_or_else(|| panic!("{:?}: no debit ledger entry found", model));
-  assert_eq!(
-    -debit.credits_delta,
-    expected_credits as i64,
-    "{:?} {:?} {}s + refs: wrong charged amount", model, resolution, duration_seconds,
-  );
-  assert!(
-    debit.is_refunded,
-    "{:?}: failed generation must refund the charge", model,
-  );
+  let debit = entries.iter().find(|entry| entry.credits_delta < 0).unwrap_or_else(|| panic!("{:?}: no debit ledger entry found", model));
+  assert_eq!(-debit.credits_delta, expected_credits as i64, "{:?} {:?} {}s + refs: wrong charged amount", model, resolution, duration_seconds,);
+  assert!(debit.is_refunded, "{:?}: failed generation must refund the charge", model,);
 
-  assert_eq!(
-    harness.wallet_balance(&user).await,
-    STARTING_CREDITS,
-    "{:?}: refund must make the wallet whole", model,
-  );
+  assert_eq!(harness.wallet_balance(&user).await, STARTING_CREDITS, "{:?}: refund must make the wallet whole", model,);
 }
 
 /// For models that currently have no execution route: the request must fail
 /// cleanly BEFORE any billing happens.
-pub async fn assert_generation_fails_and_charges_nothing(
-  harness: &TestHarness,
-  model: CommonVideoModel,
-  Seconds(duration_seconds): Seconds,
-) {
+pub async fn assert_generation_fails_and_charges_nothing(harness: &TestHarness, model: CommonVideoModel, Seconds(duration_seconds): Seconds) {
   let user = harness.create_funded_user(STARTING_CREDITS).await;
 
   let mut request = base_generate_request(model);
@@ -857,11 +625,7 @@ pub async fn assert_generation_fails_and_charges_nothing(
   let result = harness.post_generate(&user, request).await;
   assert!(result.is_err(), "{:?}: unroutable model must be rejected", model);
 
-  assert_eq!(
-    harness.wallet_balance(&user).await,
-    STARTING_CREDITS,
-    "{:?}: rejected generation must not charge", model,
-  );
+  assert_eq!(harness.wallet_balance(&user).await, STARTING_CREDITS, "{:?}: rejected generation must not charge", model,);
 }
 
 /// Run the same generation twice — once without and once with a reference
@@ -869,33 +633,17 @@ pub async fn assert_generation_fails_and_charges_nothing(
 /// generation is CHARGED strictly more credits. The no-reference generation
 /// succeeds outright; the referenced one uses an unreachable fixture (charge
 /// then refund), so its charge is read from the ledger debit entry.
-pub async fn assert_references_charge_more(
-  harness: &TestHarness,
-  model: CommonVideoModel,
-  resolution: Option<enums::common::generation::common_resolution::CommonResolution>,
-  Seconds(duration_seconds): Seconds,
-) {
+pub async fn assert_references_charge_more(harness: &TestHarness, model: CommonVideoModel, resolution: Option<enums::common::generation::common_resolution::CommonResolution>, Seconds(duration_seconds): Seconds) {
   let no_ref_user = harness.create_funded_user(STARTING_CREDITS).await;
   let mut request = base_generate_request(model);
   request.resolution = resolution;
   request.duration_seconds = Some(duration_seconds);
-  let response = harness
-    .post_generate(&no_ref_user, request)
-    .await
-    .unwrap_or_else(|err| {
-      panic!("{:?} {:?} {}s: no-reference generation failed: {:?}", model, resolution, duration_seconds, err)
-    });
+  let response = harness.post_generate(&no_ref_user, request).await.unwrap_or_else(|err| panic!("{:?} {:?} {}s: no-reference generation failed: {:?}", model, resolution, duration_seconds, err));
   assert!(response.success);
   let no_ref_debit = STARTING_CREDITS - harness.wallet_balance(&no_ref_user).await;
 
   let ref_user = harness.create_funded_user(STARTING_CREDITS).await;
-  let video_token = mysql_testing::fixtures::media_files::create_test_video_media_file(
-    &harness.pool,
-    &ref_user.user_token,
-    Some(6_000),
-  )
-  .await
-  .expect("create video media file fixture");
+  let video_token = mysql_testing::fixtures::media_files::create_test_video_media_file(&harness.pool, &ref_user.user_token, Some(6_000)).await.expect("create video media file fixture");
   let mut request = base_generate_request(model);
   request.resolution = resolution;
   request.duration_seconds = Some(duration_seconds);
@@ -903,17 +651,10 @@ pub async fn assert_references_charge_more(
   // The unreachable fixture fails after billing; the charge is in the ledger.
   let _ = harness.post_generate(&ref_user, request).await;
   let entries = harness.ledger_entries(&ref_user).await;
-  let ref_debit = entries
-    .iter()
-    .find(|entry| entry.credits_delta < 0)
-    .unwrap_or_else(|| panic!("{:?} {:?} {}s: no ledger debit for referenced generation", model, resolution, duration_seconds));
+  let ref_debit = entries.iter().find(|entry| entry.credits_delta < 0).unwrap_or_else(|| panic!("{:?} {:?} {}s: no ledger debit for referenced generation", model, resolution, duration_seconds));
   let ref_debit = u64::try_from(-ref_debit.credits_delta).expect("positive debit");
 
-  assert!(
-    ref_debit > no_ref_debit,
-    "{:?} {:?} {}s: references must charge more (ref {} vs no-ref {})",
-    model, resolution, duration_seconds, ref_debit, no_ref_debit,
-  );
+  assert!(ref_debit > no_ref_debit, "{:?} {:?} {}s: references must charge more (ref {} vs no-ref {})", model, resolution, duration_seconds, ref_debit, no_ref_debit,);
 }
 
 /// Assert the variant model charges a premium over the base model: runs one
@@ -935,12 +676,7 @@ pub async fn assert_variant_charges_premium(
   let ExpectedCredits(variant_credits) = variant;
 
   // The table itself must be internally consistent.
-  assert_eq!(
-    base_credits + delta,
-    variant_credits,
-    "test table bug: {:?} {} + delta {} != {:?} {}",
-    base_model, base_credits, delta, variant_model, variant_credits,
-  );
+  assert_eq!(base_credits + delta, variant_credits, "test table bug: {:?} {} + delta {} != {:?} {}", base_model, base_credits, delta, variant_model, variant_credits,);
 
   assert_successful_generation_charges(harness, base_model, resolution, seconds, batch, base).await;
   assert_successful_generation_charges(harness, variant_model, resolution, seconds, batch, variant).await;
@@ -961,13 +697,7 @@ pub async fn assert_real_input_videos_charge(
 
   let mut video_tokens = Vec::new();
   for millis in input_video_millis {
-    let token = mysql_testing::fixtures::media_files::create_probeable_test_video_media_file(
-      &harness.pool,
-      &user.user_token,
-      *millis,
-    )
-    .await
-    .expect("create probeable video media file fixture");
+    let token = mysql_testing::fixtures::media_files::create_probeable_test_video_media_file(&harness.pool, &user.user_token, *millis).await.expect("create probeable video media file fixture");
     video_tokens.push(token);
   }
 
@@ -976,30 +706,14 @@ pub async fn assert_real_input_videos_charge(
   request.duration_seconds = Some(duration_seconds);
   request.reference_video_media_tokens = Some(video_tokens);
 
-  let response = harness
-    .post_generate(&user, request)
-    .await
-    .unwrap_or_else(|err| {
-      panic!(
-        "{:?} {:?} {}s inputs {:?}ms: generation failed: {:?}",
-        model, resolution, duration_seconds, input_video_millis, err,
-      )
-    });
+  let response = harness.post_generate(&user, request).await.unwrap_or_else(|err| panic!("{:?} {:?} {}s inputs {:?}ms: generation failed: {:?}", model, resolution, duration_seconds, input_video_millis, err,));
   assert!(response.success);
 
   let balance = harness.wallet_balance(&user).await;
-  assert_eq!(
-    STARTING_CREDITS - balance,
-    expected_credits,
-    "{:?} {:?} {}s inputs {:?}ms: wrong wallet debit",
-    model, resolution, duration_seconds, input_video_millis,
-  );
+  assert_eq!(STARTING_CREDITS - balance, expected_credits, "{:?} {:?} {}s inputs {:?}ms: wrong wallet debit", model, resolution, duration_seconds, input_video_millis,);
 
   let entries = harness.ledger_entries(&user).await;
-  let debit = entries
-    .iter()
-    .find(|entry| entry.credits_delta < 0)
-    .unwrap_or_else(|| panic!("{:?}: no debit ledger entry found", model));
+  let debit = entries.iter().find(|entry| entry.credits_delta < 0).unwrap_or_else(|| panic!("{:?}: no debit ledger entry found", model));
   assert!(!debit.is_refunded, "{:?}: successful generation must not be refunded", model);
 }
 

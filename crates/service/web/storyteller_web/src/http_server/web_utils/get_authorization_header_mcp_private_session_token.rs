@@ -11,9 +11,7 @@ use crate::http_server::web_utils::get_authorization_header_api_key::get_authori
 /// header parsing and then requires the `mcp_session_` token prefix. Returns `None` if the
 /// header is absent, unusable, or carries a credential that is not an MCP session token —
 /// callers fall back to (or reject as) other credential types.
-pub fn get_authorization_header_mcp_private_session_token(
-  http_request: &HttpRequest,
-) -> Option<McpSessionPrivateToken> {
+pub fn get_authorization_header_mcp_private_session_token(http_request: &HttpRequest) -> Option<McpSessionPrivateToken> {
   let credential = get_authorization_header_api_key(http_request)?;
 
   if !credential.as_str_be_careful().starts_with(McpSessionPrivateToken::token_prefix()) {
@@ -29,22 +27,17 @@ mod tests {
 
   use super::*;
 
-  const SAMPLE_MCP_CREDENTIAL: &str =
-    "mcp_session_55ax0zhd580m598r6n4n7szdwjb2b28sypapvawh3k9m2p4q6r8t";
+  const SAMPLE_MCP_CREDENTIAL: &str = "mcp_session_55ax0zhd580m598r6n4n7szdwjb2b28sypapvawh3k9m2p4q6r8t";
   const SAMPLE_API_KEY: &str = "artcraft_api_55ax0zhd580m598r6n4n7szdwjb2b28sypapvawh";
 
   #[test]
   fn bearer_scheme() {
-    assert_eq!(
-      parsed(&format!("Bearer {SAMPLE_MCP_CREDENTIAL}")),
-      Some(SAMPLE_MCP_CREDENTIAL.to_string()));
+    assert_eq!(parsed(&format!("Bearer {SAMPLE_MCP_CREDENTIAL}")), Some(SAMPLE_MCP_CREDENTIAL.to_string()));
   }
 
   #[test]
   fn key_scheme() {
-    assert_eq!(
-      parsed(&format!("Key {SAMPLE_MCP_CREDENTIAL}")),
-      Some(SAMPLE_MCP_CREDENTIAL.to_string()));
+    assert_eq!(parsed(&format!("Key {SAMPLE_MCP_CREDENTIAL}")), Some(SAMPLE_MCP_CREDENTIAL.to_string()));
   }
 
   #[test]
@@ -65,10 +58,7 @@ mod tests {
   }
 
   fn parsed(header_value: &str) -> Option<String> {
-    let http_request = TestRequest::default()
-        .insert_header(("Authorization", header_value))
-        .to_http_request();
-    get_authorization_header_mcp_private_session_token(&http_request)
-        .map(|token| token.as_str().to_string())
+    let http_request = TestRequest::default().insert_header(("Authorization", header_value)).to_http_request();
+    get_authorization_header_mcp_private_session_token(&http_request).map(|token| token.as_str().to_string())
   }
 }

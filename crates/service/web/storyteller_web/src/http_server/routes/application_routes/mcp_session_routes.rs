@@ -12,13 +12,7 @@ use crate::http_server::endpoints::mcp_sessions::revoke_mcp_session_handler::rev
 pub fn add_mcp_session_routes<T, B>(app: App<T>) -> App<T>
 where
   B: MessageBody,
-  T: ServiceFactory<
-    ServiceRequest,
-    Config = (),
-    Response = ServiceResponse<B>,
-    Error = Error,
-    InitError = (),
-  >,
+  T: ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<B>, Error = Error, InitError = ()>,
 {
   app.service(
     web::scope("/v1/mcp/session")

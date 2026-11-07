@@ -16,13 +16,8 @@ use crate::util::internal_api_key::InternalApiKey;
 ///
 /// Accepts `Bearer <key>`, `Key <key>`, and bare `<key>` header forms
 /// (matching the site-wide Authorization header conventions).
-pub fn require_internal_api_key(
-  http_request: &HttpRequest,
-  server_state: &ServerState,
-) -> Result<(), CommonWebError> {
-  let maybe_header_value = http_request.headers()
-    .get("authorization")
-    .and_then(|value| value.to_str().ok());
+pub fn require_internal_api_key(http_request: &HttpRequest, server_state: &ServerState) -> Result<(), CommonWebError> {
+  let maybe_header_value = http_request.headers().get("authorization").and_then(|value| value.to_str().ok());
 
   let Some(header_value) = maybe_header_value else {
     warn!("Internal endpoint request without an Authorization header.");
@@ -62,7 +57,7 @@ fn parse_authorization_header_value(header_value: &str) -> Option<&str> {
       } else {
         Some(first)
       }
-    }
+    },
     Some(second) => {
       // Two tokens: the first must be a supported scheme.
       if parts.next().is_some() {
@@ -73,7 +68,7 @@ fn parse_authorization_header_value(header_value: &str) -> Option<&str> {
       } else {
         None
       }
-    }
+    },
   }
 }
 

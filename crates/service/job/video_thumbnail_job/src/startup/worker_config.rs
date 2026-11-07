@@ -26,12 +26,7 @@ impl WorkerConfig {
     ensure!(initial_ms > 0, "VIDEO_THUMBNAIL_RETRY_INITIAL_DELAY_MILLIS must be positive");
     ensure!(max_ms >= initial_ms, "VIDEO_THUMBNAIL_RETRY_MAX_DELAY_MILLIS must be >= the initial delay");
     ensure!(max_ms <= 86_400_000, "VIDEO_THUMBNAIL_RETRY_MAX_DELAY_MILLIS must be <= one day");
-    Ok(Self {
-      concurrency: NonZeroUsize::new(concurrency).unwrap(),
-      retry_cache_capacity: NonZeroUsize::new(capacity).unwrap(),
-      retry_initial_delay: Duration::from_millis(initial_ms),
-      retry_max_delay: Duration::from_millis(max_ms),
-    })
+    Ok(Self { concurrency: NonZeroUsize::new(concurrency).unwrap(), retry_cache_capacity: NonZeroUsize::new(capacity).unwrap(), retry_initial_delay: Duration::from_millis(initial_ms), retry_max_delay: Duration::from_millis(max_ms) })
   }
 }
 

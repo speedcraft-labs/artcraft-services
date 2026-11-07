@@ -18,7 +18,8 @@ use tokens::tokens::prompts::PromptToken;
 use tokens::tokens::users::UserToken;
 
 pub struct GetFirstPartyMinimaxH3JobByTokenArgs<'e, 'c, E>
-  where E: 'e + Executor<'c, Database = MySql>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   pub job_token: &'e InferenceJobToken,
 
@@ -47,10 +48,9 @@ pub struct FirstPartyMinimaxH3JobDetails {
   pub maybe_result_media_file_token: Option<MediaFileToken>,
 }
 
-pub async fn get_first_party_minimax_h3_job_by_token<'e, 'c : 'e, E>(
-  args: GetFirstPartyMinimaxH3JobByTokenArgs<'e, 'c, E>
-) -> Result<Option<FirstPartyMinimaxH3JobDetails>, sqlx::Error>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn get_first_party_minimax_h3_job_by_token<'e, 'c: 'e, E>(args: GetFirstPartyMinimaxH3JobByTokenArgs<'e, 'c, E>) -> Result<Option<FirstPartyMinimaxH3JobDetails>, sqlx::Error>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   let maybe_row = sqlx::query!(
     r#"
@@ -71,8 +71,8 @@ AND job_type IN ('artcraft_minimax_h3_turbo', 'artcraft_minimax_h3_ultra')
     "#,
     args.job_token.as_str(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   let Some(row) = maybe_row else {
     return Ok(None);

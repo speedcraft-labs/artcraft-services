@@ -17,11 +17,7 @@ use sha2::{Digest, Sha256};
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 
 const CODE_ALPHABET: &[u8] = b"BCDFGHJKLMNPQRSTVWXZ";
-const APPROVAL_ORIGINS: &[&str] = &[
-  ARTCRAFT_WEBAPP.https_link_without_path(),
-  ARTCRAFT_WEBSITE.https_link_without_path(),
-  ARTCRAFT_WEBSITE_WWW.https_link_without_path(),
-];
+const APPROVAL_ORIGINS: &[&str] = &[ARTCRAFT_WEBAPP.https_link_without_path(), ARTCRAFT_WEBSITE.https_link_without_path(), ARTCRAFT_WEBSITE_WWW.https_link_without_path()];
 const WINDOW: Duration = Duration::from_secs(60);
 const MAX_BUCKETS: usize = 10_000;
 

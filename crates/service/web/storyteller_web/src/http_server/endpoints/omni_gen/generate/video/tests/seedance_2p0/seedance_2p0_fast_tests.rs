@@ -12,9 +12,7 @@ use enums::common::generation::common_resolution::CommonResolution;
 use enums::common::generation::common_video_model::CommonVideoModel;
 
 use crate::http_server::endpoints::omni_gen::generate::video::tests::support::{
-  assert_generation_fails_and_charges_nothing, assert_reference_video_charge_then_refund, assert_references_charge_more,
-  assert_successful_generation_charges, assert_variant_charges_premium, Batch, CreditsDelta,
-  ExpectedCredits, Seconds, TestHarness,
+  assert_generation_fails_and_charges_nothing, assert_reference_video_charge_then_refund, assert_references_charge_more, assert_successful_generation_charges, assert_variant_charges_premium, Batch, CreditsDelta, ExpectedCredits, Seconds, TestHarness,
 };
 
 // ── Seedance 2.0 Fast (Volcengine) ──
@@ -82,9 +80,7 @@ mod seedance_2p0_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -116,9 +112,7 @@ mod seedance_2p0_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -144,9 +138,7 @@ mod seedance_2p0_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -209,9 +201,7 @@ mod seedance_2p0_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -243,9 +233,7 @@ mod seedance_2p0_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -260,9 +248,7 @@ mod seedance_2p0_fast {
 
     for resolution in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
       for seconds in [5u16, 10, 15] {
-        assert_references_charge_more(
-          &harness, CommonVideoModel::Seedance2p0Fast, Some(resolution), Seconds(seconds),
-        ).await;
+        assert_references_charge_more(&harness, CommonVideoModel::Seedance2p0Fast, Some(resolution), Seconds(seconds)).await;
       }
     }
   }
@@ -288,9 +274,7 @@ mod seedance_2p0_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0Fast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
@@ -360,9 +344,7 @@ mod seedance_2p0_bp_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -394,9 +376,7 @@ mod seedance_2p0_bp_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -422,9 +402,7 @@ mod seedance_2p0_bp_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -487,9 +465,7 @@ mod seedance_2p0_bp_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -521,9 +497,7 @@ mod seedance_2p0_bp_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -538,9 +512,7 @@ mod seedance_2p0_bp_fast {
 
     for resolution in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
       for seconds in [5u16, 10, 15] {
-        assert_references_charge_more(
-          &harness, CommonVideoModel::Seedance2p0BytePlusFast, Some(resolution), Seconds(seconds),
-        ).await;
+        assert_references_charge_more(&harness, CommonVideoModel::Seedance2p0BytePlusFast, Some(resolution), Seconds(seconds)).await;
       }
     }
   }
@@ -566,9 +538,7 @@ mod seedance_2p0_bp_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -579,14 +549,7 @@ mod seedance_2p0_bp_fast {
   async fn preview_model_fast_charges_the_byteplus_fast_rates() {
     let harness = TestHarness::create().await;
 
-    assert_successful_generation_charges(
-      &harness,
-      CommonVideoModel::PreviewModelFast,
-      Some(CommonResolution::SevenTwentyP),
-      Seconds(5),
-      Batch(1),
-      ExpectedCredits(100),
-    ).await;
+    assert_successful_generation_charges(&harness, CommonVideoModel::PreviewModelFast, Some(CommonResolution::SevenTwentyP), Seconds(5), Batch(1), ExpectedCredits(100)).await;
   }
 }
 
@@ -654,9 +617,7 @@ mod seedance_2p0_bpu_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -688,9 +649,7 @@ mod seedance_2p0_bpu_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -716,9 +675,7 @@ mod seedance_2p0_bpu_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -781,9 +738,7 @@ mod seedance_2p0_bpu_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -815,9 +770,7 @@ mod seedance_2p0_bpu_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -832,9 +785,7 @@ mod seedance_2p0_bpu_fast {
 
     for resolution in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
       for seconds in [5u16, 10, 15] {
-        assert_references_charge_more(
-          &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, Some(resolution), Seconds(seconds),
-        ).await;
+        assert_references_charge_more(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, Some(resolution), Seconds(seconds)).await;
       }
     }
   }
@@ -860,9 +811,7 @@ mod seedance_2p0_bpu_fast {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusUltraFast, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
@@ -881,9 +830,7 @@ mod seedance_2p0_u_fast {
   async fn seedance_2p0_ultra_fast_is_unroutable_and_charges_nothing() {
     let harness = TestHarness::create().await;
 
-    assert_generation_fails_and_charges_nothing(
-      &harness, CommonVideoModel::Seedance2p0UltraFast, Seconds(5),
-    ).await;
+    assert_generation_fails_and_charges_nothing(&harness, CommonVideoModel::Seedance2p0UltraFast, Seconds(5)).await;
   }
 }
 
@@ -905,12 +852,7 @@ mod premium {
     ];
 
     for (resolution, seconds, batch, base, variant, delta) in cases {
-      assert_variant_charges_premium(
-        &harness,
-        CommonVideoModel::Seedance2p0Fast,
-        CommonVideoModel::Seedance2p0BytePlusFast,
-        *resolution, *seconds, *batch, *base, *variant, *delta,
-      ).await;
+      assert_variant_charges_premium(&harness, CommonVideoModel::Seedance2p0Fast, CommonVideoModel::Seedance2p0BytePlusFast, *resolution, *seconds, *batch, *base, *variant, *delta).await;
     }
   }
 
@@ -928,26 +870,16 @@ mod premium {
     // 720p 5s: Fast 12.727 ¢/s → 64.
     assert_eq!(quote_credits(CommonVideoModel::Seedance2p0Fast).await.expect("Fast quotes"), 64);
 
-    assert!(
-      quote_credits(CommonVideoModel::Seedance2p0UltraFast).await.is_err(),
-      "deprecated UltraFast must not quote",
-    );
+    assert!(quote_credits(CommonVideoModel::Seedance2p0UltraFast).await.is_err(), "deprecated UltraFast must not quote",);
 
-    async fn quote_credits(
-      model: CommonVideoModel,
-    ) -> Result<u64, crate::http_server::common_responses::common_web_error::CommonWebError> {
+    async fn quote_credits(model: CommonVideoModel) -> Result<u64, crate::http_server::common_responses::common_web_error::CommonWebError> {
       let mut request = crate::http_server::endpoints::omni_gen::generate::video::tests::support::base_generate_request(model);
       request.resolution = Some(CommonResolution::SevenTwentyP);
       request.duration_seconds = Some(5);
 
-      let http_request = actix_web::test::TestRequest::post()
-        .uri("/v1/omni_gen/cost/video")
-        .to_http_request();
+      let http_request = actix_web::test::TestRequest::post().uri("/v1/omni_gen/cost/video").to_http_request();
       // No ServerState: quotes come from the router alone (no DB, no network).
-      let response = crate::http_server::endpoints::omni_gen::cost::video::omni_gen_video_cost_handler::omni_gen_video_cost_handler(
-        http_request, Json(request), None,
-      )
-      .await?;
+      let response = crate::http_server::endpoints::omni_gen::cost::video::omni_gen_video_cost_handler::omni_gen_video_cost_handler(http_request, Json(request), None).await?;
       Ok(response.into_inner().cost_in_credits.expect("quote should carry credits"))
     }
   }

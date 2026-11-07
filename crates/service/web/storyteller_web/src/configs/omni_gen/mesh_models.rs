@@ -1,9 +1,4 @@
-use artcraft_api_defs::omni_gen::models::omni_gen_mesh_models::{
-  OmniGenMeshModelDetails,
-  OmniGenMeshModelProviderDetails,
-  OmniGenMeshModelsResponse,
-  OmniGenMeshProviderModelDetails,
-};
+use artcraft_api_defs::omni_gen::models::omni_gen_mesh_models::{OmniGenMeshModelDetails, OmniGenMeshModelProviderDetails, OmniGenMeshModelsResponse, OmniGenMeshProviderModelDetails};
 use enums::common::generation::common_mesh_model::CommonMeshModel;
 use enums::common::generation::common_mesh_output_type::CommonMeshOutputType;
 use enums::common::generation::common_polygon_type::CommonPolygonType;
@@ -14,11 +9,7 @@ use once_cell::sync::Lazy;
 pub static OMNI_GEN_MESH_MODELS_AND_PROVIDERS: Lazy<OmniGenMeshModelsResponse> = Lazy::new(|| {
   let models = build_omni_gen_mesh_models();
   let providers = build_omni_gen_mesh_model_providers();
-  OmniGenMeshModelsResponse {
-    success: true,
-    models,
-    providers,
-  }
+  OmniGenMeshModelsResponse { success: true, models, providers }
 });
 
 fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
@@ -30,10 +21,7 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     model_creator: Some(ModelCreator::Tencent),
     full_name: Some("Hunyuan 3D 2.0".to_string()),
     image_input_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::Geometry,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::Geometry]),
     ..Default::default()
   });
 
@@ -43,10 +31,7 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     model_creator: Some(ModelCreator::Tencent),
     full_name: Some("Hunyuan 3D 2.1".to_string()),
     image_input_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::Geometry,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::Geometry]),
     ..Default::default()
   });
 
@@ -59,15 +44,8 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     text_prompt_supported: Some(true),
     image_input_supported: Some(true),
     multi_view_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::LowPoly,
-      CommonMeshOutputType::Geometry,
-    ]),
-    polygon_types: Some(vec![
-      CommonPolygonType::Triangle,
-      CommonPolygonType::Quad,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::LowPoly, CommonMeshOutputType::Geometry]),
+    polygon_types: Some(vec![CommonPolygonType::Triangle, CommonPolygonType::Quad]),
     face_count_supported: Some(true),
     pbr_supported: Some(true),
     ..Default::default()
@@ -95,10 +73,7 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     text_prompt_supported: Some(true),
     image_input_supported: Some(true),
     multi_view_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::Geometry,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::Geometry]),
     face_count_supported: Some(true),
     pbr_supported: Some(true),
     ..Default::default()
@@ -113,10 +88,7 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     extra_info_short: Some("Fast".to_string()),
     text_prompt_supported: Some(true),
     image_input_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::Geometry,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::Geometry]),
     pbr_supported: Some(true),
     ..Default::default()
   });
@@ -140,10 +112,7 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     extra_info: Some("Retopologizes an existing 3D mesh into a cleaner, more efficient topology".to_string()),
     extra_info_short: Some("Retopology".to_string()),
     mesh_input_supported: Some(true),
-    polygon_types: Some(vec![
-      CommonPolygonType::Triangle,
-      CommonPolygonType::Quad,
-    ]),
+    polygon_types: Some(vec![CommonPolygonType::Triangle, CommonPolygonType::Quad]),
     ..Default::default()
   });
 
@@ -156,14 +125,8 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     text_prompt_supported: Some(true),
     image_input_supported: Some(true),
     multi_view_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::Geometry,
-    ]),
-    polygon_types: Some(vec![
-      CommonPolygonType::Triangle,
-      CommonPolygonType::Quad,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::Geometry]),
+    polygon_types: Some(vec![CommonPolygonType::Triangle, CommonPolygonType::Quad]),
     face_count_supported: Some(true),
     pbr_supported: Some(true),
     texture_toggle_supported: Some(true),
@@ -179,15 +142,8 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     full_name: Some("Meshy 6".to_string()),
     text_prompt_supported: Some(true),
     image_input_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::LowPoly,
-      CommonMeshOutputType::Geometry,
-    ]),
-    polygon_types: Some(vec![
-      CommonPolygonType::Triangle,
-      CommonPolygonType::Quad,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::LowPoly, CommonMeshOutputType::Geometry]),
+    polygon_types: Some(vec![CommonPolygonType::Triangle, CommonPolygonType::Quad]),
     face_count_supported: Some(true),
     pbr_supported: Some(true),
     texture_toggle_supported: Some(true),
@@ -202,10 +158,7 @@ fn build_omni_gen_mesh_models() -> Vec<OmniGenMeshModelDetails> {
     extra_info_short: Some("Fast".to_string()),
     text_prompt_supported: Some(true),
     image_input_supported: Some(true),
-    mesh_output_types: Some(vec![
-      CommonMeshOutputType::Normal,
-      CommonMeshOutputType::Geometry,
-    ]),
+    mesh_output_types: Some(vec![CommonMeshOutputType::Normal, CommonMeshOutputType::Geometry]),
     pbr_supported: Some(true),
     texture_toggle_supported: Some(true),
     ..Default::default()
@@ -220,50 +173,17 @@ fn build_omni_gen_mesh_model_providers() -> Vec<OmniGenMeshModelProviderDetails>
   providers.push(OmniGenMeshModelProviderDetails {
     provider: GenerationProvider::Artcraft,
     models: vec![
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d2p0,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d2p1,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d3,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d3Sketch,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d3p1Pro,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d3p1Rapid,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d3p1Part,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Hunyuan3d3p1SmartTopology,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Tripo3dH3p1,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::MeshyV6,
-        overrides: None,
-      },
-      OmniGenMeshProviderModelDetails {
-        model: CommonMeshModel::Rodin2p5Fast,
-        overrides: None,
-      },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d2p0, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d2p1, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d3, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d3Sketch, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d3p1Pro, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d3p1Rapid, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d3p1Part, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Hunyuan3d3p1SmartTopology, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Tripo3dH3p1, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::MeshyV6, overrides: None },
+      OmniGenMeshProviderModelDetails { model: CommonMeshModel::Rodin2p5Fast, overrides: None },
     ],
   });
 

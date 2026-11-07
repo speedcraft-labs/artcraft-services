@@ -1,10 +1,6 @@
 use crate::error::fal_error_plus::FalErrorPlus;
-use crate::requests::api::video::extend::flux_3::raw_request::{
-  Flux3ExtendVideoInput, Flux3ExtendVideoOutput,
-};
-use crate::requests::api::video::text::flux_3::api::{
-  Flux3AspectRatio, Flux3Duration, Flux3Resolution,
-};
+use crate::requests::api::video::extend::flux_3::raw_request::{Flux3ExtendVideoInput, Flux3ExtendVideoOutput};
+use crate::requests::api::video::text::flux_3::api::{Flux3AspectRatio, Flux3Duration, Flux3Resolution};
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
 #[derive(Clone, Debug)]
@@ -108,20 +104,15 @@ mod tests {
 
   #[test]
   fn raw_request_omits_unset_optionals() {
-    let request = Flux3ExtendVideoRequest {
-      prompt: "minimal".to_string(),
-      video_url: "https://example.com/source.mp4".to_string(),
-      duration: None,
-      resolution: None,
-      aspect_ratio: None,
-      generate_audio: None,
-      safety_tolerance: None,
-    };
+    let request = Flux3ExtendVideoRequest { prompt: "minimal".to_string(), video_url: "https://example.com/source.mp4".to_string(), duration: None, resolution: None, aspect_ratio: None, generate_audio: None, safety_tolerance: None };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
-    assert_eq!(json, serde_json::json!({
-      "prompt": "minimal",
-      "video_url": "https://example.com/source.mp4",
-    }));
+    assert_eq!(
+      json,
+      serde_json::json!({
+        "prompt": "minimal",
+        "video_url": "https://example.com/source.mp4",
+      })
+    );
   }
 
   #[test]

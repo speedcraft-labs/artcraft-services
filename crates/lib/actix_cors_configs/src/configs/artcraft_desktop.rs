@@ -22,19 +22,12 @@ mod tests {
   #[actix_rt::test]
   async fn desktop_requests_and_preflights_allow_credentials() {
     for environment in [ServerEnvironment::Production, ServerEnvironment::Development] {
-      let service = build_cors_config(environment)
-          .new_transform(test::ok_service())
-          .await
-          .unwrap();
+      let service = build_cors_config(environment).new_transform(test::ok_service()).await.unwrap();
 
       for method in [Method::GET, Method::POST, Method::OPTIONS] {
-        let mut request = TestRequest::default()
-            .uri("/v1/session")
-            .insert_header((header::ORIGIN, DESKTOP_ORIGIN));
+        let mut request = TestRequest::default().uri("/v1/session").insert_header((header::ORIGIN, DESKTOP_ORIGIN));
         if method == Method::OPTIONS {
-          request = request
-              .insert_header((header::ACCESS_CONTROL_REQUEST_METHOD, "POST"))
-              .insert_header((header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type,session,x-artcraft-version"));
+          request = request.insert_header((header::ACCESS_CONTROL_REQUEST_METHOD, "POST")).insert_header((header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type,session,x-artcraft-version"));
         }
         let response = test::call_service(&service, request.method(method).to_srv_request()).await;
         assert_eq!(response.status(), StatusCode::OK);
@@ -47,12 +40,7 @@ mod tests {
   #[actix_rt::test]
   async fn desktop_origin_is_an_exact_https_allowlist_entry() {
     let cors = build_cors_config(ServerEnvironment::Production);
-    for origin in [
-      "http://desktop.getartcraft.com",
-      "https://desktop.getartcraft.com:8443",
-      "https://desktop.getartcraft.com.example.com",
-      "https://sub.desktop.getartcraft.com",
-    ] {
+    for origin in ["http://desktop.getartcraft.com", "https://desktop.getartcraft.com:8443", "https://desktop.getartcraft.com.example.com", "https://sub.desktop.getartcraft.com"] {
       assert_origin_invalid(&cors, origin).await;
     }
   }

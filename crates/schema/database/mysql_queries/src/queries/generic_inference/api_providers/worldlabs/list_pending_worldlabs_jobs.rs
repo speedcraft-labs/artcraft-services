@@ -71,9 +71,9 @@ LIMIT 25000
     "#,
     InferenceJobExternalThirdParty::Worldlabs.to_str(),
   )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| anyhow!("error querying pending worldlabs jobs: {:?}", err))?;
+  .fetch_all(pool)
+  .await
+  .map_err(|err| anyhow!("error querying pending worldlabs jobs: {:?}", err))?;
 
   let jobs = records
     .into_iter()
@@ -83,7 +83,7 @@ LIMIT 25000
         None => {
           warn!("PendingWorldlabsJob has no operation_id, skipping");
           return None;
-        }
+        },
       };
 
       Some(PendingWorldlabsJob {

@@ -4,34 +4,29 @@ use crate::http_server::common_responses::common_web_error::CommonWebError;
 
 /// Keep the public batch limit aligned with ArtCraft billing before the
 /// execution builder reaches Kinovi, whose Seedance API accepts larger batches.
-pub(crate) fn validate_kinovi_batch_count(
-  model: Option<CommonVideoModel>,
-  video_batch_count: Option<u16>,
-) -> Result<(), CommonWebError> {
-  if matches!(model, Some(
-    CommonVideoModel::Seedance2p5
-      | CommonVideoModel::Seedance2p0
-      | CommonVideoModel::Seedance2p0Fast
-      | CommonVideoModel::Seedance2p0Mini
-      | CommonVideoModel::Seedance2p5Ultra
-      | CommonVideoModel::Seedance2p0BytePlus
-      | CommonVideoModel::Seedance2p0BytePlusFast
-      | CommonVideoModel::Seedance2p0BytePlusMini
-      | CommonVideoModel::Seedance2p0BytePlusUltra
-      | CommonVideoModel::Seedance2p0BytePlusUltraFast
-      | CommonVideoModel::Seedance2p0BytePlusUltraMini
-      | CommonVideoModel::HappyHorse1p0
-  )) && !(1..=4).contains(&video_batch_count.unwrap_or(1)) {
-    return Err(CommonWebError::BadInputWithSimpleMessage(
-      "video_batch_count must be between 1 and 4 for this model".to_string(),
-    ));
-  }
-  if matches!(model, Some(CommonVideoModel::Wan3p0 | CommonVideoModel::Wan3p0Prime))
-    && video_batch_count.unwrap_or(1) != 1
+pub(crate) fn validate_kinovi_batch_count(model: Option<CommonVideoModel>, video_batch_count: Option<u16>) -> Result<(), CommonWebError> {
+  if matches!(
+    model,
+    Some(
+      CommonVideoModel::Seedance2p5
+        | CommonVideoModel::Seedance2p0
+        | CommonVideoModel::Seedance2p0Fast
+        | CommonVideoModel::Seedance2p0Mini
+        | CommonVideoModel::Seedance2p5Ultra
+        | CommonVideoModel::Seedance2p0BytePlus
+        | CommonVideoModel::Seedance2p0BytePlusFast
+        | CommonVideoModel::Seedance2p0BytePlusMini
+        | CommonVideoModel::Seedance2p0BytePlusUltra
+        | CommonVideoModel::Seedance2p0BytePlusUltraFast
+        | CommonVideoModel::Seedance2p0BytePlusUltraMini
+        | CommonVideoModel::HappyHorse1p0
+    )
+  ) && !(1..=4).contains(&video_batch_count.unwrap_or(1))
   {
-    return Err(CommonWebError::BadInputWithSimpleMessage(
-      "video_batch_count must be 1 for Wan 3.0 models".to_string(),
-    ));
+    return Err(CommonWebError::BadInputWithSimpleMessage("video_batch_count must be between 1 and 4 for this model".to_string()));
+  }
+  if matches!(model, Some(CommonVideoModel::Wan3p0 | CommonVideoModel::Wan3p0Prime)) && video_batch_count.unwrap_or(1) != 1 {
+    return Err(CommonWebError::BadInputWithSimpleMessage("video_batch_count must be 1 for Wan 3.0 models".to_string()));
   }
   Ok(())
 }
@@ -80,8 +75,7 @@ mod tests {
     for model in MODELS {
       for batch in [0, 5, 6, 7, 8, u16::MAX] {
         for result in validate_both(model, Some(batch)) {
-          assert!(matches!(result, Err(CommonWebError::BadInputWithSimpleMessage(_))),
-            "{:?}, batch {}", model, batch);
+          assert!(matches!(result, Err(CommonWebError::BadInputWithSimpleMessage(_))), "{:?}, batch {}", model, batch);
         }
       }
     }
@@ -105,10 +99,7 @@ mod tests {
 
   #[test]
   fn other_models_keep_their_existing_validation() {
-    for model in [
-      CommonVideoModel::Seedance2p5Preview,
-      CommonVideoModel::Veo3p1,
-    ] {
+    for model in [CommonVideoModel::Seedance2p5Preview, CommonVideoModel::Veo3p1] {
       for result in validate_both(model, Some(8)) {
         assert!(result.is_ok(), "{:?}: {:?}", model, result);
       }

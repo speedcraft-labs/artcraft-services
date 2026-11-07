@@ -20,14 +20,7 @@ pub struct PagerBuilder {
 
 impl PagerBuilder {
   pub fn new() -> Self {
-    Self {
-      client_config: None,
-      application_name: None,
-      environment: None,
-      hostname: None,
-      service_id: None,
-      queue_capacity: None,
-    }
+    Self { client_config: None, application_name: None, environment: None, hostname: None, service_id: None, queue_capacity: None }
   }
 
   /// Set the application name (used as the "source" tag on alerts).
@@ -56,15 +49,7 @@ impl PagerBuilder {
 
   /// Configure the Rootly backend. Returns a sub-builder for Rootly-specific options.
   pub fn rootly(self, api_key: RootlyApiKey) -> RootlyConfigBuilder {
-    RootlyConfigBuilder {
-      parent: self,
-      api_key,
-      urgency_id_high: None,
-      urgency_id_medium: None,
-      urgency_id_low: None,
-      notification_target_type: None,
-      notification_target_id: None,
-    }
+    RootlyConfigBuilder { parent: self, api_key, urgency_id_high: None, urgency_id_medium: None, urgency_id_low: None, notification_target_type: None, notification_target_id: None }
   }
 
   /// Set the backend config directly (for advanced use or future backends).
@@ -120,7 +105,7 @@ impl PagerBuilder {
       None => {
         warn!("No pager backend configured. Using NoOp pager.");
         PagerClientConfig::NoOp
-      }
+      },
     };
 
     PagerClient::new(client_config, self.application_name.clone(), self.environment.clone(), self.hostname.clone(), self.service_id.clone())

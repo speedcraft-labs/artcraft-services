@@ -15,30 +15,23 @@ use crate::stripe::traits::internal_subscription_product_lookup::InternalSubscri
 
 /// Handle event type: 'customer.subscription.deleted'
 /// Sent when a customer’s subscription ends.
-pub async fn customer_subscription_deleted_handler(
-  subscription: &Subscription,
-  internal_subscription_product_lookup: &dyn InternalSubscriptionProductLookup,
-  mysql_pool: &MySqlPool,
-) -> Result<StripeWebhookSummary, StripeWebhookError> {
-  let summary = subscription_summary_extractor(subscription)
-      .map_err(|err| {
-        let reason = format!("Error extracting subscription from 'customer.subscription.deleted' payload: {:?}", err);
-        error!("{}", reason);
-        StripeWebhookError::ServerError(reason) // NB: This was probably *our* fault.
-      })?;
+pub async fn customer_subscription_deleted_handler(subscription: &Subscription, internal_subscription_product_lookup: &dyn InternalSubscriptionProductLookup, mysql_pool: &MySqlPool) -> Result<StripeWebhookSummary, StripeWebhookError> {
+  let summary = subscription_summary_extractor(subscription).map_err(|err| {
+    let reason = format!("Error extracting subscription from 'customer.subscription.deleted' payload: {:?}", err);
+    error!("{}", reason);
+    StripeWebhookError::ServerError(reason) // NB: This was probably *our* fault.
+  })?;
 
   let mut should_process_update = true;
 
   let mut action_was_taken = false;
   let mut should_ignore_retry = false;
 
-  let maybe_internal_subscription_product =
-    internal_subscription_product_lookup.lookup_internal_product_from_stripe_product_id(&summary.stripe_product_id)
-        .map_err(|err| {
-          let reason = format!("Error mapping to internal product: {:?}", err);
-          error!("{}", reason);
-          StripeWebhookError::ServerError(reason) // NB: This was probably *our* fault.
-        })?;
+  let maybe_internal_subscription_product = internal_subscription_product_lookup.lookup_internal_product_from_stripe_product_id(&summary.stripe_product_id).map_err(|err| {
+    let reason = format!("Error mapping to internal product: {:?}", err);
+    error!("{}", reason);
+    StripeWebhookError::ServerError(reason) // NB: This was probably *our* fault.
+  })?;
 
   let mut subscription_namespace = PaymentsNamespace::FakeYou;
   let mut subscription_product_slug = UNKNOWN_SUBSCRIPTION_PRODUCT_SLUG;
@@ -49,13 +42,11 @@ pub async fn customer_subscription_deleted_handler(
   }
 
   // NB: It's possible to receive events out of order.
-  let maybe_existing_subscription = get_user_subscription_by_stripe_subscription_id(&summary.stripe_subscription_id, &mysql_pool)
-      .await
-      .map_err(|err| {
-        let reason = format!("Mysql error: {:?}", err);
-        error!("{}", reason);
-        StripeWebhookError::ServerError(reason)
-      })?;
+  let maybe_existing_subscription = get_user_subscription_by_stripe_subscription_id(&summary.stripe_subscription_id, &mysql_pool).await.map_err(|err| {
+    let reason = format!("Mysql error: {:?}", err);
+    error!("{}", reason);
+    StripeWebhookError::ServerError(reason)
+  })?;
 
   if let Some(existing_subscription) = maybe_existing_subscription {
     match existing_subscription.maybe_stripe_subscription_status {
@@ -63,8 +54,8 @@ pub async fn customer_subscription_deleted_handler(
         // NB: The stored subscription already had a terminal status and the subscription cannot be updated any further.
         should_process_update = false;
         should_ignore_retry = true;
-      }
-      _ => {}
+      },
+      _ => {},
     }
   }
 
@@ -72,7 +63,6 @@ pub async fn customer_subscription_deleted_handler(
   // once we detect the deletion.
   if should_process_update {
     if let Some(user_token) = summary.user_token.as_deref() {
-
       let upsert = UpsertUserSubscription {
         stripe_subscription_id: &summary.stripe_subscription_id,
         user_token,
@@ -93,13 +83,11 @@ pub async fn customer_subscription_deleted_handler(
         maybe_canceled_at: summary.maybe_canceled_at,
       };
 
-      let _r = upsert.upsert(mysql_pool)
-          .await
-          .map_err(|err| {
-            let reason = format!("Mysql error: {:?}", err);
-            error!("{}", reason);
-            StripeWebhookError::ServerError(reason)
-          })?;
+      let _r = upsert.upsert(mysql_pool).await.map_err(|err| {
+        let reason = format!("Mysql error: {:?}", err);
+        error!("{}", reason);
+        StripeWebhookError::ServerError(reason)
+      })?;
 
       action_was_taken = true;
     }
@@ -107,11 +95,5 @@ pub async fn customer_subscription_deleted_handler(
     should_ignore_retry = true;
   }
 
-  Ok(StripeWebhookSummary {
-    maybe_user_token: summary.user_token,
-    maybe_event_entity_id: Some(summary.stripe_subscription_id),
-    maybe_stripe_customer_id: Some(summary.stripe_customer_id),
-    action_was_taken,
-    should_ignore_retry,
-  })
+  Ok(StripeWebhookSummary { maybe_user_token: summary.user_token, maybe_event_entity_id: Some(summary.stripe_subscription_id), maybe_stripe_customer_id: Some(summary.stripe_customer_id), action_was_taken, should_ignore_retry })
 }

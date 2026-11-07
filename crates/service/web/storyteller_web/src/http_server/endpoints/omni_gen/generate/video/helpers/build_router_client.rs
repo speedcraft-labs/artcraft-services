@@ -14,49 +14,26 @@ use crate::http_server::common_responses::common_web_error::CommonWebError;
 use crate::http_server::endpoints::omni_gen::shared_utils::kinovi_account::KinoviAccount;
 use crate::state::server_state::ServerState;
 
-pub fn build_router_client(
-  provider: RouterProvider,
-  server_state: &ServerState,
-  kinovi_account: KinoviAccount,
-) -> Result<RouterClient, CommonWebError> {
+pub fn build_router_client(provider: RouterProvider, server_state: &ServerState, kinovi_account: KinoviAccount) -> Result<RouterClient, CommonWebError> {
   match provider {
-    RouterProvider::KinoviWeb => {
-      kinovi_provider(server_state, kinovi_account)
-    }
+    RouterProvider::KinoviWeb => kinovi_provider(server_state, kinovi_account),
     RouterProvider::Fal => {
-      let fal_client = RouterFalClient::new_with_webhook(
-        server_state.inference_providers.fal.api_key.clone(),
-        server_state.inference_providers.fal.webhook_url.clone(),
-      );
+      let fal_client = RouterFalClient::new_with_webhook(server_state.inference_providers.fal.api_key.clone(), server_state.inference_providers.fal.webhook_url.clone());
       Ok(RouterClient::Fal(fal_client))
-    }
-    RouterProvider::GmiCloud => {
-      Ok(RouterClient::GmiCloud(RouterGmiCloudClient::new(
-        server_state.inference_providers.gmicloud.api_key.clone(),
-      )))
-    }
-    RouterProvider::GrokApi => {
-      Ok(RouterClient::GrokApi(RouterGrokApiClient::new(
-        server_state.inference_providers.grok_api.api_key.clone(),
-      )))
-    }
+    },
+    RouterProvider::GmiCloud => Ok(RouterClient::GmiCloud(RouterGmiCloudClient::new(server_state.inference_providers.gmicloud.api_key.clone()))),
+    RouterProvider::GrokApi => Ok(RouterClient::GrokApi(RouterGrokApiClient::new(server_state.inference_providers.grok_api.api_key.clone()))),
     RouterProvider::WorldLabs => {
-      let creds = WorldLabsApiCreds::new(
-        server_state.inference_providers.worldlabs.api_key.clone(),
-      );
+      let creds = WorldLabsApiCreds::new(server_state.inference_providers.worldlabs.api_key.clone());
       Ok(RouterClient::WorldLabs(RouterWorldLabsClient::new(creds)))
-    }
-    other => {
-      Err(CommonWebError::server_error_with_message(
-        &format!("Unsupported provider for video generation: {:?}", other),
-      ))
-    }
+    },
+    other => Err(CommonWebError::server_error_with_message(&format!("Unsupported provider for video generation: {:?}", other))),
   }
 }
 
 fn kinovi_provider(server_state: &ServerState, kinovi_account: KinoviAccount) -> Result<RouterClient, CommonWebError> {
   let kinovi_web = &server_state.inference_providers.kinovi_web;
-  
+
   let cookies = match kinovi_account {
     KinoviAccount::Volcengine => kinovi_web.cookies_volcengine.clone(),
     KinoviAccount::BytePlus => kinovi_web.cookies_byteplus.clone(),
@@ -64,6 +41,6 @@ fn kinovi_provider(server_state: &ServerState, kinovi_account: KinoviAccount) ->
   };
 
   let session = KinoviWebSession::from_cookies_string(cookies);
-  
+
   Ok(RouterClient::KinoviWeb(RouterKinoviWebClient::new(session)))
 }

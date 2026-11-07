@@ -5,12 +5,8 @@ use actix_web::web::{Json, Query};
 use actix_web::{web, HttpRequest};
 use log::warn;
 
-use artcraft_api_defs::moderation::user_spend_events::list::{
-  ModeratorListUserSpendEventsQueryParams, ModeratorListUserSpendEventsResponse, UserSpendEventListEntry,
-};
-use mysql_queries::queries::user_spend_events::list_user_spend_events_for_moderation::{
-  list_user_spend_events_for_moderation, ListUserSpendEventsForModerationArgs,
-};
+use artcraft_api_defs::moderation::user_spend_events::list::{ModeratorListUserSpendEventsQueryParams, ModeratorListUserSpendEventsResponse, UserSpendEventListEntry};
+use mysql_queries::queries::user_spend_events::list_user_spend_events_for_moderation::{list_user_spend_events_for_moderation, ListUserSpendEventsForModerationArgs};
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 use crate::http_server::user_lookup::user_session::require_moderator::require_moderator;
@@ -33,11 +29,7 @@ const PAGE_SIZE: i64 = 200;
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn moderator_list_user_spend_events_handler(
-  http_request: HttpRequest,
-  query: Query<ModeratorListUserSpendEventsQueryParams>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<ModeratorListUserSpendEventsResponse>, CommonWebError> {
+pub async fn moderator_list_user_spend_events_handler(http_request: HttpRequest, query: Query<ModeratorListUserSpendEventsQueryParams>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<ModeratorListUserSpendEventsResponse>, CommonWebError> {
   let _user_session = require_moderator(&http_request, &server_state.session_checker, &server_state.mysql_pool).await?;
 
   let offset = query.offset.unwrap_or(0);
@@ -55,11 +47,7 @@ pub async fn moderator_list_user_spend_events_handler(
     CommonWebError::from_error(err)
   })?;
 
-  let maybe_next_offset = if rows.len() as i64 == PAGE_SIZE {
-    Some(offset + PAGE_SIZE as u64)
-  } else {
-    None
-  };
+  let maybe_next_offset = if rows.len() as i64 == PAGE_SIZE { Some(offset + PAGE_SIZE as u64) } else { None };
 
   let events = rows
     .into_iter()
@@ -85,9 +73,5 @@ pub async fn moderator_list_user_spend_events_handler(
     })
     .collect();
 
-  Ok(Json(ModeratorListUserSpendEventsResponse {
-    success: true,
-    events,
-    maybe_next_offset,
-  }))
+  Ok(Json(ModeratorListUserSpendEventsResponse { success: true, events, maybe_next_offset }))
 }

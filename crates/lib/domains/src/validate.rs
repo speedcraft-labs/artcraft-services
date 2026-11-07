@@ -13,7 +13,7 @@ const MAX_LABEL_LEN: usize = 63;
 /// and a non-numeric top-level label (so IP addresses are rejected).
 pub const fn assert_valid_domain(domain: &str) {
   match check_domain(domain) {
-    Ok(()) => {}
+    Ok(()) => {},
     Err(DomainError::Empty) => panic!("invalid domain: empty"),
     Err(DomainError::TooLong) => panic!("invalid domain: longer than 253 bytes"),
     Err(DomainError::EmptyLabel) => panic!("invalid domain: empty label (leading, trailing or doubled dot)"),
@@ -54,7 +54,7 @@ pub(crate) const fn check_domain(domain: &str) -> Result<(), DomainError> {
   while i <= bytes.len() {
     if i == bytes.len() || bytes[i] == b'.' {
       match check_label(bytes, label_start, i) {
-        Ok(()) => {}
+        Ok(()) => {},
         Err(err) => return Err(err),
       }
       labels += 1;
@@ -85,7 +85,7 @@ const fn check_label(bytes: &[u8], start: usize, end: usize) -> Result<(), Domai
   let mut i = start;
   while i < end {
     match bytes[i] {
-      b'a'..=b'z' | b'0'..=b'9' | b'-' => {}
+      b'a'..=b'z' | b'0'..=b'9' | b'-' => {},
       _ => return Err(DomainError::InvalidCharacter),
     }
     i += 1;

@@ -6,7 +6,6 @@ use tokens::tokens::twitch_oauth_tokens_internal::TwitchOauthInternalToken;
 
 pub struct TwitchOauthTokenInsertBuilder {
   // ===== Required Fields =====
-
   /// Old APIs return a u32, but this should be a string.
   /// Twitch is migrating IDs to strings.
   twitch_user_id: String,
@@ -21,7 +20,6 @@ pub struct TwitchOauthTokenInsertBuilder {
   oauth_grouping_token: String,
 
   // ===== Optional / Default Fields =====
-
   /// Other half of the access token, for renewal
   maybe_refresh_token: Option<String>,
 
@@ -41,7 +39,6 @@ pub struct TwitchOauthTokenInsertBuilder {
   refresh_count: u32,
 
   // ===== OAuth Scopes =====
-
   has_bits_read: bool,
   has_channel_read_redemptions: bool,
   has_channel_read_subscriptions: bool,
@@ -50,12 +47,7 @@ pub struct TwitchOauthTokenInsertBuilder {
 }
 
 impl TwitchOauthTokenInsertBuilder {
-  pub fn new(
-    twitch_user_id: &str,
-    twitch_username: &str,
-    access_token: &str,
-    oauth_grouping_token: &str
-  ) -> Self {
+  pub fn new(twitch_user_id: &str, twitch_username: &str, access_token: &str, oauth_grouping_token: &str) -> Self {
     Self {
       twitch_user_id: twitch_user_id.to_string(),
       twitch_username: twitch_username.to_string(),
@@ -223,16 +215,13 @@ SET
       )
     };
 
-    let query_result = query.execute(mysql_pool)
-        .await;
+    let query_result = query.execute(mysql_pool).await;
 
     let _record_id = match query_result {
-      Ok(res) => {
-        res.last_insert_id()
-      },
+      Ok(res) => res.last_insert_id(),
       Err(err) => {
         return Err(anyhow!("Twitch token insert DB error: {:?}", err));
-      }
+      },
     };
 
     Ok(())

@@ -80,20 +80,12 @@ pub struct PromptRaw {
   pub created_at: DateTime<Utc>,
 }
 
-
-pub async fn get_prompt(
-  prompt_token: &PromptToken,
-  mysql_pool: &MySqlPool
-) -> AnyhowResult<Option<Prompt>> {
+pub async fn get_prompt(prompt_token: &PromptToken, mysql_pool: &MySqlPool) -> AnyhowResult<Option<Prompt>> {
   let mut connection = mysql_pool.acquire().await?;
   get_prompt_from_connection(prompt_token, &mut connection).await
 }
 
-pub async fn get_prompt_from_connection(
-  prompt_token: &PromptToken,
-  mysql_connection: &mut PoolConnection<MySql>
-) -> AnyhowResult<Option<Prompt>> {
-
+pub async fn get_prompt_from_connection(prompt_token: &PromptToken, mysql_connection: &mut PoolConnection<MySql>) -> AnyhowResult<Option<Prompt>> {
   let record = select_record(prompt_token, mysql_connection).await;
 
   let record = match record {
@@ -103,7 +95,7 @@ pub async fn get_prompt_from_connection(
         sqlx::Error::RowNotFound => Ok(None),
         _ => Err(anyhow!("database error: {:?}", err)),
       }
-    }
+    },
   };
 
   Ok(Some(Prompt {
@@ -121,22 +113,16 @@ pub async fn get_prompt_from_connection(
     maybe_batch_count: record.maybe_batch_count,
     maybe_generate_audio: record.maybe_generate_audio,
     maybe_duration_seconds: record.maybe_duration_seconds,
-    maybe_other_args: record.maybe_other_args
-        .as_deref()
-        .map(|args| PromptInnerPayload::from_json(args))
-        .transpose()?,
+    maybe_other_args: record.maybe_other_args.as_deref().map(|args| PromptInnerPayload::from_json(args)).transpose()?,
     creator_ip_address: record.creator_ip_address,
     created_at: record.created_at,
   }))
 }
 
-async fn select_record(
-  prompt_token: &PromptToken,
-  mysql_connection: &mut PoolConnection<MySql>
-) -> Result<PromptRaw, sqlx::Error> {
+async fn select_record(prompt_token: &PromptToken, mysql_connection: &mut PoolConnection<MySql>) -> Result<PromptRaw, sqlx::Error> {
   sqlx::query_as!(
-      PromptRaw,
-        r#"
+    PromptRaw,
+    r#"
 SELECT
     p.token as `token: tokens::tokens::prompts::PromptToken`,
 
@@ -167,8 +153,8 @@ FROM prompts as p
 WHERE
     p.token = ?
         "#,
-      prompt_token
-    )
-      .fetch_one(&mut **mysql_connection)
-      .await
+    prompt_token
+  )
+  .fetch_one(&mut **mysql_connection)
+  .await
 }

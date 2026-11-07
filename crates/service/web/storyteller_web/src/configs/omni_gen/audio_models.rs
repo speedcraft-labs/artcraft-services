@@ -1,9 +1,4 @@
-use artcraft_api_defs::omni_gen::models::omni_gen_audio_models::{
-  OmniGenAudioModelDetails,
-  OmniGenAudioModelProviderDetails,
-  OmniGenAudioModelsResponse,
-  OmniGenAudioProviderModelDetails,
-};
+use artcraft_api_defs::omni_gen::models::omni_gen_audio_models::{OmniGenAudioModelDetails, OmniGenAudioModelProviderDetails, OmniGenAudioModelsResponse, OmniGenAudioProviderModelDetails};
 use enums::common::generation::common_audio_model::CommonAudioModel;
 use enums::common::generation::model_creator::ModelCreator;
 use enums::common::generation_provider::GenerationProvider;
@@ -12,11 +7,7 @@ use once_cell::sync::Lazy;
 pub static OMNI_GEN_AUDIO_MODELS_AND_PROVIDERS: Lazy<OmniGenAudioModelsResponse> = Lazy::new(|| {
   let models = build_omni_gen_audio_models();
   let providers = build_omni_gen_audio_model_providers();
-  OmniGenAudioModelsResponse {
-    success: true,
-    models,
-    providers,
-  }
+  OmniGenAudioModelsResponse { success: true, models, providers }
 });
 
 fn build_omni_gen_audio_models() -> Vec<OmniGenAudioModelDetails> {
@@ -99,26 +90,11 @@ fn build_omni_gen_audio_model_providers() -> Vec<OmniGenAudioModelProviderDetail
   providers.push(OmniGenAudioModelProviderDetails {
     provider: GenerationProvider::Artcraft,
     models: vec![
-      OmniGenAudioProviderModelDetails {
-        model: CommonAudioModel::SunoMusic,
-        overrides: None,
-      },
-      OmniGenAudioProviderModelDetails {
-        model: CommonAudioModel::SunoRemix,
-        overrides: None,
-      },
-      OmniGenAudioProviderModelDetails {
-        model: CommonAudioModel::SunoSounds,
-        overrides: None,
-      },
-      OmniGenAudioProviderModelDetails {
-        model: CommonAudioModel::SunoSample,
-        overrides: None,
-      },
-      OmniGenAudioProviderModelDetails {
-        model: CommonAudioModel::SeedAudio1p0,
-        overrides: None,
-      },
+      OmniGenAudioProviderModelDetails { model: CommonAudioModel::SunoMusic, overrides: None },
+      OmniGenAudioProviderModelDetails { model: CommonAudioModel::SunoRemix, overrides: None },
+      OmniGenAudioProviderModelDetails { model: CommonAudioModel::SunoSounds, overrides: None },
+      OmniGenAudioProviderModelDetails { model: CommonAudioModel::SunoSample, overrides: None },
+      OmniGenAudioProviderModelDetails { model: CommonAudioModel::SeedAudio1p0, overrides: None },
     ],
   });
 

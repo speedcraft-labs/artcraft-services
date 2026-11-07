@@ -12,13 +12,7 @@ use crate::http_server::endpoints::api_keys::update_api_key_handler::update_api_
 pub fn add_api_keys_routes<T, B>(app: App<T>) -> App<T>
 where
   B: MessageBody,
-  T: ServiceFactory<
-    ServiceRequest,
-    Config = (),
-    Response = ServiceResponse<B>,
-    Error = Error,
-    InitError = (),
-  >,
+  T: ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<B>, Error = Error, InitError = ()>,
 {
   app.service(
     web::scope("/v1/api_keys")

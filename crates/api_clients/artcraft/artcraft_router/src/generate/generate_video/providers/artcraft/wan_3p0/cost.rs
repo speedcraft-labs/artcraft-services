@@ -17,11 +17,7 @@ pub struct ArtcraftWan3p0CostState {
 
 impl ArtcraftWan3p0CostState {
   pub fn from_request(state: &ArtcraftWan3p0RequestState) -> Self {
-    Self {
-      is_prime: matches!(state.request.model, Some(CommonVideoModel::Wan3p0Prime)),
-      resolution: state.request.resolution.unwrap_or(CommonResolution::SevenTwentyP),
-      duration_seconds: state.request.duration_seconds.unwrap_or(5),
-    }
+    Self { is_prime: matches!(state.request.model, Some(CommonVideoModel::Wan3p0Prime)), resolution: state.request.resolution.unwrap_or(CommonResolution::SevenTwentyP), duration_seconds: state.request.duration_seconds.unwrap_or(5) }
   }
 
   pub fn estimate_cost(&self) -> VideoGenerationCostEstimate {
@@ -32,11 +28,7 @@ impl ArtcraftWan3p0CostState {
       _ => 1,
     };
     let cents = (rates[index] * f64::from(self.duration_seconds)).ceil() as u64;
-    VideoGenerationCostEstimate {
-      cost_in_credits: Some(cents), cost_in_usd_cents: Some(cents),
-      is_free: false, is_unlimited: false, is_rate_limited: false,
-      has_watermark: false, failures_are_refunded: None,
-    }
+    VideoGenerationCostEstimate { cost_in_credits: Some(cents), cost_in_usd_cents: Some(cents), is_free: false, is_unlimited: false, is_rate_limited: false, has_watermark: false, failures_are_refunded: None }
   }
 }
 
@@ -46,19 +38,10 @@ mod tests {
 
   #[test]
   fn regular_wan_prices_are_fixed_per_resolution_and_duration() {
-    let expected = [
-      (CommonResolution::FourEightyP, [10, 25, 49]),
-      (CommonResolution::SevenTwentyP, [20, 49, 97]),
-      (CommonResolution::TenEightyP, [39, 97, 194]),
-    ];
+    let expected = [(CommonResolution::FourEightyP, [10, 25, 49]), (CommonResolution::SevenTwentyP, [20, 49, 97]), (CommonResolution::TenEightyP, [39, 97, 194])];
     for (resolution, prices) in expected {
       for (duration, price) in [(2, prices[0]), (5, prices[1]), (10, prices[2])] {
-        let cost = ArtcraftWan3p0CostState {
-          is_prime: false,
-          resolution,
-          duration_seconds: duration,
-        }
-        .estimate_cost();
+        let cost = ArtcraftWan3p0CostState { is_prime: false, resolution, duration_seconds: duration }.estimate_cost();
         assert_eq!(cost.cost_in_credits, Some(price));
         assert_eq!(cost.cost_in_usd_cents, Some(price));
       }
@@ -67,19 +50,10 @@ mod tests {
 
   #[test]
   fn prime_wan_prices_are_fixed_per_resolution_and_duration() {
-    let expected = [
-      (CommonResolution::FourEightyP, [19, 46, 92]),
-      (CommonResolution::SevenTwentyP, [38, 94, 188]),
-      (CommonResolution::TenEightyP, [76, 188, 376]),
-    ];
+    let expected = [(CommonResolution::FourEightyP, [19, 46, 92]), (CommonResolution::SevenTwentyP, [38, 94, 188]), (CommonResolution::TenEightyP, [76, 188, 376])];
     for (resolution, prices) in expected {
       for (duration, price) in [(2, prices[0]), (5, prices[1]), (10, prices[2])] {
-        let cost = ArtcraftWan3p0CostState {
-          is_prime: true,
-          resolution,
-          duration_seconds: duration,
-        }
-        .estimate_cost();
+        let cost = ArtcraftWan3p0CostState { is_prime: true, resolution, duration_seconds: duration }.estimate_cost();
         assert_eq!(cost.cost_in_credits, Some(price));
         assert_eq!(cost.cost_in_usd_cents, Some(price));
       }

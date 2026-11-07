@@ -51,48 +51,29 @@ pub struct CometVideoTask {
 pub async fn get_video_task(args: GetVideoTaskArgs<'_>) -> Result<CometVideoTask, CometError> {
   let url = format!("{COMET_API_BASE_URL}/v1/videos/{}", args.task_id);
 
-  let client = reqwest::Client::builder()
-    .build()
-    .map_err(CometClientError::ReqwestClientError)?;
+  let client = reqwest::Client::builder().build().map_err(CometClientError::ReqwestClientError)?;
 
-  let response = client.get(&url)
-    .bearer_auth(args.api_key.as_str())
-    .send()
-    .await
-    .map_err(CometGenericApiError::ReqwestError)?;
+  let response = client.get(&url).bearer_auth(args.api_key.as_str()).send().await.map_err(CometGenericApiError::ReqwestError)?;
 
   let status_code = response.status();
-  let body = response.text()
-    .await
-    .map_err(CometGenericApiError::ReqwestError)?;
+  let body = response.text().await.map_err(CometGenericApiError::ReqwestError)?;
 
   if !status_code.is_success() {
     return Err(categorize_get_video_task_error(status_code, body, args.task_id));
   }
 
-  let raw: VideoTaskRawResponse = serde_json::from_str(&body)
-    .map_err(|err| CometGenericApiError::SerdeResponseParseErrorWithBody(err, body.clone()))?;
+  let raw: VideoTaskRawResponse = serde_json::from_str(&body).map_err(|err| CometGenericApiError::SerdeResponseParseErrorWithBody(err, body.clone()))?;
 
   info!("Comet video task {}: status {} (progress: {:?})", raw.id, raw.status, raw.progress);
 
-  Ok(CometVideoTask {
-    task_id: raw.id,
-    status: raw.status,
-    maybe_model: raw.model,
-    maybe_progress: raw.progress,
-    maybe_video_url: raw.video_url,
-    maybe_created_at: raw.created_at,
-    maybe_completed_at: raw.completed_at,
-  })
+  Ok(CometVideoTask { task_id: raw.id, status: raw.status, maybe_model: raw.model, maybe_progress: raw.progress, maybe_video_url: raw.video_url, maybe_created_at: raw.created_at, maybe_completed_at: raw.completed_at })
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
   use crate::error::comet_specific_api_error::CometSpecificApiError;
-  use crate::requests::get_video_content::get_video_content::{
-    probe_video_failure_reason, ProbeVideoFailureReasonArgs,
-  };
+  use crate::requests::get_video_content::get_video_content::{probe_video_failure_reason, ProbeVideoFailureReasonArgs};
   use crate::test_utils::load_api_key;
 
   /// Historical task ids from real generations, kept for diagnosing how
@@ -117,15 +98,12 @@ mod tests {
   async fn live_get_video_task_unknown_id() {
     let api_key = load_api_key();
 
-    let result = get_video_task(GetVideoTaskArgs {
-      api_key: &api_key,
-      task_id: "task_does_not_exist_artcraft_test",
-    }).await;
+    let result = get_video_task(GetVideoTaskArgs { api_key: &api_key, task_id: "task_does_not_exist_artcraft_test" }).await;
 
     match result {
       Err(CometError::ApiSpecific(CometSpecificApiError::TaskNotFound { task_id, .. })) => {
         assert_eq!(task_id, "task_does_not_exist_artcraft_test");
-      }
+      },
       other => panic!("Expected TaskNotFound, got: {:?}", other),
     }
   }
@@ -154,7 +132,7 @@ mod tests {
         Err(err) => {
           println!("  poll error: {err}");
           continue;
-        }
+        },
       };
 
       println!("  status:       {}", task.status);
@@ -173,7 +151,7 @@ mod tests {
             println!("    content violation: {}", reason.is_content_violation());
             println!("    error type:        {}", reason.maybe_error_type.as_deref().unwrap_or("(none)"));
             println!("    request id:        {}", reason.maybe_request_id.as_deref().unwrap_or("(none)"));
-          }
+          },
           Ok(None) => println!("  failure probe: content unexpectedly downloadable"),
           Err(err) => println!("  failure probe error: {err}"),
         }

@@ -38,9 +38,7 @@ pub struct PendingFirstPartyMinimaxH3Job {
 
 /// Returns the locked job, or `None` when no unlocked pending job of the
 /// given tier exists.
-pub async fn select_pending_first_party_minimax_h3_job_for_update(
-  args: SelectPendingFirstPartyMinimaxH3JobForUpdateArgs<'_, '_>
-) -> Result<Option<PendingFirstPartyMinimaxH3Job>, sqlx::Error> {
+pub async fn select_pending_first_party_minimax_h3_job_for_update(args: SelectPendingFirstPartyMinimaxH3JobForUpdateArgs<'_, '_>) -> Result<Option<PendingFirstPartyMinimaxH3Job>, sqlx::Error> {
   let job_type = args.minimax_model.inference_job_type();
 
   let maybe_row = sqlx::query!(
@@ -57,11 +55,8 @@ FOR UPDATE SKIP LOCKED
     "#,
     job_type.to_str(),
   )
-    .fetch_optional(&mut **args.transaction)
-    .await?;
+  .fetch_optional(&mut **args.transaction)
+  .await?;
 
-  Ok(maybe_row.map(|row| PendingFirstPartyMinimaxH3Job {
-    job_token: row.job_token,
-    maybe_prompt_token: row.maybe_prompt_token,
-  }))
+  Ok(maybe_row.map(|row| PendingFirstPartyMinimaxH3Job { job_token: row.job_token, maybe_prompt_token: row.maybe_prompt_token }))
 }

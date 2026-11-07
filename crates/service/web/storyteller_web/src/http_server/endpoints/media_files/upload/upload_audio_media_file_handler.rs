@@ -72,7 +72,7 @@ pub struct UploadAudioMediaFileSuccessResponse {
   pub media_file_token: MediaFileToken,
 }
 
-static ALLOWED_MIME_TYPES : Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static ALLOWED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
   HashSet::from([
     // Audio
     "audio/aac",
@@ -85,7 +85,7 @@ static ALLOWED_MIME_TYPES : Lazy<HashSet<&'static str>> = Lazy::new(|| {
     // Mixed
     "audio/mp4", // iPhone seems to upload these as audio
     // Video
-    "video/mp4", // TODO(bt,2024-05-01): Do we want to allow these as audio?
+    "video/mp4",  // TODO(bt,2024-05-01): Do we want to allow these as audio?
     "video/webm", // TODO(bt,2024-05-01): Do we want to allow these as audio?
   ])
 });
@@ -114,14 +114,10 @@ pub async fn upload_audio_media_file_handler(
   server_state: web::Data<Arc<ServerState>>,
   MultipartForm(mut form): MultipartForm<UploadAudioMediaFileForm>,
 ) -> Result<Json<UploadAudioMediaFileSuccessResponse>, MediaFileUploadError> {
-
-  let mut mysql_connection = server_state.mysql_pool
-      .acquire()
-      .await
-      .map_err(|err| {
-        error!("MySql pool error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  let mut mysql_connection = server_state.mysql_pool.acquire().await.map_err(|err| {
+    error!("MySql pool error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   // ==================== READ SESSION ==================== //
 
@@ -131,17 +127,11 @@ pub async fn upload_audio_media_file_handler(
 
   let maybe_user_token = session_auth.maybe_user_token();
 
-  let maybe_avt_token = server_state
-      .avt_cookie_manager
-      .get_avt_token_from_request(&http_request);
+  let maybe_avt_token = server_state.avt_cookie_manager.get_avt_token_from_request(&http_request);
 
   // ==================== RATE LIMIT ==================== //
 
-  let rate_limiter = if session_auth.is_logged_in() {
-    &server_state.redis_rate_limiters.file_upload_logged_in
-  } else {
-    &server_state.redis_rate_limiters.file_upload_logged_out
-  };
+  let rate_limiter = if session_auth.is_logged_in() { &server_state.redis_rate_limiters.file_upload_logged_in } else { &server_state.redis_rate_limiters.file_upload_logged_out };
 
   if let Err(_err) = rate_limiter.rate_limit_request(&http_request).await {
     return Err(MediaFileUploadError::RateLimited);
@@ -156,23 +146,16 @@ pub async fn upload_audio_media_file_handler(
     return Err(MediaFileUploadError::BadInput(reason));
   }
 
-  insert_idempotency_token(uuid_idempotency_token, &mut *mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Error inserting idempotency token: {:?}", err);
-        MediaFileUploadError::BadInput("invalid idempotency token".to_string())
-      })?;
+  insert_idempotency_token(uuid_idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    MediaFileUploadError::BadInput("invalid idempotency token".to_string())
+  })?;
 
   // ==================== UPLOAD METADATA ==================== //
 
-  let maybe_title = form.maybe_title
-      .map(|title| title.trim().to_string())
-      .filter(|title| !title.is_empty());
+  let maybe_title = form.maybe_title.map(|title| title.trim().to_string()).filter(|title| !title.is_empty());
 
-  let creator_set_visibility = form.maybe_visibility
-      .map(|visibility| visibility.0)
-      .or_else(|| session_auth.maybe_preferred_visibility())
-      .unwrap_or(Visibility::default());
+  let creator_set_visibility = form.maybe_visibility.map(|visibility| visibility.0).or_else(|| session_auth.maybe_preferred_visibility()).unwrap_or(Visibility::default());
 
   // ==================== USER DATA ==================== //
 
@@ -181,26 +164,19 @@ pub async fn upload_audio_media_file_handler(
   // ==================== FILE VALIDATION ==================== //
 
   let mut file_bytes = Vec::new();
-  form.file.file.read_to_end(&mut file_bytes)
-      .map_err(|e| {
-        error!("Problem reading file: {:?}", e);
-        MediaFileUploadError::ServerError
-      })?;
+  form.file.file.read_to_end(&mut file_bytes).map_err(|e| {
+    error!("Problem reading file: {:?}", e);
+    MediaFileUploadError::ServerError
+  })?;
 
-  let mimetype = get_mimetype_for_bytes(file_bytes.as_ref())
-      .map(|mimetype| mimetype.to_string())
-      .ok_or_else(|| {
-        warn!("Could not determine mimetype for file");
-        MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
-      })?;
+  let mimetype = get_mimetype_for_bytes(file_bytes.as_ref()).map(|mimetype| mimetype.to_string()).ok_or_else(|| {
+    warn!("Could not determine mimetype for file");
+    MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
+  })?;
 
   if !ALLOWED_MIME_TYPES.contains(mimetype.as_str()) {
     // NB: Don't let our error message inject malicious strings
-    let filtered_mimetype = mimetype
-        .chars()
-        .filter(|c| c.is_ascii())
-        .filter(|c| c.is_alphanumeric() || *c == '/')
-        .collect::<String>();
+    let filtered_mimetype = mimetype.chars().filter(|c| c.is_ascii()).filter(|c| c.is_alphanumeric() || *c == '/').collect::<String>();
     return Err(MediaFileUploadError::BadInput(format!("unpermitted mime type: {}", &filtered_mimetype)));
   }
 
@@ -233,7 +209,7 @@ pub async fn upload_audio_media_file_handler(
       //     left: `Unknown`,
       //    right: `Ebml`: EBML element type must be checked before calling this function', /Users/bt/.cargo/git/checkouts/symphonia-8fbe6c90fc095688/e1a7009/symphonia-format-mkv/src/ebml.rs:335:9
       false
-    }
+    },
     // Also, don't decode images
     "image/jpeg" => false,
     "image/png" => false,
@@ -244,11 +220,7 @@ pub async fn upload_audio_media_file_handler(
   let mut maybe_duration_millis = None;
 
   if do_audio_decode {
-    let basic_info = decode_basic_audio_bytes_info(
-      file_bytes.as_ref(),
-      Some(&mimetype),
-      None
-    ).map_err(|e| {
+    let basic_info = decode_basic_audio_bytes_info(file_bytes.as_ref(), Some(&mimetype), None).map_err(|e| {
       warn!("file decoding error: {:?}", e);
       MediaFileUploadError::BadInput("could not decode file".to_string())
     })?;
@@ -258,68 +230,52 @@ pub async fn upload_audio_media_file_handler(
 
   // ==================== OTHER FILE METADATA ==================== //
 
-  let maybe_filename = form.file.file_name.as_deref()
-      .as_deref()
-      .map(|filename| PathBuf::from(filename));
+  let maybe_filename = form.file.file_name.as_deref().as_deref().map(|filename| PathBuf::from(filename));
 
   let extension = mimetype_to_extension(&mimetype)
-      .or_else(|| {
-        maybe_filename
+    .or_else(|| {
+      maybe_filename
             .as_ref()
             .and_then(|filename| filename.extension()) // TODO needs dot prefix
             .and_then(|ext| ext.to_str())
-      })
-      .ok_or_else(|| {
-        warn!("Could not determine file extension for mimetype: {}", &mimetype);
-        MediaFileUploadError::ServerError
-      })?;
+    })
+    .ok_or_else(|| {
+      warn!("Could not determine file extension for mimetype: {}", &mimetype);
+      MediaFileUploadError::ServerError
+    })?;
 
   let extension = format!(".{extension}"); // NB: needs dot prefix
 
   let file_size_bytes = file_bytes.len();
 
-  let hash = sha256_hash_bytes(&file_bytes)
-      .map_err(|io_error| {
-        error!("Problem hashing bytes: {:?}", io_error);
-        MediaFileUploadError::ServerError
-      })?;
+  let hash = sha256_hash_bytes(&file_bytes).map_err(|io_error| {
+    error!("Problem hashing bytes: {:?}", io_error);
+    MediaFileUploadError::ServerError
+  })?;
 
   // ==================== UPLOAD AND SAVE ==================== //
 
-  const PREFIX : Option<&str> = Some("aud_");
+  const PREFIX: Option<&str> = Some("aud_");
 
   let public_upload_path = MediaFileBucketPath::generate_new(PREFIX, Some(&extension));
 
   info!("Uploading media to bucket path: {}", public_upload_path.get_full_object_path_str());
 
-  server_state.public_bucket_client.upload_file_with_content_type(
-    public_upload_path.get_full_object_path_str(),
-    file_bytes.as_ref(),
-    &mimetype)
-      .await
-      .map_err(|e| {
-        warn!("Upload media bytes to bucket error: {:?}", e);
-        MediaFileUploadError::ServerError
-      })?;
+  server_state.public_bucket_client.upload_file_with_content_type(public_upload_path.get_full_object_path_str(), file_bytes.as_ref(), &mimetype).await.map_err(|e| {
+    warn!("Upload media bytes to bucket error: {:?}", e);
+    MediaFileUploadError::ServerError
+  })?;
 
-  let maybe_generation_provider = form.maybe_generation_provider
-      .as_ref()
-      .and_then(|text| try_parse_generation_provider(text.as_ref()));
+  let maybe_generation_provider = form.maybe_generation_provider.as_ref().and_then(|text| try_parse_generation_provider(text.as_ref()));
 
-  let upload_type = if maybe_generation_provider.is_some() {
-    UploadType::ThirdPartyInference
-  } else {
-    UploadType::Filesystem
-  };
+  let upload_type = if maybe_generation_provider.is_some() { UploadType::ThirdPartyInference } else { UploadType::Filesystem };
 
   let maybe_upload_filename = form.file.file_name.as_deref();
 
   let (token, record_id) = insert_media_file_from_file_upload(InsertMediaFileFromUploadArgs {
     maybe_media_class: Some(MediaFileClass::Audio),
     maybe_project_type: None,
-    media_file_type: MediaFileType::try_from_mime_type(&mimetype)
-        .or_else(|| maybe_upload_filename.and_then(MediaFileType::try_from_filename_or_extension))
-        .unwrap_or(MediaFileType::Audio), // Coarse fallback for unrecognized files
+    media_file_type: MediaFileType::try_from_mime_type(&mimetype).or_else(|| maybe_upload_filename.and_then(MediaFileType::try_from_filename_or_extension)).unwrap_or(MediaFileType::Audio), // Coarse fallback for unrecognized files
     maybe_creator_user_token: maybe_user_token,
     maybe_creator_anonymous_visitor_token: maybe_avt_token.as_ref(),
     creator_ip_address: &ip_address,
@@ -344,16 +300,13 @@ pub async fn upload_audio_media_file_handler(
     maybe_public_bucket_extension: Some(&extension),
     pool: &server_state.mysql_pool,
   })
-      .await
-      .map_err(|err| {
-        warn!("New file creation DB error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  .await
+  .map_err(|err| {
+    warn!("New file creation DB error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   info!("new media file id: {} token: {:?}", record_id, &token);
 
-  Ok(Json(UploadAudioMediaFileSuccessResponse {
-    success: true,
-    media_file_token: token,
-  }))
+  Ok(Json(UploadAudioMediaFileSuccessResponse { success: true, media_file_token: token }))
 }

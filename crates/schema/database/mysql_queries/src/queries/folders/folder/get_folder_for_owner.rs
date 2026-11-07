@@ -21,9 +21,7 @@ where
 /// Fetch a single (live) folder by token, scoped to an owner. Returns
 /// `Ok(None)` if the folder doesn't exist, is soft-deleted, or is owned
 /// by a different user (don't leak existence of others' folders).
-pub async fn get_folder_for_owner<'e, 'c: 'e, E>(
-  args: GetFolderForOwnerArgs<'e, 'c, E>,
-) -> Result<Option<FolderRow>, sqlx::Error>
+pub async fn get_folder_for_owner<'e, 'c: 'e, E>(args: GetFolderForOwnerArgs<'e, 'c, E>) -> Result<Option<FolderRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -59,8 +57,8 @@ LIMIT 1
     args.folder_token.as_str(),
     args.owner_user_token.as_str(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| FolderRow {
     id: r.id,

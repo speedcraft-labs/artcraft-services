@@ -35,11 +35,7 @@ mod tests {
     use super::*;
 
     // (duration, expected_cents) — 6¢ × secs; None defaults to 5s.
-    const COST_TABLE: &[(Option<u8>, u64)] = &[
-      (Some(5),  30),
-      (Some(20), 120),
-      (None, 30),
-    ];
+    const COST_TABLE: &[(Option<u8>, u64)] = &[(Some(5), 30), (Some(20), 120), (None, 30)];
 
     #[test]
     fn matches_cost_table() {

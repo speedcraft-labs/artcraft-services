@@ -23,14 +23,10 @@ use crate::generate::generate_image::generate_image_request_builder::GenerateIma
 /// constraints (e.g. unsupported aspect ratios) BEFORE calling this helper.
 /// Validation that's identical across every Artcraft image model — batch count
 /// (1..=[`max_batch_count`]) and image_inputs shape — lives here.
-pub fn build_artcraft_omni_image_request(
-  builder: GenerateImageRequestBuilder,
-  model: CommonImageModelEnum,
-) -> Result<OmniGenImageCostAndGenerateRequest, ArtcraftRouterError> {
+pub fn build_artcraft_omni_image_request(builder: GenerateImageRequestBuilder, model: CommonImageModelEnum) -> Result<OmniGenImageCostAndGenerateRequest, ArtcraftRouterError> {
   let strategy = builder.request_mismatch_mitigation_strategy;
 
-  let image_batch_count =
-    plan_batch_count_with_max(builder.image_batch_count, strategy, max_batch_count(model))?;
+  let image_batch_count = plan_batch_count_with_max(builder.image_batch_count, strategy, max_batch_count(model))?;
   let image_media_tokens = resolve_image_list_ref(builder.image_inputs.clone())?;
 
   let aspect_ratio = builder.aspect_ratio.map(to_aspect_ratio_enum);
@@ -64,20 +60,13 @@ pub fn max_batch_count(model: CommonImageModelEnum) -> u16 {
 
 /// Validate batch count (1..=4). Mirrors the v1 plan-level validation that
 /// every Artcraft image model performs.
-pub fn plan_batch_count(
-  image_batch_count: Option<u16>,
-  strategy: RequestMismatchMitigationStrategy,
-) -> Result<u16, ArtcraftRouterError> {
+pub fn plan_batch_count(image_batch_count: Option<u16>, strategy: RequestMismatchMitigationStrategy) -> Result<u16, ArtcraftRouterError> {
   plan_batch_count_with_max(image_batch_count, strategy, 4)
 }
 
 /// Validate batch count (1..=`max`), clamping or erroring per the mitigation
 /// strategy when the request exceeds the model's cap.
-pub fn plan_batch_count_with_max(
-  image_batch_count: Option<u16>,
-  strategy: RequestMismatchMitigationStrategy,
-  max: u16,
-) -> Result<u16, ArtcraftRouterError> {
+pub fn plan_batch_count_with_max(image_batch_count: Option<u16>, strategy: RequestMismatchMitigationStrategy, max: u16) -> Result<u16, ArtcraftRouterError> {
   let count = image_batch_count.unwrap_or(1);
   if count == 0 {
     return Err(ArtcraftRouterError::Client(ClientError::UserRequestedZeroGenerations));
@@ -86,14 +75,8 @@ pub fn plan_batch_count_with_max(
     return Ok(count);
   }
   match strategy {
-    RequestMismatchMitigationStrategy::ErrorOut => {
-      Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption {
-        field: "image_batch_count",
-        value: format!("{}", count),
-      }))
-    }
-    RequestMismatchMitigationStrategy::PayMoreUpgrade
-    | RequestMismatchMitigationStrategy::PayLessDowngrade => Ok(max),
+    RequestMismatchMitigationStrategy::ErrorOut => Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption { field: "image_batch_count", value: format!("{}", count) })),
+    RequestMismatchMitigationStrategy::PayMoreUpgrade | RequestMismatchMitigationStrategy::PayLessDowngrade => Ok(max),
   }
 }
 
@@ -103,9 +86,7 @@ pub fn plan_batch_count_with_max(
 /// distillation hydrates media tokens to URLs before the cost path runs.
 /// Cost only depends on `num_images` + mode (derived from `image_inputs`
 /// presence by callers), so URL-form inputs flow through cleanly.
-pub fn resolve_image_list_ref(
-  image_list_ref: Option<ImageListRef>,
-) -> Result<Option<Vec<MediaFileToken>>, ArtcraftRouterError> {
+pub fn resolve_image_list_ref(image_list_ref: Option<ImageListRef>) -> Result<Option<Vec<MediaFileToken>>, ArtcraftRouterError> {
   match image_list_ref {
     None => Ok(None),
     Some(ImageListRef::MediaFileTokens(tokens)) => Ok(Some(tokens)),

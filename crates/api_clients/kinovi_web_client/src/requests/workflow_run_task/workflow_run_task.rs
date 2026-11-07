@@ -107,10 +107,7 @@ impl std::fmt::Debug for WorkflowRunTaskRequest {
 
 impl std::fmt::Debug for WorkflowRunTaskArgs<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("WorkflowRunTaskArgs")
-      .field("request", &self.request)
-      .field("host_override", &self.host_override)
-      .finish()
+    f.debug_struct("WorkflowRunTaskArgs").field("request", &self.request).field("host_override", &self.host_override).finish()
   }
 }
 
@@ -363,13 +360,8 @@ pub async fn workflow_run_task(args: WorkflowRunTaskArgs<'_>) -> Result<Workflow
 /// parameter sets. The caller provides the tRPC `businessType` and a
 /// serializable `apiParams` payload; the HTTP plumbing and response handling
 /// are shared with [`workflow_run_task`].
-pub async fn workflow_run_task_custom<T: serde::Serialize + std::fmt::Debug>(
-  args: WorkflowRunTaskCustomArgs<'_, T>,
-) -> Result<WorkflowRunTaskResponse, KinoviWebError> {
-  info!(
-    "Requesting {} from Seedance2Pro (custom): {:?}",
-    args.business_type, args.api_params,
-  );
+pub async fn workflow_run_task_custom<T: serde::Serialize + std::fmt::Debug>(args: WorkflowRunTaskCustomArgs<'_, T>) -> Result<WorkflowRunTaskResponse, KinoviWebError> {
+  info!("Requesting {} from Seedance2Pro (custom): {:?}", args.business_type, args.api_params,);
 
   let request_body = serde_json::json!({
     "0": {
@@ -392,26 +384,19 @@ pub struct WorkflowRunTaskCustomArgs<'a, T: serde::Serialize + std::fmt::Debug> 
   pub host_override: Option<KinoviHost>,
 }
 
-async fn send_run_task_request<B: serde::Serialize>(
-  session: &KinoviWebSession,
-  host_override: Option<KinoviHost>,
-  request_body: &B,
-) -> Result<WorkflowRunTaskResponse, KinoviWebError> {
+async fn send_run_task_request<B: serde::Serialize>(session: &KinoviWebSession, host_override: Option<KinoviHost>, request_body: &B) -> Result<WorkflowRunTaskResponse, KinoviWebError> {
   let host = resolve_host(host_override.as_ref());
   let base_url = host.api_base_url();
   let run_task_url = format!("{}/api/trpc/workflow.runTask?batch=1", base_url);
 
   let cookie = session.cookies.as_str();
 
-  let client = Client::builder()
-    .emulation(Emulation::Firefox143)
-    .timeout(KINOVI_REQUEST_TIMEOUT)
-    .build()
-    .map_err(|err| KinoviWebClientError::WreqClientError(err))?;
+  let client = Client::builder().emulation(Emulation::Firefox143).timeout(KINOVI_REQUEST_TIMEOUT).build().map_err(|err| KinoviWebClientError::WreqClientError(err))?;
 
   let referer = format!("{}/", base_url);
 
-  let response = client.post(&run_task_url)
+  let response = client
+    .post(&run_task_url)
     .header("User-Agent", FIREFOX_USER_AGENT)
     .header("Accept", "*/*")
     .header("Accept-Language", "en-US,en;q=0.9")
@@ -433,9 +418,7 @@ async fn send_run_task_request<B: serde::Serialize>(
     .map_err(|err| KinoviWebGenericApiError::WreqError(err))?;
 
   let status = response.status();
-  let response_body = response.text()
-    .await
-    .map_err(|err| KinoviWebGenericApiError::WreqError(err))?;
+  let response_body = response.text().await.map_err(|err| KinoviWebGenericApiError::WreqError(err))?;
 
   info!("Response status: {}, body: {}", status, response_body);
 
@@ -443,30 +426,15 @@ async fn send_run_task_request<B: serde::Serialize>(
     return Err(categorize_kinovi_web_error(status, response_body));
   }
 
-  let batch_response: Vec<BatchResponseItem> = serde_json::from_str(&response_body)
-    .map_err(|err| KinoviWebGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.clone()))?;
+  let batch_response: Vec<BatchResponseItem> = serde_json::from_str(&response_body).map_err(|err| KinoviWebGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.clone()))?;
 
-  let task_data = batch_response
-    .into_iter()
-    .next()
-    .ok_or_else(|| KinoviWebGenericApiError::UnexpectedResponseShape {
-      explanation: "Empty batch response array".to_string(),
-      raw_body: response_body.clone(),
-    })?
-    .result
-    .data
-    .json;
+  let task_data = batch_response.into_iter().next().ok_or_else(|| KinoviWebGenericApiError::UnexpectedResponseShape { explanation: "Empty batch response array".to_string(), raw_body: response_body.clone() })?.result.data.json;
 
   if task_data.violation_warning {
     return Err(KinoviWebBadRequestApiError::VideoGenerationViolation { raw_body: response_body }.into());
   }
 
-  Ok(WorkflowRunTaskResponse {
-    task_id: task_data.task_id,
-    order_id: task_data.order_id,
-    task_ids: task_data.task_ids,
-    order_ids: task_data.order_ids,
-  })
+  Ok(WorkflowRunTaskResponse { task_id: task_data.task_id, order_id: task_data.order_id, task_ids: task_data.task_ids, order_ids: task_data.order_ids })
 }
 
 /// Build the tRPC request body for a workflow run-task call.
@@ -537,11 +505,7 @@ fn build_batch_request(req: WorkflowRunTaskRequest) -> BatchRequest {
     (None, None, if urls.is_empty() { None } else { Some(urls) })
   };
 
-  let audio_urls: Option<Vec<String>> = if has_reference_audio {
-    req.reference_audio_urls
-  } else {
-    None
-  };
+  let audio_urls: Option<Vec<String>> = if has_reference_audio { req.reference_audio_urls } else { None };
 
   let face_blur_mode = match req.use_face_blur_hack {
     Some(true) => Some("on"),
@@ -586,10 +550,7 @@ fn build_batch_request(req: WorkflowRunTaskRequest) -> BatchRequest {
     (Some(video_input_mode), None)
   };
 
-  info!(
-    "Generating video (v2): mode={}, model={}, duration={}, batch={}",
-    video_input_mode, req.model_type.as_api_str(), duration, batch_count_value
-  );
+  info!("Generating video (v2): mode={}, model={}, duration={}, batch={}", video_input_mode, req.model_type.as_api_str(), duration, batch_count_value);
 
   BatchRequest {
     zero: BatchRequestInner {
@@ -618,8 +579,7 @@ fn build_batch_request(req: WorkflowRunTaskRequest) -> BatchRequest {
             _ => None,
           },
           maybe_generate_audio: match req.model_type {
-            KinoviModelTypeRaw::Seedance2Pro | KinoviModelTypeRaw::Seedance2Fast
-            | KinoviModelTypeRaw::Seedance2Mini | KinoviModelTypeRaw::Seedance2p5 => req.maybe_generate_audio,
+            KinoviModelTypeRaw::Seedance2Pro | KinoviModelTypeRaw::Seedance2Fast | KinoviModelTypeRaw::Seedance2Mini | KinoviModelTypeRaw::Seedance2p5 => req.maybe_generate_audio,
             _ => None,
           },
         },
@@ -752,11 +712,7 @@ mod tests {
   mod mini_request_shape_tests {
     use super::*;
 
-    fn mini_request(
-      aspect_ratio: KinoviAspectRatioRaw,
-      output_resolution: Option<KinoviOutputResolutionRaw>,
-      batch_count: KinoviBatchCountRaw,
-    ) -> WorkflowRunTaskRequest {
+    fn mini_request(aspect_ratio: KinoviAspectRatioRaw, output_resolution: Option<KinoviOutputResolutionRaw>, batch_count: KinoviBatchCountRaw) -> WorkflowRunTaskRequest {
       WorkflowRunTaskRequest {
         model_type: KinoviModelTypeRaw::Seedance2Mini,
         prompt: "a corgi".to_string(),
@@ -779,11 +735,7 @@ mod tests {
 
     #[test]
     fn mini_uses_aspect_ratio_field_and_business_type() {
-      let body = build_batch_request(mini_request(
-        KinoviAspectRatioRaw::Landscape4x3,
-        Some(KinoviOutputResolutionRaw::FourEightyP),
-        KinoviBatchCountRaw::One,
-      ));
+      let body = build_batch_request(mini_request(KinoviAspectRatioRaw::Landscape4x3, Some(KinoviOutputResolutionRaw::FourEightyP), KinoviBatchCountRaw::One));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""businessType":"seedance20-mini-video-generation""#), "{json}");
       assert!(json.contains(r#""model":"seedance2.0-mini""#), "{json}");
@@ -795,11 +747,7 @@ mod tests {
 
     #[test]
     fn mini_unset_resolution_sends_explicit_720p() {
-      let body = build_batch_request(mini_request(
-        KinoviAspectRatioRaw::Landscape16x9,
-        None,
-        KinoviBatchCountRaw::One,
-      ));
+      let body = build_batch_request(mini_request(KinoviAspectRatioRaw::Landscape16x9, None, KinoviBatchCountRaw::One));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""aspectRatio":"16:9""#), "{json}");
       assert!(json.contains(r#""outputResolution":"720p""#), "{json}");
@@ -807,25 +755,14 @@ mod tests {
 
     #[test]
     fn mini_batch_count_eight_serializes() {
-      let body = build_batch_request(mini_request(
-        KinoviAspectRatioRaw::Landscape16x9,
-        None,
-        KinoviBatchCountRaw::Eight,
-      ));
+      let body = build_batch_request(mini_request(KinoviAspectRatioRaw::Landscape16x9, None, KinoviBatchCountRaw::Eight));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""batchCount":8"#), "{json}");
     }
 
     #[test]
     fn batch_count_serializes_for_all_video_models() {
-      for model in [
-        KinoviModelTypeRaw::Seedance2Pro,
-        KinoviModelTypeRaw::Seedance2Fast,
-        KinoviModelTypeRaw::Seedance2Mini,
-        KinoviModelTypeRaw::Seedance2p5,
-        KinoviModelTypeRaw::Seedance2p5Preview,
-        KinoviModelTypeRaw::HappyHorse1p0,
-      ] {
+      for model in [KinoviModelTypeRaw::Seedance2Pro, KinoviModelTypeRaw::Seedance2Fast, KinoviModelTypeRaw::Seedance2Mini, KinoviModelTypeRaw::Seedance2p5, KinoviModelTypeRaw::Seedance2p5Preview, KinoviModelTypeRaw::HappyHorse1p0] {
         let batches = match model {
           KinoviModelTypeRaw::HappyHorse1p0 => [(KinoviBatchCountRaw::One, None), (KinoviBatchCountRaw::Three, Some(3))],
           _ => [(KinoviBatchCountRaw::One, None), (KinoviBatchCountRaw::Eight, Some(8))],
@@ -884,12 +821,7 @@ mod tests {
   mod seedance_2p5_preview_shape_tests {
     use super::*;
 
-    fn preview_request(
-      output_resolution: Option<KinoviOutputResolutionRaw>,
-      reference_image_urls: Option<Vec<String>>,
-      reference_video_urls: Option<Vec<String>>,
-      reference_audio_urls: Option<Vec<String>>,
-    ) -> WorkflowRunTaskRequest {
+    fn preview_request(output_resolution: Option<KinoviOutputResolutionRaw>, reference_image_urls: Option<Vec<String>>, reference_video_urls: Option<Vec<String>>, reference_audio_urls: Option<Vec<String>>) -> WorkflowRunTaskRequest {
       WorkflowRunTaskRequest {
         model_type: KinoviModelTypeRaw::Seedance2p5Preview,
         prompt: "A man is running from a t-rex".to_string(),
@@ -913,8 +845,7 @@ mod tests {
     #[test]
     fn text_to_video_matches_observed_request() {
       // Mirrors external/requests/sites/kinovi.ai/2026-07-31-seedance2p5/1_seedance2p5.txt.
-      let body = build_batch_request(preview_request(
-        Some(KinoviOutputResolutionRaw::FourEightyP), None, None, None));
+      let body = build_batch_request(preview_request(Some(KinoviOutputResolutionRaw::FourEightyP), None, None, None));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""businessType":"seedance25-preview-video-generation""#), "{json}");
       assert!(json.contains(r#""model":"seedance2-5-preview""#), "{json}");
@@ -949,12 +880,8 @@ mod tests {
 
     #[test]
     fn image_references_fill_image_urls_and_uploaded_urls() {
-      let images = vec![
-        "https://static.seedance2-pro.com/materials/a.jpg".to_string(),
-        "https://static.seedance2-pro.com/materials/b.png".to_string(),
-      ];
-      let body = build_batch_request(preview_request(
-        Some(KinoviOutputResolutionRaw::SevenTwentyP), Some(images), None, None));
+      let images = vec!["https://static.seedance2-pro.com/materials/a.jpg".to_string(), "https://static.seedance2-pro.com/materials/b.png".to_string()];
+      let body = build_batch_request(preview_request(Some(KinoviOutputResolutionRaw::SevenTwentyP), Some(images), None, None));
       let json = serde_json::to_string(&body).unwrap();
       let expected_urls = r#"["https://static.seedance2-pro.com/materials/a.jpg","https://static.seedance2-pro.com/materials/b.png"]"#;
       assert!(json.contains(&format!(r#""imageUrls":{expected_urls}"#)), "{json}");
@@ -982,8 +909,7 @@ mod tests {
 
     #[test]
     fn empty_reference_lists_send_no_url_fields() {
-      let body = build_batch_request(preview_request(
-        None, Some(vec![]), Some(vec![]), None));
+      let body = build_batch_request(preview_request(None, Some(vec![]), Some(vec![]), None));
       let json = serde_json::to_string(&body).unwrap();
       assert!(!json.contains("imageUrls"), "{json}");
       assert!(!json.contains("videoUrls"), "{json}");
@@ -1142,10 +1068,7 @@ mod tests {
       // uploadedUrls mirroring just the images.
       let mut request = base_request("The t-rex @image1 eats the banana @image2", 8);
       request.aspect_ratio = KinoviAspectRatioRaw::UltraWide21x9;
-      request.reference_image_urls = Some(vec![
-        "https://static.seedance2-pro.com/materials/a.png".to_string(),
-        "https://static.seedance2-pro.com/materials/b.jpg".to_string(),
-      ]);
+      request.reference_image_urls = Some(vec!["https://static.seedance2-pro.com/materials/a.png".to_string(), "https://static.seedance2-pro.com/materials/b.jpg".to_string()]);
       request.reference_video_urls = Some(vec!["https://static.seedance2-pro.com/materials/ref.mp4".to_string()]);
       request.reference_audio_urls = Some(vec!["https://static.seedance2-pro.com/materials/ref.wav".to_string()]);
 
@@ -1207,11 +1130,7 @@ mod tests {
   mod wire_shape_change_tests {
     use super::*;
 
-    fn request(
-      model_type: KinoviModelTypeRaw,
-      aspect_ratio: KinoviAspectRatioRaw,
-      start_frame_url: Option<String>,
-    ) -> WorkflowRunTaskRequest {
+    fn request(model_type: KinoviModelTypeRaw, aspect_ratio: KinoviAspectRatioRaw, start_frame_url: Option<String>) -> WorkflowRunTaskRequest {
       WorkflowRunTaskRequest {
         model_type,
         prompt: "a corgi".to_string(),
@@ -1234,8 +1153,7 @@ mod tests {
 
     #[test]
     fn seedance_pro_resolution_is_a_ratio_string() {
-      let body = build_batch_request(request(
-        KinoviModelTypeRaw::Seedance2Pro, KinoviAspectRatioRaw::Landscape16x9, None));
+      let body = build_batch_request(request(KinoviModelTypeRaw::Seedance2Pro, KinoviAspectRatioRaw::Landscape16x9, None));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""businessType":"wan22-video-generation""#), "{json}");
       assert!(json.contains(r#""resolution":"16:9""#), "{json}");
@@ -1247,8 +1165,7 @@ mod tests {
 
     #[test]
     fn seedance_fast_resolution_is_a_ratio_string() {
-      let body = build_batch_request(request(
-        KinoviModelTypeRaw::Seedance2Fast, KinoviAspectRatioRaw::Portrait3x4, None));
+      let body = build_batch_request(request(KinoviModelTypeRaw::Seedance2Fast, KinoviAspectRatioRaw::Portrait3x4, None));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""model":"seedance2-fast""#), "{json}");
       assert!(json.contains(r#""resolution":"3:4""#), "{json}");
@@ -1256,8 +1173,7 @@ mod tests {
 
     #[test]
     fn happy_horse_text_to_video_shape() {
-      let body = build_batch_request(request(
-        KinoviModelTypeRaw::HappyHorse1p0, KinoviAspectRatioRaw::Portrait9x16, None));
+      let body = build_batch_request(request(KinoviModelTypeRaw::HappyHorse1p0, KinoviAspectRatioRaw::Portrait9x16, None));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""businessType":"happyhorse-video-generation""#), "{json}");
       assert!(json.contains(r#""model":"happyhorse1.0""#), "{json}");
@@ -1270,9 +1186,7 @@ mod tests {
 
     #[test]
     fn happy_horse_image_to_video_uses_i2v() {
-      let body = build_batch_request(request(
-        KinoviModelTypeRaw::HappyHorse1p0, KinoviAspectRatioRaw::Landscape16x9,
-        Some("https://example.com/start.png".to_string())));
+      let body = build_batch_request(request(KinoviModelTypeRaw::HappyHorse1p0, KinoviAspectRatioRaw::Landscape16x9, Some("https://example.com/start.png".to_string())));
       let json = serde_json::to_string(&body).unwrap();
       assert!(json.contains(r#""happyhorseMode":"i2v""#), "{json}");
       assert!(json.contains(r#""uploadedUrls":["https://example.com/start.png"]"#), "{json}");
@@ -1377,16 +1291,14 @@ mod tests {
         host_override: None,
         request: WorkflowRunTaskRequest {
           model_type: KinoviModelTypeRaw::Seedance2Pro,
-          prompt: "The dog in @2 is in the office at @1 without the man. The office is dark and moonlight streams in through the windows. Particles of dust gleam in the moon beams. Suddenly, the dog jumps walks in front of the desk and barks.".to_string(),
+          prompt: "The dog in @2 is in the office at @1 without the man. The office is dark and moonlight streams in through the windows. Particles of dust gleam in the moon beams. Suddenly, the dog jumps walks in front of the desk and barks."
+            .to_string(),
           aspect_ratio: KinoviAspectRatioRaw::Landscape4x3,
           duration_seconds: 10,
           batch_count: KinoviBatchCountRaw::One,
           start_frame_url: None,
           end_frame_url: None,
-          reference_image_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260219/1771463564512-b14bfe90.png".to_string(),
-            "https://static.seedance2-pro.com/materials/20260219/1771496300184-fb32e08c.jpg".to_string(),
-          ]),
+          reference_image_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260219/1771463564512-b14bfe90.png".to_string(), "https://static.seedance2-pro.com/materials/20260219/1771496300184-fb32e08c.jpg".to_string()]),
           reference_video_urls: None,
           reference_audio_urls: None,
           character_ids: None,
@@ -1422,9 +1334,7 @@ mod tests {
           start_frame_url: None,
           end_frame_url: None,
           reference_image_urls: None,
-          reference_video_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string(),
-          ]),
+          reference_video_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string()]),
           reference_audio_urls: None,
           character_ids: None,
           use_face_blur_hack: None,
@@ -1458,12 +1368,8 @@ mod tests {
           batch_count: KinoviBatchCountRaw::One,
           start_frame_url: None,
           end_frame_url: None,
-          reference_image_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260315/1773595053724-07a1d500.png".to_string(),
-          ]),
-          reference_video_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string(),
-          ]),
+          reference_image_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260315/1773595053724-07a1d500.png".to_string()]),
+          reference_video_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string()]),
           reference_audio_urls: None,
           character_ids: None,
           use_face_blur_hack: None,
@@ -1488,22 +1394,14 @@ mod tests {
 
       let cookies = get_test_cookies()?;
       let session = KinoviWebSession::from_cookies_string(cookies);
-      let prepare_args = PrepareFileUploadArgs {
-        session: &session,
-        extension: "mp4".to_string(),
-        host_override: None,
-      };
+      let prepare_args = PrepareFileUploadArgs { session: &session, extension: "mp4".to_string(), host_override: None };
       let prepare_result = prepare_file_upload(prepare_args).await?;
       println!("Upload URL: {}", prepare_result.upload_url);
 
       let file_bytes = fs::read("/Users/bt/Videos/Artcraft/Artcraft Best/ArtCraft Seedance Knight.mp4")?;
       println!("File size: {} bytes", file_bytes.len());
 
-      let upload_args = UploadFileArgs {
-        upload_url: prepare_result.upload_url,
-        file_bytes,
-        host_override: None,
-      };
+      let upload_args = UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes, host_override: None };
       let result = upload_file(upload_args).await?;
       println!("Public URL: {}", result.public_url);
 
@@ -1544,21 +1442,11 @@ mod tests {
       setup_test_logging(LevelFilter::Trace);
       let session = test_session()?;
 
-      let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-        test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-      ).await?;
+      let image_bytes = crate::test_utils::http_download::http_download_to_bytes(test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL).await?;
 
-      let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-        session: &session,
-        extension: "jpg".to_string(),
-        host_override: None,
-      }).await?;
+      let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: "jpg".to_string(), host_override: None }).await?;
 
-      let upload_result = upload_file(UploadFileArgs {
-        upload_url: prepare_result.upload_url,
-        file_bytes: image_bytes,
-        host_override: None,
-      }).await?;
+      let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
       println!("Uploaded start frame: {}", upload_result.public_url);
 
@@ -1599,21 +1487,11 @@ mod tests {
       setup_test_logging(LevelFilter::Trace);
       let session = test_session()?;
 
-      let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-        test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-      ).await?;
+      let image_bytes = crate::test_utils::http_download::http_download_to_bytes(test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL).await?;
 
-      let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-        session: &session,
-        extension: "jpg".to_string(),
-        host_override: None,
-      }).await?;
+      let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: "jpg".to_string(), host_override: None }).await?;
 
-      let upload_result = upload_file(UploadFileArgs {
-        upload_url: prepare_result.upload_url,
-        file_bytes: image_bytes,
-        host_override: None,
-      }).await?;
+      let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
       println!("Uploaded start frame: {}", upload_result.public_url);
 
@@ -1654,28 +1532,16 @@ mod tests {
       setup_test_logging(LevelFilter::Trace);
       let session = test_session()?;
 
-      let image_urls_to_upload = [
-        test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-        test_data::web::image_urls::WHITE_HOUSE_SUNSET_IMAGE_URL,
-        test_data::web::image_urls::FOREST_BACKDROP_IMAGE_URL,
-      ];
+      let image_urls_to_upload = [test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL, test_data::web::image_urls::WHITE_HOUSE_SUNSET_IMAGE_URL, test_data::web::image_urls::FOREST_BACKDROP_IMAGE_URL];
 
       let mut uploaded_urls = Vec::new();
       for (i, source_url) in image_urls_to_upload.iter().enumerate() {
         let image_bytes = crate::test_utils::http_download::http_download_to_bytes(source_url).await?;
         let ext = if source_url.ends_with(".png") { "png" } else { "jpg" };
 
-        let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-          session: &session,
-          extension: ext.to_string(),
-          host_override: None,
-        }).await?;
+        let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: ext.to_string(), host_override: None }).await?;
 
-        let upload_result = upload_file(UploadFileArgs {
-          upload_url: prepare_result.upload_url,
-          file_bytes: image_bytes,
-          host_override: None,
-        }).await?;
+        let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
         println!("Uploaded ref image {}: {}", i + 1, upload_result.public_url);
         uploaded_urls.push(upload_result.public_url);
@@ -1718,23 +1584,13 @@ mod tests {
       setup_test_logging(LevelFilter::Trace);
       let session = test_session()?;
 
-      let audio_path = test_utils::test_file_path::test_file_path(
-        "test_data/audio/mp3/super_mario_rpg_beware_the_forests_mushrooms.mp3",
-      )?;
+      let audio_path = test_utils::test_file_path::test_file_path("test_data/audio/mp3/super_mario_rpg_beware_the_forests_mushrooms.mp3")?;
       let audio_bytes = fs::read(&audio_path)?;
       println!("Audio file size: {} bytes", audio_bytes.len());
 
-      let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-        session: &session,
-        extension: "mp3".to_string(),
-        host_override: None,
-      }).await?;
+      let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: "mp3".to_string(), host_override: None }).await?;
 
-      let upload_result = upload_file(UploadFileArgs {
-        upload_url: prepare_result.upload_url,
-        file_bytes: audio_bytes,
-        host_override: None,
-      }).await?;
+      let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: audio_bytes, host_override: None }).await?;
 
       println!("Uploaded audio: {}", upload_result.public_url);
 
@@ -1863,9 +1719,7 @@ mod tests {
             batch_count: KinoviBatchCountRaw::One,
             start_frame_url: None,
             end_frame_url: None,
-            reference_image_urls: Some(vec![
-              "https://static.seedance2-pro.com/materials/20260329/1774752385699-1ff44886.jpeg".to_string(),
-            ]),
+            reference_image_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260329/1774752385699-1ff44886.jpeg".to_string()]),
             reference_video_urls: None,
             reference_audio_urls: None,
             character_ids: Some(vec![STEAMPUNK_CLOWN_ID.to_string()]),
@@ -1904,10 +1758,7 @@ mod tests {
             reference_image_urls: None,
             reference_video_urls: None,
             reference_audio_urls: None,
-            character_ids: Some(vec![
-              STEAMPUNK_CLOWN_ID.to_string(),
-              MOCHI_ID.to_string(),
-            ]),
+            character_ids: Some(vec![STEAMPUNK_CLOWN_ID.to_string(), MOCHI_ID.to_string()]),
             use_face_blur_hack: None,
             bitrate: None,
             output_resolution: None,
@@ -1969,21 +1820,11 @@ mod tests {
         setup_test_logging(LevelFilter::Trace);
         let session = test_session()?;
 
-        let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-          test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-        ).await?;
+        let image_bytes = crate::test_utils::http_download::http_download_to_bytes(test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL).await?;
 
-        let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-          session: &session,
-          extension: "jpg".to_string(),
-          host_override: None,
-        }).await?;
+        let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: "jpg".to_string(), host_override: None }).await?;
 
-        let upload_result = upload_file(UploadFileArgs {
-          upload_url: prepare_result.upload_url,
-          file_bytes: image_bytes,
-          host_override: None,
-        }).await?;
+        let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
         println!("Uploaded start frame: {}", upload_result.public_url);
 
@@ -2023,21 +1864,11 @@ mod tests {
         setup_test_logging(LevelFilter::Trace);
         let session = test_session()?;
 
-        let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-          test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-        ).await?;
+        let image_bytes = crate::test_utils::http_download::http_download_to_bytes(test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL).await?;
 
-        let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-          session: &session,
-          extension: "jpg".to_string(),
-          host_override: None,
-        }).await?;
+        let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: "jpg".to_string(), host_override: None }).await?;
 
-        let upload_result = upload_file(UploadFileArgs {
-          upload_url: prepare_result.upload_url,
-          file_bytes: image_bytes,
-          host_override: None,
-        }).await?;
+        let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
         println!("Uploaded start frame: {}", upload_result.public_url);
 
@@ -2081,12 +1912,7 @@ mod tests {
       Ok(KinoviWebSession::from_cookies_string(cookies))
     }
 
-    fn make_args_with_prompt<'a>(
-      prompt: &'a str,
-      session: &'a KinoviWebSession,
-      model_type: KinoviModelTypeRaw,
-      output_resolution: Option<KinoviOutputResolutionRaw>,
-    ) -> WorkflowRunTaskArgs<'a> {
+    fn make_args_with_prompt<'a>(prompt: &'a str, session: &'a KinoviWebSession, model_type: KinoviModelTypeRaw, output_resolution: Option<KinoviOutputResolutionRaw>) -> WorkflowRunTaskArgs<'a> {
       WorkflowRunTaskArgs {
         session,
         host_override: None,
@@ -2111,11 +1937,7 @@ mod tests {
       }
     }
 
-    fn make_args<'a>(
-      session: &'a KinoviWebSession,
-      model_type: KinoviModelTypeRaw,
-      output_resolution: Option<KinoviOutputResolutionRaw>,
-    ) -> WorkflowRunTaskArgs<'a> {
+    fn make_args<'a>(session: &'a KinoviWebSession, model_type: KinoviModelTypeRaw, output_resolution: Option<KinoviOutputResolutionRaw>) -> WorkflowRunTaskArgs<'a> {
       make_args_with_prompt("A corgi running through a field of flowers", session, model_type, output_resolution)
     }
 
@@ -2168,28 +1990,16 @@ mod tests {
         let session = test_session()?;
 
         // Upload a few reference images first, then drive a 5-second 4K job.
-        let image_urls_to_upload = [
-          test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-          test_data::web::image_urls::WHITE_HOUSE_SUNSET_IMAGE_URL,
-          test_data::web::image_urls::FOREST_BACKDROP_IMAGE_URL,
-        ];
+        let image_urls_to_upload = [test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL, test_data::web::image_urls::WHITE_HOUSE_SUNSET_IMAGE_URL, test_data::web::image_urls::FOREST_BACKDROP_IMAGE_URL];
 
         let mut uploaded_urls = Vec::new();
         for (i, source_url) in image_urls_to_upload.iter().enumerate() {
           let image_bytes = crate::test_utils::http_download::http_download_to_bytes(source_url).await?;
           let ext = if source_url.ends_with(".png") { "png" } else { "jpg" };
 
-          let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-            session: &session,
-            extension: ext.to_string(),
-            host_override: None,
-          }).await?;
+          let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: ext.to_string(), host_override: None }).await?;
 
-          let upload_result = upload_file(UploadFileArgs {
-            upload_url: prepare_result.upload_url,
-            file_bytes: image_bytes,
-            host_override: None,
-          }).await?;
+          let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
           println!("Uploaded ref image {}: {}", i + 1, upload_result.public_url);
           uploaded_urls.push(upload_result.public_url);

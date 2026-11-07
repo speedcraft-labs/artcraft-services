@@ -3,10 +3,7 @@ use std::fmt::{Display, Formatter};
 use actix_http::StatusCode;
 use actix_web::web::Json;
 use actix_web::{HttpResponse, ResponseError};
-use artcraft_api_defs::generate::cost_estimate::estimate_video_cost::{
-  EstimateVideoCostError, EstimateVideoCostErrorType, EstimateVideoCostRequest,
-  EstimateVideoCostResponse,
-};
+use artcraft_api_defs::generate::cost_estimate::estimate_video_cost::{EstimateVideoCostError, EstimateVideoCostErrorType, EstimateVideoCostRequest, EstimateVideoCostResponse};
 use artcraft_router::api::router_aspect_ratio::RouterAspectRatio;
 use artcraft_router::api::router_resolution::RouterResolution;
 use artcraft_router::api::router_video_model::RouterVideoModel;
@@ -17,7 +14,6 @@ use enums::common::generation::common_aspect_ratio::CommonAspectRatio;
 use enums::common::generation::common_video_model::CommonVideoModel;
 use enums::common::generation::common_resolution::CommonResolution;
 use enums::common::generation_provider::GenerationProvider;
-
 
 /// Estimate the credit and USD cost of a video generation request.
 /// Does not require authentication and does not charge any credits.
@@ -30,9 +26,7 @@ use enums::common::generation_provider::GenerationProvider;
     (status = 400, description = "Invalid request", body = EstimateVideoCostError),
   ),
 )]
-pub async fn estimate_video_cost_handler(
-  request: Json<EstimateVideoCostRequest>,
-) -> Result<Json<EstimateVideoCostResponse>, HandlerError> {
+pub async fn estimate_video_cost_handler(request: Json<EstimateVideoCostRequest>) -> Result<Json<EstimateVideoCostResponse>, HandlerError> {
   let router_provider = map_provider(request.provider, request.model)?;
   let router_model = map_video_model(request.model)?;
   let router_aspect_ratio = request.aspect_ratio.map(map_aspect_ratio);
@@ -61,10 +55,7 @@ pub async fn estimate_video_cost_handler(
     idempotency_token: None,
   };
 
-  let estimate = router_request.build2()
-    .map_err(|e| HandlerError::InvalidInput(format!("{}", e)))?
-    .estimate_cost()
-    .map_err(|e| HandlerError::InvalidInput(format!("{}", e)))?;
+  let estimate = router_request.build2().map_err(|e| HandlerError::InvalidInput(format!("{}", e)))?.estimate_cost().map_err(|e| HandlerError::InvalidInput(format!("{}", e)))?;
 
   Ok(Json(EstimateVideoCostResponse {
     success: true,
@@ -100,33 +91,17 @@ impl ResponseError for HandlerError {
 
   fn error_response(&self) -> HttpResponse {
     let (error_type, error_message) = match self {
-      HandlerError::InvalidProviderForModel { provider, model } => (
-        EstimateVideoCostErrorType::InvalidProviderForModel,
-        format!("RouterProvider '{}' is not supported for model '{}'", provider, model),
-      ),
-      HandlerError::InvalidInput(msg) => (
-        EstimateVideoCostErrorType::InvalidInput,
-        msg.clone(),
-      ),
+      HandlerError::InvalidProviderForModel { provider, model } => (EstimateVideoCostErrorType::InvalidProviderForModel, format!("RouterProvider '{}' is not supported for model '{}'", provider, model)),
+      HandlerError::InvalidInput(msg) => (EstimateVideoCostErrorType::InvalidInput, msg.clone()),
     };
-    HttpResponse::BadRequest().json(EstimateVideoCostError {
-      success: false,
-      error_type,
-      error_message,
-    })
+    HttpResponse::BadRequest().json(EstimateVideoCostError { success: false, error_type, error_message })
   }
 }
 
-fn map_provider(
-  provider: GenerationProvider,
-  model: CommonVideoModel,
-) -> Result<RouterProvider, HandlerError> {
+fn map_provider(provider: GenerationProvider, model: CommonVideoModel) -> Result<RouterProvider, HandlerError> {
   match provider {
     GenerationProvider::Artcraft => Ok(RouterProvider::Artcraft),
-    other => Err(HandlerError::InvalidProviderForModel {
-      provider: format!("{:?}", other),
-      model: format!("{:?}", model),
-    }),
+    other => Err(HandlerError::InvalidProviderForModel { provider: format!("{:?}", other), model: format!("{:?}", model) }),
   }
 }
 
@@ -150,12 +125,11 @@ fn map_video_model(model: CommonVideoModel) -> Result<RouterVideoModel, HandlerE
     CommonVideoModel::Seedance2p0Fast => RouterVideoModel::Seedance2p0Fast,
     // Deprecated: these never launched and have no execution route.
     #[allow(deprecated)]
-    CommonVideoModel::Seedance2p0Ultra
-    | CommonVideoModel::Seedance2p0UltraFast => {
+    CommonVideoModel::Seedance2p0Ultra | CommonVideoModel::Seedance2p0UltraFast => {
       return Err(HandlerError::InvalidInput(format!("Model is not supported: {:?}", model)));
-    }
-    CommonVideoModel::Seedance2p0BytePlus=> RouterVideoModel::Seedance2p0BytePlus,
-    CommonVideoModel::Seedance2p0BytePlusFast=> RouterVideoModel::Seedance2p0BytePlusFast,
+    },
+    CommonVideoModel::Seedance2p0BytePlus => RouterVideoModel::Seedance2p0BytePlus,
+    CommonVideoModel::Seedance2p0BytePlusFast => RouterVideoModel::Seedance2p0BytePlusFast,
     CommonVideoModel::Seedance2p0BytePlusUltra => RouterVideoModel::Seedance2p0BytePlusUltra,
     CommonVideoModel::Seedance2p0BytePlusUltraFast => RouterVideoModel::Seedance2p0BytePlusUltraFast,
     CommonVideoModel::Seedance2p0Mini => RouterVideoModel::Seedance2p0Mini,

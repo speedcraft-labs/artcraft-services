@@ -29,7 +29,7 @@ pub struct LegacyQueueDetails {
 pub struct ModernInferenceQueueStats {
   pub total_pending_job_count: u64,
 
-  #[deprecated(note="the frontend uses this field, but we should switch to total_pending_job_count")]
+  #[deprecated(note = "the frontend uses this field, but we should switch to total_pending_job_count")]
   pub pending_job_count: u64,
 
   pub by_queue: ByQueueStats,
@@ -53,26 +53,13 @@ pub async fn dummy_queue_stats_handler() -> HttpResponse {
     inference: ModernInferenceQueueStats {
       total_pending_job_count: 12_345,
       pending_job_count: 12_345,
-      by_queue: ByQueueStats {
-        pending_face_animation_jobs: 12_345,
-        pending_rvc_jobs: 12_345,
-        pending_svc_jobs: 12_345,
-        pending_tacotron2_jobs: 12_345,
-        pending_voice_designer: 12_345,
-        pending_stable_diffusion: 12_345,
-      }
+      by_queue: ByQueueStats { pending_face_animation_jobs: 12_345, pending_rvc_jobs: 12_345, pending_svc_jobs: 12_345, pending_tacotron2_jobs: 12_345, pending_voice_designer: 12_345, pending_stable_diffusion: 12_345 },
     },
-    legacy_tts: LegacyQueueDetails {
-      pending_job_count: 12_345,
-    },
+    legacy_tts: LegacyQueueDetails { pending_job_count: 12_345 },
   };
 
   match serde_json::to_string(&response) {
-    Ok(body) => HttpResponse::Ok()
-        .content_type("application/json")
-        .body(body),
-    Err(_err) => HttpResponse::Ok()
-        .content_type("application/json")
-        .body("{\"success\": false}"),
+    Ok(body) => HttpResponse::Ok().content_type("application/json").body(body),
+    Err(_err) => HttpResponse::Ok().content_type("application/json").body("{\"success\": false}"),
   }
 }

@@ -8,11 +8,10 @@ use server_environment::ServerEnvironment;
 use url::Url;
 
 // TODO(bt,2024-09-05): Worth reducing the quality at all?
-const QUALITY : u8 = 95;
-
+const QUALITY: u8 = 95;
 
 /// Links to media file locations (bucket, CDN, etc.)
-/// 
+///
 /// This migrates the constructors to the `artcraft_api_defs` crate
 pub struct MediaLinksBuilder {}
 
@@ -35,48 +34,26 @@ impl VideoThumbnailInfo {
 }
 
 impl MediaLinksBuilder {
-
-  pub fn from_media_path_and_env(
-    domain: MediaDomain,
-    server_environment: ServerEnvironment,
-    bucket_path: &MediaFileBucketPath,
-    thumbnail_info: VideoThumbnailInfo,
-  ) -> MediaLinks {
+  pub fn from_media_path_and_env(domain: MediaDomain, server_environment: ServerEnvironment, bucket_path: &MediaFileBucketPath, thumbnail_info: VideoThumbnailInfo) -> MediaLinks {
     let rooted_path = bucket_path.get_full_object_path_str();
     Self::from_rooted_path_and_env(domain, server_environment, rooted_path, thumbnail_info)
   }
 
-  pub fn from_rooted_path_and_env(
-    domain: MediaDomain,
-    server_environment: ServerEnvironment,
-    rooted_path: &str,
-    thumbnail_info: VideoThumbnailInfo,
-  ) -> MediaLinks {
+  pub fn from_rooted_path_and_env(domain: MediaDomain, server_environment: ServerEnvironment, rooted_path: &str, thumbnail_info: VideoThumbnailInfo) -> MediaLinks {
     let mut cdn_url = new_cdn_url(domain, server_environment);
     cdn_url.set_path(rooted_path);
-    MediaLinks {
-      cdn_url,
-      maybe_thumbnail_template: thumbnail_template(domain, server_environment, rooted_path),
-      maybe_video_previews: VideoPreviewsBuilder::from_rooted_path(domain, server_environment, rooted_path, thumbnail_info),
-    }
+    MediaLinks { cdn_url, maybe_thumbnail_template: thumbnail_template(domain, server_environment, rooted_path), maybe_video_previews: VideoPreviewsBuilder::from_rooted_path(domain, server_environment, rooted_path, thumbnail_info) }
   }
 }
 
 pub struct VideoPreviewsBuilder {}
 
 impl VideoPreviewsBuilder {
-  fn from_rooted_path(
-    domain: MediaDomain,
-    server_environment: ServerEnvironment,
-    rooted_path: &str,
-    thumbnail_info: VideoThumbnailInfo,
-  ) -> Option<VideoPreviews> {
+  fn from_rooted_path(domain: MediaDomain, server_environment: ServerEnvironment, rooted_path: &str, thumbnail_info: VideoThumbnailInfo) -> Option<VideoPreviews> {
     if !rooted_path.ends_with(".mp4") {
       return None;
     }
-    let animated = PreviewType::Animated(animated_preview_format(
-      thumbnail_info.maybe_thumbnail_version,
-      thumbnail_info.created_at.timestamp()));
+    let animated = PreviewType::Animated(animated_preview_format(thumbnail_info.maybe_thumbnail_version, thumbnail_info.created_at.timestamp()));
     // Written for every thumbnail version (dual write since version 2).
     let catalina_fallback = PreviewType::Animated(AnimatedPreviewFormat::Gif);
     Some(VideoPreviews {
@@ -117,9 +94,7 @@ fn video_preview(media_domain: MediaDomain, server_environment: ServerEnvironmen
 
 /// Returns a thumbnail template for image
 fn thumbnail_template(media_domain: MediaDomain, server_environment: ServerEnvironment, rooted_path: &str) -> Option<String> {
-  if !rooted_path.ends_with(".jpg")
-      && !rooted_path.ends_with(".png")
-      && !rooted_path.ends_with(".gif") {
+  if !rooted_path.ends_with(".jpg") && !rooted_path.ends_with(".png") && !rooted_path.ends_with(".gif") {
     return None;
   }
 
@@ -128,7 +103,7 @@ fn thumbnail_template(media_domain: MediaDomain, server_environment: ServerEnvir
   // NB(bt,2025-02-01): Development doesn't currently support thumbnails, so serve the full image.
   match server_environment {
     ServerEnvironment::Development => Some(format!("{host}{rooted_path}")), // NB(bt,2025-02-01): No thumbnails in development.
-    ServerEnvironment::Production => Some(format!("{host}/cdn-cgi/image/width={{WIDTH}},quality={QUALITY}{rooted_path}"))
+    ServerEnvironment::Production => Some(format!("{host}/cdn-cgi/image/width={{WIDTH}},quality={QUALITY}{rooted_path}")),
   }
 }
 
@@ -149,7 +124,6 @@ fn video_preview_thumbnail_template(media_domain: MediaDomain, server_environmen
   }
 }
 
-
 #[cfg(test)]
 mod tests {
   use crate::http_server::common_responses::media::media_domain::MediaDomain;
@@ -164,12 +138,12 @@ mod tests {
   mod fakeyou {
     use super::*;
 
-    const DOMAIN : MediaDomain = MediaDomain::FakeYou;
+    const DOMAIN: MediaDomain = MediaDomain::FakeYou;
 
     mod production {
       use super::*;
 
-      const ENV : ServerEnvironment = ServerEnvironment::Production;
+      const ENV: ServerEnvironment = ServerEnvironment::Production;
 
       #[test]
       fn wav_file() {
@@ -241,7 +215,7 @@ mod tests {
     mod development {
       use super::*;
 
-      const ENV : ServerEnvironment = ServerEnvironment::Development;
+      const ENV: ServerEnvironment = ServerEnvironment::Development;
 
       #[test]
       fn wav_file() {
@@ -290,12 +264,12 @@ mod tests {
   mod storyteller {
     use super::*;
 
-    const DOMAIN : MediaDomain = MediaDomain::Storyteller;
+    const DOMAIN: MediaDomain = MediaDomain::Storyteller;
 
     mod production {
       use super::*;
 
-      const ENV : ServerEnvironment = ServerEnvironment::Production;
+      const ENV: ServerEnvironment = ServerEnvironment::Production;
 
       #[test]
       fn wav_file() {
@@ -367,7 +341,7 @@ mod tests {
     mod development {
       use super::*;
 
-      const ENV : ServerEnvironment = ServerEnvironment::Development;
+      const ENV: ServerEnvironment = ServerEnvironment::Development;
 
       #[test]
       fn wav_file() {
@@ -416,9 +390,9 @@ mod tests {
   mod thumbnail_versions {
     use super::*;
 
-    const DOMAIN : MediaDomain = MediaDomain::FakeYou;
-    const ENV : ServerEnvironment = ServerEnvironment::Production;
-    const VIDEO : &str = "/foo/bar.mp4";
+    const DOMAIN: MediaDomain = MediaDomain::FakeYou;
+    const ENV: ServerEnvironment = ServerEnvironment::Production;
+    const VIDEO: &str = "/foo/bar.mp4";
 
     #[test]
     fn version_1_serves_gif() {
@@ -453,12 +427,8 @@ mod tests {
     fn catalina_fallback_is_always_the_gif() {
       for thumbnail_info in [info(None, before_cutover()), info(None, cutover()), info(Some(1), cutover()), info(Some(2), cutover())] {
         let previews = previews(thumbnail_info);
-        assert_eq!(
-          previews.maybe_catalina_fallback_animated_gif.as_ref().map(|url| url.as_str()),
-          Some(format!("{PROD_CDN}/foo/bar.mp4-thumb.gif").as_str()));
-        assert_eq!(
-          previews.maybe_catalina_fallback_animated_gif_thumbnail_template,
-          Some(format!("{PROD_CDN}/cdn-cgi/image/width={{WIDTH}},quality=95/foo/bar.mp4-thumb.gif")));
+        assert_eq!(previews.maybe_catalina_fallback_animated_gif.as_ref().map(|url| url.as_str()), Some(format!("{PROD_CDN}/foo/bar.mp4-thumb.gif").as_str()));
+        assert_eq!(previews.maybe_catalina_fallback_animated_gif_thumbnail_template, Some(format!("{PROD_CDN}/cdn-cgi/image/width={{WIDTH}},quality=95/foo/bar.mp4-thumb.gif")));
       }
     }
 
@@ -488,9 +458,7 @@ mod tests {
     }
 
     fn previews(thumbnail_info: VideoThumbnailInfo) -> artcraft_api_defs::common::responses::media_links::VideoPreviews {
-      MediaLinksBuilder::from_rooted_path_and_env(DOMAIN, ENV, VIDEO, thumbnail_info)
-          .maybe_video_previews
-          .expect("mp4 should have previews")
+      MediaLinksBuilder::from_rooted_path_and_env(DOMAIN, ENV, VIDEO, thumbnail_info).maybe_video_previews.expect("mp4 should have previews")
     }
 
     fn cutover() -> DateTime<Utc> {

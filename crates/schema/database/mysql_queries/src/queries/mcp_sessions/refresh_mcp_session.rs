@@ -32,9 +32,7 @@ where
 /// layer) and returns a new refresh token, and the previous one is gone. Callers retrying a
 /// refresh whose response they lost will get an error, not a replay — we don't store the
 /// history of refresh tokens.
-pub async fn refresh_mcp_session<'e, 'c: 'e, E>(
-  args: RefreshMcpSessionArgs<'e, 'c, E>,
-) -> Result<Option<McpSessionRefreshToken>, sqlx::Error>
+pub async fn refresh_mcp_session<'e, 'c: 'e, E>(args: RefreshMcpSessionArgs<'e, 'c, E>) -> Result<Option<McpSessionRefreshToken>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -59,8 +57,8 @@ LIMIT 1
     args.private_session_token.as_str(),
     args.private_refresh_token.as_str(),
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
 
   if result.rows_affected() == 0 {
     return Ok(None);

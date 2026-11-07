@@ -1,7 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
-use crate::requests::api::video::images::flux_3_draft::raw_request::{
-  Flux3DraftFirstLastFrameToVideoInput, Flux3DraftFirstLastFrameToVideoOutput,
-};
+use crate::requests::api::video::images::flux_3_draft::raw_request::{Flux3DraftFirstLastFrameToVideoInput, Flux3DraftFirstLastFrameToVideoOutput};
 use crate::requests::api::video::text::flux_3::api::Flux3AspectRatio;
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
@@ -61,10 +59,8 @@ mod tests {
   use errors::AnyhowResult;
   use std::fs::read_to_string;
 
-  const START_IMAGE_URL: &str =
-    "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-1.jpeg";
-  const END_IMAGE_URL: &str =
-    "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-2.jpeg";
+  const START_IMAGE_URL: &str = "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-1.jpeg";
+  const END_IMAGE_URL: &str = "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-2.jpeg";
 
   // ── Real requests (manually run; require a live key and cost money) ──
 
@@ -125,18 +121,19 @@ mod tests {
       safety_tolerance: None,
     };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
-    assert_eq!(json, serde_json::json!({
-      "prompt": "minimal",
-      "start_image_url": "https://example.com/first.png",
-      "end_image_url": "https://example.com/last.png",
-    }));
+    assert_eq!(
+      json,
+      serde_json::json!({
+        "prompt": "minimal",
+        "start_image_url": "https://example.com/first.png",
+        "end_image_url": "https://example.com/last.png",
+      })
+    );
   }
 
   #[test]
   fn endpoint_path_is_canonical() {
-    assert_eq!(
-      Flux3DraftFirstLastFrameToVideoRequest::ENDPOINT,
-      "blackforestlabs/flux-3/first-last-frame-to-video/draft");
+    assert_eq!(Flux3DraftFirstLastFrameToVideoRequest::ENDPOINT, "blackforestlabs/flux-3/first-last-frame-to-video/draft");
   }
 
   // NB: Pricing tests are in cost.rs

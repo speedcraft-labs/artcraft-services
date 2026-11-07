@@ -36,9 +36,7 @@ pub struct InsertedMcpSession {
 /// handler) and returned to the caller. The provided IP address is stamped on both the creation
 /// and update IP columns, and the session expires [`MCP_SESSION_LIFETIME_DAYS`] days out from
 /// MySQL `NOW()` unless refreshed.
-pub async fn insert_mcp_session<'e, 'c: 'e, E>(
-  args: InsertMcpSessionArgs<'e, 'c, E>,
-) -> Result<InsertedMcpSession, sqlx::Error>
+pub async fn insert_mcp_session<'e, 'c: 'e, E>(args: InsertMcpSessionArgs<'e, 'c, E>) -> Result<InsertedMcpSession, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -73,12 +71,8 @@ SET
     args.ip_address,
     MCP_SESSION_LIFETIME_DAYS,
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
 
-  Ok(InsertedMcpSession {
-    token,
-    private_session_token,
-    private_refresh_token,
-  })
+  Ok(InsertedMcpSession { token, private_session_token, private_refresh_token })
 }

@@ -36,14 +36,7 @@ pub struct GenerateWan3p0TextToVideoRequest {
 
 impl Default for GenerateWan3p0TextToVideoRequest {
   fn default() -> Self {
-    Self {
-      prompt: String::new(),
-      maybe_aspect_ratio: None,
-      maybe_output_resolution: None,
-      duration_seconds: 5,
-      maybe_seed: None,
-      maybe_generate_audio: None,
-    }
+    Self { prompt: String::new(), maybe_aspect_ratio: None, maybe_output_resolution: None, duration_seconds: 5, maybe_seed: None, maybe_generate_audio: None }
   }
 }
 
@@ -60,28 +53,12 @@ impl KinoviCostCalculatorTrait for GenerateWan3p0TextToVideoRequest {
 
 impl GenerateWan3p0TextToVideoRequest {
   pub(super) fn build_api_params(self) -> Result<Wan3p0ApiParams, KinoviWebError> {
-    let mut params = Wan3p0ApiParams::new(
-      Wan3p0Model::TextToVideo,
-      self.prompt,
-      self.maybe_aspect_ratio,
-      self.maybe_output_resolution,
-      self.duration_seconds,
-      self.maybe_seed,
-      self.maybe_generate_audio,
-    )?;
+    let mut params = Wan3p0ApiParams::new(Wan3p0Model::TextToVideo, self.prompt, self.maybe_aspect_ratio, self.maybe_output_resolution, self.duration_seconds, self.maybe_seed, self.maybe_generate_audio)?;
     params.validate_media(self.duration_seconds, None)?;
     Ok(params)
   }
 }
 
-pub async fn generate_wan_3p0_text_to_video(
-  args: GenerateWan3p0TextToVideoArgs<'_>,
-) -> Result<GenerateWan3p0TextToVideoResponse, KinoviWebError> {
-  workflow_run_task_custom(WorkflowRunTaskCustomArgs {
-    business_type: BUSINESS_TYPE,
-    api_params: args.request.build_api_params()?,
-    session: args.session,
-    host_override: args.maybe_host_override,
-  })
-  .await
+pub async fn generate_wan_3p0_text_to_video(args: GenerateWan3p0TextToVideoArgs<'_>) -> Result<GenerateWan3p0TextToVideoResponse, KinoviWebError> {
+  workflow_run_task_custom(WorkflowRunTaskCustomArgs { business_type: BUSINESS_TYPE, api_params: args.request.build_api_params()?, session: args.session, host_override: args.maybe_host_override }).await
 }

@@ -2,22 +2,13 @@ use artcraft_api_defs::common::responses::job_details::JobDetailsLivePortraitReq
 use mysql_queries::payloads::generic_inference_args::generic_inference_args::PolymorphicInferenceArgs;
 
 pub fn extract_live_portrait_details(args: &PolymorphicInferenceArgs) -> Option<JobDetailsLivePortraitRequest> {
-  let lp =
-      if let PolymorphicInferenceArgs::Lp(live_portrait_args) = args {
-        live_portrait_args
-      } else {
-        return None;
-      };
+  let lp = if let PolymorphicInferenceArgs::Lp(live_portrait_args) = args {
+    live_portrait_args
+  } else {
+    return None;
+  };
 
-  lp.portrait_media_file_token
-      .as_ref()
-      .zip(lp.driver_media_file_token.as_ref())
-      .map(|(portrait, driver) | {
-        JobDetailsLivePortraitRequest {
-          source_media_file_token: portrait.clone(),
-          face_driver_media_file_token: driver.clone(),
-        }
-      })
+  lp.portrait_media_file_token.as_ref().zip(lp.driver_media_file_token.as_ref()).map(|(portrait, driver)| JobDetailsLivePortraitRequest { source_media_file_token: portrait.clone(), face_driver_media_file_token: driver.clone() })
 }
 
 #[cfg(test)]
@@ -40,8 +31,7 @@ mod tests {
       sleep_millis: None,
     });
 
-    let details = extract_live_portrait_details(&polymorphic_args)
-        .expect("should contain tokens");
+    let details = extract_live_portrait_details(&polymorphic_args).expect("should contain tokens");
 
     assert_eq!(details.source_media_file_token.as_str(), "portrait");
     assert_eq!(details.face_driver_media_file_token.as_str(), "driver");

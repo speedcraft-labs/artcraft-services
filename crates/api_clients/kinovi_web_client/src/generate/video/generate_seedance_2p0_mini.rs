@@ -5,11 +5,7 @@ use crate::pricing::kinovi_cost_calculator_trait::KinoviCostCalculatorTrait;
 use crate::pricing::kinovi_pricing_rate::KinoviPricingRate;
 use crate::pricing::kinovi_pricing_tier::KinoviPricingTier;
 use crate::requests::kinovi_host::KinoviHost;
-use crate::requests::workflow_run_task::workflow_run_task::{
-  workflow_run_task, KinoviAspectRatioRaw, KinoviBatchCountRaw, KinoviBitrateRaw,
-  KinoviModelTypeRaw, KinoviOutputResolutionRaw, WorkflowRunTaskArgs,
-  WorkflowRunTaskRequest,
-};
+use crate::requests::workflow_run_task::workflow_run_task::{workflow_run_task, KinoviAspectRatioRaw, KinoviBatchCountRaw, KinoviBitrateRaw, KinoviModelTypeRaw, KinoviOutputResolutionRaw, WorkflowRunTaskArgs, WorkflowRunTaskRequest};
 
 // ── Args ──
 
@@ -106,25 +102,13 @@ pub enum KinoviSeedance2p0MiniBitrate {
 // count multiplies the total.
 
 /// Per-second base credit rates by resolution.
-const SEEDANCE_2P0_MINI_480P: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 7.5,
-  maybe_enterprise_credits: Some(3.0),
-};
-const SEEDANCE_2P0_MINI_720P: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 20.0,
-  maybe_enterprise_credits: Some(8.0),
-};
+const SEEDANCE_2P0_MINI_480P: KinoviPricingRate = KinoviPricingRate { consumer_credits: 7.5, maybe_enterprise_credits: Some(3.0) };
+const SEEDANCE_2P0_MINI_720P: KinoviPricingRate = KinoviPricingRate { consumer_credits: 20.0, maybe_enterprise_credits: Some(8.0) };
 
 /// Per-second video-reference surcharge rates by resolution. Flat per
 /// generation regardless of how many reference videos are attached.
-const SEEDANCE_2P0_MINI_480P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 2.0,
-  maybe_enterprise_credits: Some(0.8),
-};
-const SEEDANCE_2P0_MINI_720P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 4.0,
-  maybe_enterprise_credits: Some(1.6),
-};
+const SEEDANCE_2P0_MINI_480P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate { consumer_credits: 2.0, maybe_enterprise_credits: Some(0.8) };
+const SEEDANCE_2P0_MINI_720P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate { consumer_credits: 4.0, maybe_enterprise_credits: Some(1.6) };
 
 impl KinoviCostCalculatorTrait for GenerateSeedance2p0MiniRequest {
   type Cost = KinoviSeedanceFractionalGenerationCost;
@@ -143,25 +127,15 @@ impl KinoviCostCalculatorTrait for GenerateSeedance2p0MiniRequest {
 
     let output_seconds = f64::from(self.duration_seconds) * f64::from(self.batch_multiplier());
     let base_credits = base_rate.credits(tier) * output_seconds;
-    let maybe_video_reference_surcharge_credits = if self.has_video_reference() {
-      Some(surcharge_rate.credits(tier) * output_seconds)
-    } else {
-      None
-    };
+    let maybe_video_reference_surcharge_credits = if self.has_video_reference() { Some(surcharge_rate.credits(tier) * output_seconds) } else { None };
 
-    KinoviSeedanceFractionalGenerationCost::from_base_and_surcharge_at_tier(
-      tier,
-      base_credits,
-      maybe_video_reference_surcharge_credits,
-    )
+    KinoviSeedanceFractionalGenerationCost::from_base_and_surcharge_at_tier(tier, base_credits, maybe_video_reference_surcharge_credits)
   }
 }
 
 impl GenerateSeedance2p0MiniRequest {
   fn has_video_reference(&self) -> bool {
-    self.reference_video_urls
-      .as_ref()
-      .is_some_and(|urls| !urls.is_empty())
+    self.reference_video_urls.as_ref().is_some_and(|urls| !urls.is_empty())
   }
 
   fn batch_multiplier(&self) -> u8 {
@@ -189,21 +163,10 @@ pub struct GenerateSeedance2p0MiniResponse {
 
 // ── Entry point ──
 
-pub async fn generate_seedance_2p0_mini(
-  args: GenerateSeedance2p0MiniArgs<'_>,
-) -> Result<GenerateSeedance2p0MiniResponse, KinoviWebError> {
-  let raw_response = workflow_run_task(WorkflowRunTaskArgs {
-    request: to_raw_request(args.request),
-    session: args.session,
-    host_override: args.host_override,
-  }).await?;
+pub async fn generate_seedance_2p0_mini(args: GenerateSeedance2p0MiniArgs<'_>) -> Result<GenerateSeedance2p0MiniResponse, KinoviWebError> {
+  let raw_response = workflow_run_task(WorkflowRunTaskArgs { request: to_raw_request(args.request), session: args.session, host_override: args.host_override }).await?;
 
-  Ok(GenerateSeedance2p0MiniResponse {
-    task_id: raw_response.task_id,
-    order_id: raw_response.order_id,
-    task_ids: raw_response.task_ids,
-    order_ids: raw_response.order_ids,
-  })
+  Ok(GenerateSeedance2p0MiniResponse { task_id: raw_response.task_id, order_id: raw_response.order_id, task_ids: raw_response.task_ids, order_ids: raw_response.order_ids })
 }
 
 // ── Mapping helpers ──
@@ -461,11 +424,7 @@ mod tests {
         for (tier, make, duration, base, surcharge) in cases {
           let costs = with_video_ref(make(*duration)).calculate_costs(*tier);
           assert_eq!(costs.base_cost.kinovi_credits, *base, "base at {duration}s ({tier:?})");
-          assert_eq!(
-            costs.video_reference_surcharge_cost.map(|c| c.kinovi_credits),
-            Some(*surcharge),
-            "surcharge at {duration}s ({tier:?})",
-          );
+          assert_eq!(costs.video_reference_surcharge_cost.map(|c| c.kinovi_credits), Some(*surcharge), "surcharge at {duration}s ({tier:?})",);
           assert_eq!(costs.total_cost.kinovi_credits, base + surcharge, "total at {duration}s ({tier:?})");
         }
       }
@@ -490,11 +449,7 @@ mod tests {
       /// The surcharge applies per generated video, so batches multiply it.
       #[test]
       fn batch_multiplies_surcharge() {
-        let request = with_video_ref(build_request(
-          5,
-          Some(KinoviSeedance2p0MiniOutputResolution::FourEightyP),
-          Some(KinoviSeedance2p0MiniBatchCount::Two),
-        ));
+        let request = with_video_ref(build_request(5, Some(KinoviSeedance2p0MiniOutputResolution::FourEightyP), Some(KinoviSeedance2p0MiniBatchCount::Two)));
 
         // Consumer: (37.5 base + 10 surcharge) × 2.
         let consumer = request.calculate_consumer_costs();
@@ -532,32 +487,16 @@ mod tests {
       #[test]
       fn fixed_five_second_batch_prices_without_video_reference() {
         let cases = [
-          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [
-            (37.5, 20), (75.0, 39), (112.5, 59), (150.0, 78),
-            (187.5, 98), (225.0, 117), (262.5, 137), (300.0, 156),
-          ]),
-          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [
-            (100.0, 52), (200.0, 104), (300.0, 156), (400.0, 208),
-            (500.0, 260), (600.0, 311), (700.0, 363), (800.0, 415),
-          ]),
-          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [
-            (15.0, 7), (30.0, 13), (45.0, 19), (60.0, 25),
-            (75.0, 31), (90.0, 38), (105.0, 44), (120.0, 50),
-          ]),
-          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [
-            (40.0, 17), (80.0, 33), (120.0, 50), (160.0, 66),
-            (200.0, 83), (240.0, 99), (280.0, 116), (320.0, 132),
-          ]),
+          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [(37.5, 20), (75.0, 39), (112.5, 59), (150.0, 78), (187.5, 98), (225.0, 117), (262.5, 137), (300.0, 156)]),
+          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [(100.0, 52), (200.0, 104), (300.0, 156), (400.0, 208), (500.0, 260), (600.0, 311), (700.0, 363), (800.0, 415)]),
+          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [(15.0, 7), (30.0, 13), (45.0, 19), (60.0, 25), (75.0, 31), (90.0, 38), (105.0, 44), (120.0, 50)]),
+          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [(40.0, 17), (80.0, 33), (120.0, 50), (160.0, 66), (200.0, 83), (240.0, 99), (280.0, 116), (320.0, 132)]),
         ];
         for (resolution, tier, prices) in cases {
           for (batch, (credits, usd_cents)) in BATCHES.into_iter().zip(prices) {
             let request = build_request(5, Some(resolution), Some(batch));
             let cost = request.calculate_costs(tier).total_cost;
-            assert_eq!(
-              (cost.kinovi_credits, cost.usd_cents_rounded_up),
-              (credits, usd_cents),
-              "{resolution:?} {tier:?} {batch:?}",
-            );
+            assert_eq!((cost.kinovi_credits, cost.usd_cents_rounded_up), (credits, usd_cents), "{resolution:?} {tier:?} {batch:?}",);
           }
         }
       }
@@ -565,33 +504,17 @@ mod tests {
       #[test]
       fn fixed_five_second_batch_prices_with_video_reference() {
         let cases = [
-          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [
-            (47.5, 25), (95.0, 50), (142.5, 74), (190.0, 99),
-            (237.5, 124), (285.0, 148), (332.5, 173), (380.0, 197),
-          ]),
-          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [
-            (120.0, 63), (240.0, 125), (360.0, 187), (480.0, 249),
-            (600.0, 311), (720.0, 374), (840.0, 436), (960.0, 498),
-          ]),
-          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [
-            (19.0, 8), (38.0, 16), (57.0, 24), (76.0, 32),
-            (95.0, 40), (114.0, 47), (133.0, 55), (152.0, 63),
-          ]),
-          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [
-            (48.0, 20), (96.0, 40), (144.0, 60), (192.0, 79),
-            (240.0, 99), (288.0, 119), (336.0, 139), (384.0, 158),
-          ]),
+          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [(47.5, 25), (95.0, 50), (142.5, 74), (190.0, 99), (237.5, 124), (285.0, 148), (332.5, 173), (380.0, 197)]),
+          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [(120.0, 63), (240.0, 125), (360.0, 187), (480.0, 249), (600.0, 311), (720.0, 374), (840.0, 436), (960.0, 498)]),
+          (KinoviSeedance2p0MiniOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [(19.0, 8), (38.0, 16), (57.0, 24), (76.0, 32), (95.0, 40), (114.0, 47), (133.0, 55), (152.0, 63)]),
+          (KinoviSeedance2p0MiniOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [(48.0, 20), (96.0, 40), (144.0, 60), (192.0, 79), (240.0, 99), (288.0, 119), (336.0, 139), (384.0, 158)]),
         ];
         for (resolution, tier, prices) in cases {
           for (batch, (credits, usd_cents)) in BATCHES.into_iter().zip(prices) {
             let request = build_request(5, Some(resolution), Some(batch));
             let request = with_video_ref(request);
             let cost = request.calculate_costs(tier).total_cost;
-            assert_eq!(
-              (cost.kinovi_credits, cost.usd_cents_rounded_up),
-              (credits, usd_cents),
-              "{resolution:?} {tier:?} {batch:?}",
-            );
+            assert_eq!((cost.kinovi_credits, cost.usd_cents_rounded_up), (credits, usd_cents), "{resolution:?} {tier:?} {batch:?}",);
           }
         }
       }
@@ -610,18 +533,9 @@ mod tests {
           (Some(KinoviSeedance2p0MiniBatchCount::Eight), 8),
         ];
         for tier in [KinoviPricingTier::Enterprise, KinoviPricingTier::Consumer] {
-          for resolution in [
-            None,
-            Some(KinoviSeedance2p0MiniOutputResolution::FourEightyP),
-            Some(KinoviSeedance2p0MiniOutputResolution::SevenTwentyP),
-          ] {
+          for resolution in [None, Some(KinoviSeedance2p0MiniOutputResolution::FourEightyP), Some(KinoviSeedance2p0MiniOutputResolution::SevenTwentyP)] {
             for duration in [4, 5, 15] {
-              for references in [
-                None,
-                Some(vec![]),
-                Some(vec!["https://example.com/ref.mp4".to_string()]),
-                Some(vec!["https://example.com/ref1.mp4".to_string(), "https://example.com/ref2.mp4".to_string()]),
-              ] {
+              for references in [None, Some(vec![]), Some(vec!["https://example.com/ref.mp4".to_string()]), Some(vec!["https://example.com/ref1.mp4".to_string(), "https://example.com/ref2.mp4".to_string()])] {
                 let mut request = build_request(duration, resolution, None);
                 request.reference_video_urls = references;
                 let single = request.calculate_costs(tier);
@@ -645,11 +559,7 @@ mod tests {
 
       #[test]
       fn batch_eight_480p_with_video_reference() {
-        let request = with_video_ref(build_request(
-          5,
-          Some(KinoviSeedance2p0MiniOutputResolution::FourEightyP),
-          Some(KinoviSeedance2p0MiniBatchCount::Eight),
-        ));
+        let request = with_video_ref(build_request(5, Some(KinoviSeedance2p0MiniOutputResolution::FourEightyP), Some(KinoviSeedance2p0MiniBatchCount::Eight)));
         // Consumer: (37.5 + 10) × 8 = 380. Enterprise: (15 + 4) × 8 = 152.
         assert_eq!(consumer_credits(&request), 380.0);
         assert_eq!(enterprise_credits(&request), 152.0);
@@ -734,11 +644,7 @@ mod tests {
 
     // ── Helpers ──
 
-    fn build_request(
-      duration_seconds: u8,
-      output_resolution: Option<KinoviSeedance2p0MiniOutputResolution>,
-      batch_count: Option<KinoviSeedance2p0MiniBatchCount>,
-    ) -> GenerateSeedance2p0MiniRequest {
+    fn build_request(duration_seconds: u8, output_resolution: Option<KinoviSeedance2p0MiniOutputResolution>, batch_count: Option<KinoviSeedance2p0MiniBatchCount>) -> GenerateSeedance2p0MiniRequest {
       GenerateSeedance2p0MiniRequest {
         prompt: String::new(),
         aspect_ratio: None,
@@ -921,7 +827,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("mini t2v 720p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert!(!result.order_id.is_empty());
@@ -953,7 +860,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("mini t2v 480p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -976,9 +884,7 @@ mod tests {
           duration_seconds: 15,
           start_frame_url: None,
           end_frame_url: None,
-          reference_image_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260624/1782342102687-53fe5496.png".to_string(),
-          ]),
+          reference_image_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260624/1782342102687-53fe5496.png".to_string()]),
           reference_video_urls: None,
           reference_audio_urls: None,
           character_ids: None,
@@ -986,7 +892,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("mini reference-to-video 720p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -1010,16 +917,15 @@ mod tests {
           start_frame_url: None,
           end_frame_url: None,
           reference_image_urls: None,
-          reference_video_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string(),
-          ]),
+          reference_video_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string()]),
           reference_audio_urls: None,
           character_ids: None,
           use_face_blur_hack: None,
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("mini video ref 480p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);

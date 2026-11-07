@@ -2,7 +2,6 @@
 /// These do not have to have the same value for each instance, but they behave
 /// similarly across all usages.
 pub struct CommonEnv {
-
   /// The amount of time to wait between job batches (not individual jobs).
   /// This prevents the outer loop of querying batches from flooding the DB.
   /// (In theory, there's work within jobs that prevents rapidly pegging the DB.)
@@ -25,7 +24,6 @@ pub struct CommonEnv {
 }
 
 impl CommonEnv {
-
   pub fn read_from_env() -> anyhow::Result<Self> {
     Ok(Self {
       job_batch_wait_millis: easyenv::get_env_num("JOB_BATCH_WAIT_MILLIS", 100)?,

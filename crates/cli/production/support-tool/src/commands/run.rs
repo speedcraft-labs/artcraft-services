@@ -32,11 +32,7 @@ pub enum TopLevelCommand {
 
 pub async fn run(cli: Cli) -> anyhow::Result<()> {
   match cli.command {
-    TopLevelCommand::KinoviWeb(args) => {
-      kinovi_web::run(args).await
-    }
-    TopLevelCommand::Artcraft(args) => {
-      artcraft::dispatch(args).await
-    }
+    TopLevelCommand::KinoviWeb(args) => kinovi_web::run(args).await,
+    TopLevelCommand::Artcraft(args) => artcraft::dispatch(args).await,
   }
 }

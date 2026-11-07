@@ -49,13 +49,7 @@ pub struct CheckArgs<'a, P: AsRef<Path>> {
 }
 
 impl VitsModelCheckCommand {
-  pub fn new<P: AsRef<Path>>(
-    vits_root_code_directory: P,
-    check_script_name: P,
-    maybe_override_python_interpreter: Option<&str>,
-    maybe_virtual_env_activation_command: Option<&str>,
-    maybe_docker_options: Option<DockerOptions>,
-  ) -> Self {
+  pub fn new<P: AsRef<Path>>(vits_root_code_directory: P, check_script_name: P, maybe_override_python_interpreter: Option<&str>, maybe_virtual_env_activation_command: Option<&str>, maybe_docker_options: Option<DockerOptions>) -> Self {
     Self {
       vits_root_code_directory: vits_root_code_directory.as_ref().to_path_buf(),
       check_script_name: check_script_name.as_ref().to_path_buf(),
@@ -65,11 +59,7 @@ impl VitsModelCheckCommand {
     }
   }
 
-  pub fn execute_check<P: AsRef<Path>>(
-    &self,
-    args: CheckArgs<'_, P>,
-  ) -> AnyhowResult<()> {
-
+  pub fn execute_check<P: AsRef<Path>>(&self, args: CheckArgs<'_, P>) -> AnyhowResult<()> {
     let mut command = String::new();
     command.push_str(&format!("cd {}", path_to_string(&self.vits_root_code_directory)));
 
@@ -79,9 +69,7 @@ impl VitsModelCheckCommand {
       command.push_str(" ");
     }
 
-    let python_binary = self.maybe_override_python_interpreter
-        .as_deref()
-        .unwrap_or("python");
+    let python_binary = self.maybe_override_python_interpreter.as_deref().unwrap_or("python");
 
     command.push_str(" && ");
     command.push_str(python_binary);
@@ -120,15 +108,9 @@ impl VitsModelCheckCommand {
 
     info!("Command: {:?}", command);
 
-    let command_parts = [
-      "bash",
-      "-c",
-      &command
-    ];
+    let command_parts = ["bash", "-c", &command];
 
-    let mut p = Popen::create(&command_parts, PopenConfig {
-      ..Default::default()
-    })?;
+    let mut p = Popen::create(&command_parts, PopenConfig { ..Default::default() })?;
 
     info!("Subprocess PID: {:?}", p.pid());
 

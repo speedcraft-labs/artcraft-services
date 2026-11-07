@@ -14,7 +14,6 @@ use tokens::tokens::non_unique::debug_logs_event_token::DebugLogEventToken;
 use tokens::tokens::prompts::PromptToken;
 use tokens::tokens::users::UserToken;
 
-
 #[derive(Debug, Default)]
 pub struct BeebleJobDetails {
   pub job_token: InferenceJobToken,
@@ -63,20 +62,16 @@ struct RawJobRecord {
 }
 
 /// Returns Ok(None) when the record cannot be found.
-pub async fn get_inference_job_by_beeble_id(beeble_id: &str, mysql_pool: &MySqlPool)
-  -> AnyhowResult<Option<BeebleJobDetails>>
-{
+pub async fn get_inference_job_by_beeble_id(beeble_id: &str, mysql_pool: &MySqlPool) -> AnyhowResult<Option<BeebleJobDetails>> {
   let mut connection = mysql_pool.acquire().await?;
   get_inference_job_by_beeble_id_from_connection(beeble_id, &mut connection).await
 }
 
 /// Returns Ok(None) when the record cannot be found.
-pub async fn get_inference_job_by_beeble_id_from_connection(beeble_id: &str, mysql_connection: &mut PoolConnection<MySql>)
-  -> AnyhowResult<Option<BeebleJobDetails>>
-{
+pub async fn get_inference_job_by_beeble_id_from_connection(beeble_id: &str, mysql_connection: &mut PoolConnection<MySql>) -> AnyhowResult<Option<BeebleJobDetails>> {
   let maybe_status = sqlx::query_as!(
-      RawJobRecord,
-        r#"
+    RawJobRecord,
+    r#"
 SELECT
     jobs.token as `job_token: tokens::tokens::generic_inference_jobs::InferenceJobToken`,
 
@@ -102,11 +97,11 @@ FROM generic_inference_jobs as jobs
 WHERE jobs.maybe_external_third_party = ?
 AND jobs.maybe_external_third_party_id = ?
         "#,
-      InferenceJobExternalThirdParty::Beeble.to_str(),
-      beeble_id
-    )
-      .fetch_one(&mut **mysql_connection)
-      .await;
+    InferenceJobExternalThirdParty::Beeble.to_str(),
+    beeble_id
+  )
+  .fetch_one(&mut **mysql_connection)
+  .await;
 
   let record = match maybe_status {
     Ok(record) => record,
@@ -115,8 +110,8 @@ AND jobs.maybe_external_third_party_id = ?
       _ => {
         warn!("error querying job record: {:?}", err);
         return Err(anyhow!("error querying job record: {:?}", err));
-      }
-    }
+      },
+    },
   };
 
   let record = raw_record_to_public_result(record)?;

@@ -23,9 +23,7 @@ pub struct FfmpegVideoWebpPreviewArgs<I: AsRef<Path>, O: AsRef<Path>> {
 /// first 5 seconds, resampled to 10 fps, scaled to fit within 360x360
 /// (preserving aspect ratio). Runs the ffmpeg chosen by
 /// `webp_ffmpeg_binary::resolve_webp_ffmpeg` (call it at startup).
-pub fn ffmpeg_video_webp_preview<I: AsRef<Path>, O: AsRef<Path>>(
-  args: FfmpegVideoWebpPreviewArgs<I, O>,
-) -> AnyhowResult<()> {
+pub fn ffmpeg_video_webp_preview<I: AsRef<Path>, O: AsRef<Path>>(args: FfmpegVideoWebpPreviewArgs<I, O>) -> AnyhowResult<()> {
   let mut command = Command::new(webp_ffmpeg()?);
 
   command
@@ -68,18 +66,13 @@ mod tests {
       return;
     }
 
-    let input_path = test_file_path("test_data/video/mp4/golden_sun_garoh.mp4")
-        .expect("test video should exist");
+    let input_path = test_file_path("test_data/video/mp4/golden_sun_garoh.mp4").expect("test video should exist");
 
-    let temp_dir = TempDir::new_in("/tmp", "ffmpeg_webp_preview_test")
-        .expect("should create temp dir");
+    let temp_dir = TempDir::new_in("/tmp", "ffmpeg_webp_preview_test").expect("should create temp dir");
 
     let output_path = temp_dir.path().join("preview.webp");
 
-    ffmpeg_video_webp_preview(FfmpegVideoWebpPreviewArgs {
-      input_video_path: &input_path,
-      output_webp_path: &output_path,
-    }).expect("ffmpeg should succeed");
+    ffmpeg_video_webp_preview(FfmpegVideoWebpPreviewArgs { input_video_path: &input_path, output_webp_path: &output_path }).expect("ffmpeg should succeed");
 
     let bytes = std::fs::read(&output_path).expect("output webp should exist");
 
@@ -113,7 +106,7 @@ mod tests {
       Err(err) => {
         eprintln!("SKIPPED: {}", err);
         false
-      }
+      },
     }
   }
 

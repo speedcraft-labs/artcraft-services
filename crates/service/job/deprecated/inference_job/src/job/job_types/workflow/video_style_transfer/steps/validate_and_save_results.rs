@@ -56,33 +56,23 @@ pub struct SaveResultsArgs<'a> {
 }
 
 pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<MediaFileToken, ProcessSingleJobError> {
-
   // ==================== GET METADATA ==================== //
 
   info!("Interrogating result file size ...");
 
   let final_video = args.videos.primary_video.get_final_video_to_upload();
 
-  let file_size_bytes = file_size(final_video)
-      .map_err(|err| ProcessSingleJobError::Other(err))?;
+  let file_size_bytes = file_size(final_video).map_err(|err| ProcessSingleJobError::Other(err))?;
 
   info!("Interrogating result mimetype ...");
 
-  let mimetype = get_mimetype_for_file(final_video)
-      .map_err(|err| ProcessSingleJobError::from_io_error(err))?
-      .map(|mime| mime.to_string())
-      .ok_or(ProcessSingleJobError::Other(anyhow!("Mimetype could not be determined")))?;
+  let mimetype = get_mimetype_for_file(final_video).map_err(|err| ProcessSingleJobError::from_io_error(err))?.map(|mime| mime.to_string()).ok_or(ProcessSingleJobError::Other(anyhow!("Mimetype could not be determined")))?;
 
   // create ext from mimetype
-  let ext = get_file_extension(mimetype.as_str())
-      .map_err(|e| ProcessSingleJobError::Other(e))?;
+  let ext = get_file_extension(mimetype.as_str()).map_err(|e| ProcessSingleJobError::Other(e))?;
 
   // Extension is really a "suffix" and should have the leading period to act as an extension.
-  let ext_suffix = if ext.starts_with(".") {
-    ext.to_string()
-  } else {
-    format!(".{ext}")
-  };
+  let ext_suffix = if ext.starts_with(".") { ext.to_string() } else { format!(".{ext}") };
 
   const PREFIX: &str = "storyteller_";
 
@@ -96,19 +86,13 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
 
   info!("Calculating sha256...");
 
-  let file_checksum = sha256_hash_file(final_video)
-      .map_err(|err| {
-        ProcessSingleJobError::Other(anyhow!("Error hashing file: {:?}", err))
-      })?;
+  let file_checksum = sha256_hash_file(final_video).map_err(|err| ProcessSingleJobError::Other(anyhow!("Error hashing file: {:?}", err)))?;
 
   // ==================== UPLOAD VIDEO TO BUCKET ==================== //
 
-  args.job_progress_reporter.log_status("uploading result")
-      .map_err(|e| ProcessSingleJobError::Other(e))?;
+  args.job_progress_reporter.log_status("uploading result").map_err(|e| ProcessSingleJobError::Other(e))?;
 
-  let result_bucket_location = MediaFileBucketPath::generate_new(
-    Some(PREFIX),
-    Some(&ext_suffix));
+  let result_bucket_location = MediaFileBucketPath::generate_new(Some(PREFIX), Some(&ext_suffix));
 
   let result_bucket_object_pathbuf = result_bucket_location.to_full_object_pathbuf();
 
@@ -124,12 +108,12 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
       .map_err(|e| ProcessSingleJobError::Other(e))?;
 
   let thumbnail_task_result = ThumbnailTaskBuilder::new_for_source_mimetype(ThumbnailTaskInputMimeType::MP4)
-      .with_bucket(&*args.deps.buckets.public_bucket_client.bucket_name())
-      .with_path(&*path_to_string(result_bucket_object_pathbuf.clone()))
-      .with_output_suffix("thumb")
-      .with_event_id(&args.job.id.0.to_string())
-      .send_all()
-      .await;
+    .with_bucket(&*args.deps.buckets.public_bucket_client.bucket_name())
+    .with_path(&*path_to_string(result_bucket_object_pathbuf.clone()))
+    .with_output_suffix("thumb")
+    .with_event_id(&args.job.id.0.to_string())
+    .send_all()
+    .await;
 
   match thumbnail_task_result {
     Ok(thumbnail_task) => {
@@ -137,7 +121,7 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
     },
     Err(e) => {
       error!("Failed to create some/all thumbnail tasks: {:?}", e);
-    }
+    },
   }
 
   // Also upload the non-watermarked copy
@@ -161,8 +145,7 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
   // ==================== SAVE RECORDS ==================== //
 
   // create a json detailing the args used to create the media
-  let args_json = serde_json::to_string(&args.job_args)
-      .map_err(|e| ProcessSingleJobError::Other(e.into()))?;
+  let args_json = serde_json::to_string(&args.job_args).map_err(|e| ProcessSingleJobError::Other(e.into()))?;
 
   info!("Saving ComfyUI result (media_files table record) ...");
 
@@ -170,9 +153,7 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
   // This also lets us hide the engine renders from users.
   // This shouldn't ever become a deeply nested tree of children, but rather a single root
   // with potentially many direct children.
-  let style_transfer_source_media_file_token = args.videos
-      .primary_video.record.maybe_style_transfer_source_media_file_token.as_ref()
-      .unwrap_or_else(|| &args.videos.primary_video.record.token);
+  let style_transfer_source_media_file_token = args.videos.primary_video.record.maybe_style_transfer_source_media_file_token.as_ref().unwrap_or_else(|| &args.videos.primary_video.record.token);
 
   let prompt_token = PromptToken::generate();
 
@@ -196,8 +177,7 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
     maybe_mime_type: Some(&mimetype),
     maybe_title: args.videos.primary_video.record.maybe_title.as_deref(),
     maybe_style_transfer_source_media_file_token: Some(&style_transfer_source_media_file_token),
-    maybe_scene_source_media_file_token: args.videos
-        .primary_video.record.maybe_scene_source_media_file_token.as_ref(),
+    maybe_scene_source_media_file_token: args.videos.primary_video.record.maybe_scene_source_media_file_token.as_ref(),
     file_size_bytes,
     sha256_checksum: &file_checksum,
     maybe_prompt_token: Some(&prompt_token),
@@ -209,24 +189,23 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
     worker_cluster: &args.deps.job.info.container.cluster_name,
     extra_file_modification_info: Some(&args_json),
   })
-      .await
-      .map_err(|e| {
-        error!("Error saving media file record: {:?}", e);
-        ProcessSingleJobError::Other(e)
-      })?;
+  .await
+  .map_err(|e| {
+    error!("Error saving media file record: {:?}", e);
+    ProcessSingleJobError::Other(e)
+  })?;
 
-  let should_insert_prompt_record =
-          args.comfy_args.disable_lcm.is_some()
-          || args.comfy_args.global_ip_adapter_token.is_some()
-          || args.comfy_args.lipsync_enabled.is_some()
-          || args.comfy_args.negative_prompt.is_some()
-          || args.comfy_args.positive_prompt.is_some()
-          || args.comfy_args.travel_prompt.is_some()
-          || args.comfy_args.strength.is_some()
-          || args.comfy_args.style_name.is_some()
-          || args.comfy_args.use_cinematic.is_some()
-          || args.comfy_args.use_face_detailer.is_some()
-          || args.comfy_args.use_upscaler.is_some();
+  let should_insert_prompt_record = args.comfy_args.disable_lcm.is_some()
+    || args.comfy_args.global_ip_adapter_token.is_some()
+    || args.comfy_args.lipsync_enabled.is_some()
+    || args.comfy_args.negative_prompt.is_some()
+    || args.comfy_args.positive_prompt.is_some()
+    || args.comfy_args.travel_prompt.is_some()
+    || args.comfy_args.strength.is_some()
+    || args.comfy_args.style_name.is_some()
+    || args.comfy_args.use_cinematic.is_some()
+    || args.comfy_args.use_face_detailer.is_some()
+    || args.comfy_args.use_upscaler.is_some();
 
   if should_insert_prompt_record {
     info!("Saving prompt record");
@@ -305,7 +284,8 @@ pub async fn validate_and_save_results(args: SaveResultsArgs<'_>) -> Result<Medi
       creator_ip_address: &args.job.creator_ip_address,
       mysql_executor: &args.deps.db.mysql_pool,
       phantom: Default::default(),
-    }).await;
+    })
+    .await;
 
     if let Err(err) = prompt_result {
       error!("No prompt result token? something has failed: {:?} (we'll ignore this error)", err);

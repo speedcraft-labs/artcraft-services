@@ -51,11 +51,7 @@ struct RawRecord {
 }
 
 /// Returns all non-terminal KinoviWeb video jobs that have an associated order_id.
-pub async fn list_pending_kinovi_web_video_jobs(
-  pool: &MySqlPool,
-  external_third_party: InferenceJobExternalThirdParty,
-  job_type: InferenceJobType,
-) -> Result<Vec<PendingKinoviWebJob>, sqlx::Error> {
+pub async fn list_pending_kinovi_web_video_jobs(pool: &MySqlPool, external_third_party: InferenceJobExternalThirdParty, job_type: InferenceJobType) -> Result<Vec<PendingKinoviWebJob>, sqlx::Error> {
   let records = sqlx::query_as!(
     RawRecord,
     r#"
@@ -83,8 +79,8 @@ LIMIT 25000
     external_third_party.to_str(),
     job_type.to_str(),
   )
-    .fetch_all(pool)
-    .await?;
+  .fetch_all(pool)
+  .await?;
 
   let jobs = records
     .into_iter()
@@ -94,7 +90,7 @@ LIMIT 25000
         None => {
           warn!("PendingKinoviWebJob has no order_id, skipping");
           return None;
-        }
+        },
       };
 
       Some(PendingKinoviWebJob {

@@ -1,9 +1,4 @@
-use artcraft_api_defs::omni_gen::models::omni_gen_splat_models::{
-  OmniGenSplatModelDetails,
-  OmniGenSplatModelProviderDetails,
-  OmniGenSplatModelsResponse,
-  OmniGenSplatProviderModelDetails,
-};
+use artcraft_api_defs::omni_gen::models::omni_gen_splat_models::{OmniGenSplatModelDetails, OmniGenSplatModelProviderDetails, OmniGenSplatModelsResponse, OmniGenSplatProviderModelDetails};
 use enums::common::generation::common_splat_model::CommonSplatModel;
 use enums::common::generation::model_creator::ModelCreator;
 use enums::common::generation_provider::GenerationProvider;
@@ -15,11 +10,7 @@ const MARBLE_MAX_IMAGE_REFERENCES: u16 = 4;
 pub static OMNI_GEN_SPLAT_MODELS_AND_PROVIDERS: Lazy<OmniGenSplatModelsResponse> = Lazy::new(|| {
   let models = build_omni_gen_splat_models();
   let providers = build_omni_gen_splat_model_providers();
-  OmniGenSplatModelsResponse {
-    success: true,
-    models,
-    providers,
-  }
+  OmniGenSplatModelsResponse { success: true, models, providers }
 });
 
 fn build_omni_gen_splat_models() -> Vec<OmniGenSplatModelDetails> {
@@ -38,26 +29,11 @@ fn build_omni_gen_splat_model_providers() -> Vec<OmniGenSplatModelProviderDetail
   providers.push(OmniGenSplatModelProviderDetails {
     provider: GenerationProvider::Artcraft,
     models: vec![
-      OmniGenSplatProviderModelDetails {
-        model: CommonSplatModel::Marble1p0,
-        overrides: None,
-      },
-      OmniGenSplatProviderModelDetails {
-        model: CommonSplatModel::Marble1p0Draft,
-        overrides: None,
-      },
-      OmniGenSplatProviderModelDetails {
-        model: CommonSplatModel::Marble1p1,
-        overrides: None,
-      },
-      OmniGenSplatProviderModelDetails {
-        model: CommonSplatModel::Marble1p1Plus,
-        overrides: None,
-      },
-      OmniGenSplatProviderModelDetails {
-        model: CommonSplatModel::TripoSplat,
-        overrides: None,
-      },
+      OmniGenSplatProviderModelDetails { model: CommonSplatModel::Marble1p0, overrides: None },
+      OmniGenSplatProviderModelDetails { model: CommonSplatModel::Marble1p0Draft, overrides: None },
+      OmniGenSplatProviderModelDetails { model: CommonSplatModel::Marble1p1, overrides: None },
+      OmniGenSplatProviderModelDetails { model: CommonSplatModel::Marble1p1Plus, overrides: None },
+      OmniGenSplatProviderModelDetails { model: CommonSplatModel::TripoSplat, overrides: None },
     ],
   });
 

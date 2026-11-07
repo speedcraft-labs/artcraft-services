@@ -9,11 +9,10 @@ use crate::state::job_dependencies::JobDependencies;
 use crate::util::downloaders::maybe_download_file_from_bucket::{maybe_download_file_from_bucket, MaybeDownloadArgs};
 
 pub struct StaticDependencies {
-  pub waveglow_vocoder_model_fs_path : PathBuf,
+  pub waveglow_vocoder_model_fs_path: PathBuf,
   pub pretrained_hifigan_vocoder_model_fs_path: PathBuf,
-  pub hifigan_superres_vocoder_model_fs_path : PathBuf,
+  pub hifigan_superres_vocoder_model_fs_path: PathBuf,
 }
-
 
 pub async fn download_static_dependencies<'a>(
   job_dependencies: &'a JobDependencies,
@@ -21,7 +20,6 @@ pub async fn download_static_dependencies<'a>(
   model_dependencies: &'a Tacotron2Dependencies,
   mut job_progress_reporter: &mut Box<dyn JobProgressReporter>,
 ) -> Result<StaticDependencies, ProcessSingleJobError> {
-
   // ==================== CONFIRM OR DOWNLOAD WAVEGLOW VOCODER MODEL ==================== //
 
   let waveglow_vocoder_model_fs_path = {
@@ -40,7 +38,8 @@ pub async fn download_static_dependencies<'a>(
       job_id: job.id.0,
       scoped_tempdir_creator: &job_dependencies.fs.scoped_temp_dir_creator_for_long_lived_downloads,
       maybe_existing_file_minimum_size_required: Some(1000),
-    }).await?;
+    })
+    .await?;
 
     waveglow_vocoder_model_fs_path
   };
@@ -63,7 +62,8 @@ pub async fn download_static_dependencies<'a>(
       job_id: job.id.0,
       scoped_tempdir_creator: &job_dependencies.fs.scoped_temp_dir_creator_for_long_lived_downloads,
       maybe_existing_file_minimum_size_required: Some(1000),
-    }).await?;
+    })
+    .await?;
 
     hifigan_vocoder_model_fs_path
   };
@@ -86,14 +86,11 @@ pub async fn download_static_dependencies<'a>(
       job_id: job.id.0,
       scoped_tempdir_creator: &job_dependencies.fs.scoped_temp_dir_creator_for_long_lived_downloads,
       maybe_existing_file_minimum_size_required: Some(1000),
-    }).await?;
+    })
+    .await?;
 
     hifigan_superres_vocoder_model_fs_path
   };
 
-  Ok(StaticDependencies {
-    waveglow_vocoder_model_fs_path,
-    pretrained_hifigan_vocoder_model_fs_path,
-    hifigan_superres_vocoder_model_fs_path,
-  })
+  Ok(StaticDependencies { waveglow_vocoder_model_fs_path, pretrained_hifigan_vocoder_model_fs_path, hifigan_superres_vocoder_model_fs_path })
 }

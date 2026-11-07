@@ -51,32 +51,24 @@ pub async fn set_media_file_cover_image_handler(
   http_request: HttpRequest,
   path: Path<MediaFileTokenPathInfo>,
   request: Json<SetMediaFileCoverImageRequest>,
-  server_state: web::Data<Arc<ServerState>>
-) -> Result<Json<SimpleGenericJsonSuccess>, CommonWebError>{
-  let maybe_user_session = server_state
-      .session_checker
-      .maybe_get_user_session(&http_request, &server_state.mysql_pool)
-      .await
-      .map_err(|e| {
-        warn!("Session checker error: {:?}", e);
-        CommonWebError::from_error(e)
-      })?;
+  server_state: web::Data<Arc<ServerState>>,
+) -> Result<Json<SimpleGenericJsonSuccess>, CommonWebError> {
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session(&http_request, &server_state.mysql_pool).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
 
   let user_session = match maybe_user_session {
     Some(session) => session,
     None => {
       warn!("not logged in");
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   let is_mod = user_session.can_ban_users;
 
-  let media_file_lookup_result = get_media_file(
-    &path.token,
-    is_mod,
-    &server_state.mysql_pool,
-  ).await;
+  let media_file_lookup_result = get_media_file(&path.token, is_mod, &server_state.mysql_pool).await;
 
   let media_file = match media_file_lookup_result {
     Ok(Some(media_file)) => media_file,
@@ -87,11 +79,10 @@ pub async fn set_media_file_cover_image_handler(
     Err(err) => {
       warn!("Error looking up media_file: {:?}", err);
       return Err(CommonWebError::from_anyhow_error(err));
-    }
+    },
   };
 
-  let is_creator = media_file.maybe_creator_user_token
-      .is_some_and(|t| t.as_str() == user_session.user_token.as_str());
+  let is_creator = media_file.maybe_creator_user_token.is_some_and(|t| t.as_str() == user_session.user_token.as_str());
 
   if !is_creator && !is_mod {
     warn!("user is not allowed to delete this media_file: {:?}", user_session.user_token);
@@ -100,20 +91,13 @@ pub async fn set_media_file_cover_image_handler(
 
   let mut maybe_set_media_file_token = None;
 
-  let delete_cover_image = request.cover_image_media_file_token
-      .as_ref()
-      .map(|token| token.as_str().trim().is_empty())
-      .unwrap_or(true);
+  let delete_cover_image = request.cover_image_media_file_token.as_ref().map(|token| token.as_str().trim().is_empty()).unwrap_or(true);
 
   info!("Delete media file cover image? : {delete_cover_image}");
 
   if !delete_cover_image {
     if let Some(media_file_token) = &request.cover_image_media_file_token {
-      let media_file_lookup_result = get_media_file(
-        &media_file_token,
-        false,
-        &server_state.mysql_pool,
-      ).await;
+      let media_file_lookup_result = get_media_file(&media_file_token, false, &server_state.mysql_pool).await;
 
       let media_file = match media_file_lookup_result {
         Ok(Some(media_file)) => media_file,
@@ -124,7 +108,7 @@ pub async fn set_media_file_cover_image_handler(
         Err(err) => {
           warn!("Error looking up model_weights : {:?}", err);
           return Err(CommonWebError::from_anyhow_error(err));
-        }
+        },
       };
 
       //let can_use_image = media_file.creator_set_visibility == Visibility::Public
@@ -132,9 +116,7 @@ pub async fn set_media_file_cover_image_handler(
 
       // NB: A private image belongs to its creator. Pointing a cover at someone else's private
       // image would publish its URL through the media file and any folder using it as a cover.
-      let is_cover_image_creator = media_file.maybe_creator_user_token
-          .as_ref()
-          .is_some_and(|t| t.as_str() == user_session.user_token.as_str());
+      let is_cover_image_creator = media_file.maybe_creator_user_token.as_ref().is_some_and(|t| t.as_str() == user_session.user_token.as_str());
 
       if media_file.creator_set_visibility == Visibility::Private && !is_cover_image_creator && !is_mod {
         warn!("user cannot use private media file as cover image: {:?}", media_file_token);
@@ -151,18 +133,14 @@ pub async fn set_media_file_cover_image_handler(
     }
   }
 
-  let query_result = set_media_file_cover_image(UpdateArgs {
-    media_file_token: &path.token,
-    maybe_cover_image_media_file_token: maybe_set_media_file_token.as_ref(),
-    mysql_pool: &server_state.mysql_pool,
-  }).await;
+  let query_result = set_media_file_cover_image(UpdateArgs { media_file_token: &path.token, maybe_cover_image_media_file_token: maybe_set_media_file_token.as_ref(), mysql_pool: &server_state.mysql_pool }).await;
 
   match query_result {
     Ok(_) => {},
     Err(err) => {
       warn!("Update MediaFile DB error: {:?}", err);
       return Err(CommonWebError::from_anyhow_error(err));
-    }
+    },
   };
 
   Ok(Json(SimpleGenericJsonSuccess { success: true }))

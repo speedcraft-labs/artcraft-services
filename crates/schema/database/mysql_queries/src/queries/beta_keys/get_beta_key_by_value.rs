@@ -27,17 +27,13 @@ pub struct BetaKey {
   pub maybe_redeemed_at: Option<DateTime<Utc>>,
 }
 
-pub async fn get_beta_key_by_value<'e, 'c, E>(
-  key_value: &'e str,
-  mysql_executor: E
-)
-  -> AnyhowResult<Option<BetaKey>>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn get_beta_key_by_value<'e, 'c, E>(key_value: &'e str, mysql_executor: E) -> AnyhowResult<Option<BetaKey>>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
-
   let maybe_results = sqlx::query_as!(
-      RawRecord,
-        r#"
+    RawRecord,
+    r#"
 SELECT
   b.token as `token: tokens::tokens::beta_keys::BetaKeyToken`,
 
@@ -68,10 +64,10 @@ LEFT OUTER JOIN users AS redeemer
 WHERE
     b.key_value = ?
         "#,
-      key_value
-    )
-      .fetch_one(mysql_executor)
-      .await;
+    key_value
+  )
+  .fetch_one(mysql_executor)
+  .await;
 
   match maybe_results {
     Ok(record) => Ok(Some(BetaKey {
@@ -92,7 +88,7 @@ WHERE
     Err(err) => match err {
       sqlx::Error::RowNotFound => Ok(None),
       _ => Err(anyhow!("Error querying: {:?}", err)),
-    }
+    },
   }
 }
 

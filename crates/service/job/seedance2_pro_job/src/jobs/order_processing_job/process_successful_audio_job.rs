@@ -27,18 +27,10 @@ const PREFIX: &str = "artcraft_";
 ///
 /// Preserve every returned clip in one batch and expose the first as the
 /// primary result. Download and validate audio before marking the job complete.
-pub async fn process_successful_audio_job(
-  deps: &JobDependencies,
-  job: &PendingKinoviWebJob,
-  order: &OrderStatus,
-) -> AnyhowResult<()> {
+pub async fn process_successful_audio_job(deps: &JobDependencies, job: &PendingKinoviWebJob, order: &OrderStatus) -> AnyhowResult<()> {
   let results = audio_results(order)?;
 
-  info!(
-    "Processing completed audio order {}: {} audio(s) to download.",
-    order.order_id,
-    results.len(),
-  );
+  info!("Processing completed audio order {}: {} audio(s) to download.", order.order_id, results.len(),);
 
   // Complete all network IO before acquiring a database connection. Media
   // records and job completion are then committed together so a failed second
@@ -46,41 +38,21 @@ pub async fn process_successful_audio_job(
   let maybe_batch_token = (results.len() > 1).then(BatchGenerationToken::generate);
   let mut media_files = Vec::with_capacity(results.len());
   for (idx, result) in results.iter().enumerate() {
-    media_files.push(
-      download_and_upload_audio(deps, job, order, result, idx, maybe_batch_token.as_ref()).await?,
-    );
+    media_files.push(download_and_upload_audio(deps, job, order, result, idx, maybe_batch_token.as_ref()).await?);
   }
 
   // Finalize inside a transaction: re-check the job is still pending under a row
   // lock, then mark it complete. See `process_successful_video_job` for the rationale.
-  let mut transaction = deps.mysql_pool.begin().await.map_err(|err| {
-    anyhow!(
-      "error beginning finalize transaction for job {}: {:?}",
-      job.job_token.as_str(),
-      err
-    )
-  })?;
+  let mut transaction = deps.mysql_pool.begin().await.map_err(|err| anyhow!("error beginning finalize transaction for job {}: {:?}", job.job_token.as_str(), err))?;
 
-  let maybe_status = select_inference_job_status_for_update(&mut *transaction, &job.job_token)
-    .await
-    .map_err(|err| {
-      anyhow!(
-        "error locking job {} for finalize: {:?}",
-        job.job_token.as_str(),
-        err
-      )
-    })?;
+  let maybe_status = select_inference_job_status_for_update(&mut *transaction, &job.job_token).await.map_err(|err| anyhow!("error locking job {} for finalize: {:?}", job.job_token.as_str(), err))?;
 
   // A concurrent completion or cancellation must win over this import.
   let status = match maybe_status {
     Some(status) => status,
     None => {
       let _ = transaction.rollback().await;
-      return Err(anyhow!(
-        "Job {} vanished before finalize (order {})",
-        job.job_token.as_str(),
-        order.order_id,
-      ));
+      return Err(anyhow!("Job {} vanished before finalize (order {})", job.job_token.as_str(), order.order_id,));
     },
   };
 
@@ -108,66 +80,33 @@ pub async fn process_successful_audio_job(
 
   // Commit all clips and the job status within the same transaction.
 
-  if let Err(err) = mark_generic_inference_job_successfully_done_by_token_with_executor(
-    MarkGenericInferenceJobSuccessfullyDoneByTokenWithExecutorArgs {
-      executor: &mut *transaction,
-      token: &job.job_token,
-      maybe_entity_type: Some(InferenceResultType::MediaFile),
-      maybe_entity_token: Some(primary_token.as_str()),
-      total_job_duration: None,
-      inference_duration: None,
-    },
-  )
+  if let Err(err) = mark_generic_inference_job_successfully_done_by_token_with_executor(MarkGenericInferenceJobSuccessfullyDoneByTokenWithExecutorArgs {
+    executor: &mut *transaction,
+    token: &job.job_token,
+    maybe_entity_type: Some(InferenceResultType::MediaFile),
+    maybe_entity_token: Some(primary_token.as_str()),
+    total_job_duration: None,
+    inference_duration: None,
+  })
   .await
   {
     let _ = transaction.rollback().await;
-    error!(
-      "Error marking audio job {} done: {:?}",
-      job.job_token.as_str(),
-      err
-    );
-    return alert_pager_and_return_err(
-      &deps.pager,
-      "Kinovi audio job completion update failed",
-      anyhow!("error marking job done: {:?}", err),
-      Some(job),
-    );
+    error!("Error marking audio job {} done: {:?}", job.job_token.as_str(), err);
+    return alert_pager_and_return_err(&deps.pager, "Kinovi audio job completion update failed", anyhow!("error marking job done: {:?}", err), Some(job));
   }
 
-  transaction.commit().await.map_err(|err| {
-    anyhow!(
-      "error committing finalize transaction for job {}: {:?}",
-      job.job_token.as_str(),
-      err
-    )
-  })?;
+  transaction.commit().await.map_err(|err| anyhow!("error committing finalize transaction for job {}: {:?}", job.job_token.as_str(), err))?;
 
-  info!(
-    "Audio job {} completed successfully.",
-    job.job_token.as_str()
-  );
+  info!("Audio job {} completed successfully.", job.job_token.as_str());
 
   Ok(())
 }
 
 /// Upload a clip and prepare its media record without holding a DB connection.
-async fn download_and_upload_audio(
-  deps: &JobDependencies,
-  job: &PendingKinoviWebJob,
-  order: &OrderStatus,
-  result: &MediaResult,
-  index: usize,
-  maybe_batch_token: Option<&BatchGenerationToken>,
-) -> AnyhowResult<MediaFileInsertBuilder> {
+async fn download_and_upload_audio(deps: &JobDependencies, job: &PendingKinoviWebJob, order: &OrderStatus, result: &MediaResult, index: usize, maybe_batch_token: Option<&BatchGenerationToken>) -> AnyhowResult<MediaFileInsertBuilder> {
   let audio_url = result.url.as_str();
 
-  info!(
-    "Downloading audio {}/{} for order {} from: {}",
-    index + 1,
-    order.results.len().max(1),
-    order.order_id,
-    audio_url,
-  );
+  info!("Downloading audio {}/{} for order {} from: {}", index + 1, order.results.len().max(1), order.order_id, audio_url,);
 
   let audio_bytes: Vec<u8> = deps
     .download_client
@@ -182,34 +121,18 @@ async fn download_and_upload_audio(
     .map_err(|err| anyhow!("error reading audio bytes for index {}: {:?}", index, err))?
     .to_vec();
 
-  info!(
-    "Downloaded {} bytes for audio {}/{} of order {}",
-    audio_bytes.len(),
-    index + 1,
-    order.results.len().max(1),
-    order.order_id,
-  );
+  info!("Downloaded {} bytes for audio {}/{} of order {}", audio_bytes.len(), index + 1, order.results.len().max(1), order.order_id,);
 
   let (suffix, mime_type, file_type) = audio_metadata(&audio_bytes)?;
 
-  let checksum = sha256_hash_bytes(&audio_bytes)
-    .map_err(|err| anyhow!("error hashing audio {}: {:?}", index, err))?;
+  let checksum = sha256_hash_bytes(&audio_bytes).map_err(|err| anyhow!("error hashing audio {}: {:?}", index, err))?;
 
   let bucket_path = MediaFileBucketPath::generate_new(Some(PREFIX), Some(suffix));
   let object_path = bucket_path.get_full_object_path_str();
 
-  info!(
-    "Uploading audio {}/{} to public bucket at path: {}",
-    index + 1,
-    order.results.len().max(1),
-    object_path,
-  );
+  info!("Uploading audio {}/{} to public bucket at path: {}", index + 1, order.results.len().max(1), object_path,);
 
-  deps
-    .public_bucket_client
-    .upload_file_with_content_type_process(object_path, &audio_bytes, mime_type)
-    .await
-    .map_err(|err| anyhow!("bucket upload failed for audio {}: {:?}", index, err))?;
+  deps.public_bucket_client.upload_file_with_content_type_process(object_path, &audio_bytes, mime_type).await.map_err(|err| anyhow!("bucket upload failed for audio {}: {:?}", index, err))?;
 
   let media_file = MediaFileInsertBuilder::new()
     .checksum_sha2(&checksum)
@@ -238,16 +161,8 @@ fn audio_results(order: &OrderStatus) -> AnyhowResult<Vec<MediaResult>> {
   if !order.results.is_empty() {
     return Ok(order.results.clone());
   }
-  let url = order
-    .result_url
-    .as_ref()
-    .filter(|url| !url.is_empty())
-    .ok_or_else(|| anyhow!("Completed audio order {} has no results", order.order_id))?;
-  Ok(vec![MediaResult {
-    url: url.clone(),
-    maybe_width: None,
-    maybe_height: None,
-  }])
+  let url = order.result_url.as_ref().filter(|url| !url.is_empty()).ok_or_else(|| anyhow!("Completed audio order {} has no results", order.order_id))?;
+  Ok(vec![MediaResult { url: url.clone(), maybe_width: None, maybe_height: None }])
 }
 
 fn audio_metadata(bytes: &[u8]) -> AnyhowResult<(&'static str, &'static str, MediaFileType)> {
@@ -258,10 +173,7 @@ fn audio_metadata(bytes: &[u8]) -> AnyhowResult<(&'static str, &'static str, Med
     Some("audio/ogg") => Ok((".ogg", "audio/ogg", MediaFileType::Ogg)),
     Some("audio/x-m4a" | "audio/m4a") => Ok((".m4a", "audio/mp4", MediaFileType::M4a)),
     Some("audio/aac" | "audio/x-aac") => Ok((".aac", "audio/aac", MediaFileType::Aac)),
-    other => Err(anyhow!(
-      "Unsupported Kinovi audio result MIME type: {:?}",
-      other
-    )),
+    other => Err(anyhow!("Unsupported Kinovi audio result MIME type: {:?}", other)),
   }
 }
 
@@ -272,14 +184,8 @@ mod tests {
 
   #[test]
   fn accepts_mp3_and_wav_with_correct_file_metadata() {
-    assert_eq!(
-      audio_metadata(b"ID3\x04\x00\x00\x00\x00\x00\x00").unwrap(),
-      (".mp3", "audio/mpeg", MediaFileType::Mp3)
-    );
-    assert_eq!(
-      audio_metadata(b"RIFF\x24\x00\x00\x00WAVEfmt ").unwrap(),
-      (".wav", "audio/wav", MediaFileType::Wav)
-    );
+    assert_eq!(audio_metadata(b"ID3\x04\x00\x00\x00\x00\x00\x00").unwrap(), (".mp3", "audio/mpeg", MediaFileType::Mp3));
+    assert_eq!(audio_metadata(b"RIFF\x24\x00\x00\x00WAVEfmt ").unwrap(), (".wav", "audio/wav", MediaFileType::Wav));
   }
 
   #[test]
@@ -292,10 +198,7 @@ mod tests {
   fn preserves_both_clips_without_duplicating_the_primary_url() {
     let mut order = completed_order();
     order.result_url = Some("https://example.test/one.mp3".into());
-    order.results = vec![
-      clip("https://example.test/one.mp3"),
-      clip("https://example.test/two.mp3"),
-    ];
+    order.results = vec![clip("https://example.test/one.mp3"), clip("https://example.test/two.mp3")];
     let results = audio_results(&order).unwrap();
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].url, "https://example.test/one.mp3");
@@ -315,11 +218,7 @@ mod tests {
   }
 
   fn clip(url: &str) -> MediaResult {
-    MediaResult {
-      url: url.into(),
-      maybe_width: None,
-      maybe_height: None,
-    }
+    MediaResult { url: url.into(), maybe_width: None, maybe_height: None }
   }
 
   fn completed_order() -> OrderStatus {
