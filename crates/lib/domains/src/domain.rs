@@ -28,11 +28,7 @@ pub struct Domain {
 #[macro_export]
 macro_rules! domain {
   ($domain:literal) => {
-    $crate::Domain::__from_macro(
-      $domain,
-      ::core::concat!("https://", $domain),
-      ::core::concat!("https://", $domain, "/"),
-    )
+    $crate::Domain::__from_macro($domain, ::core::concat!("https://", $domain), ::core::concat!("https://", $domain, "/"))
   };
 }
 
@@ -40,11 +36,7 @@ impl Domain {
   /// Only for the `domain!` macro, which guarantees the three strings agree.
   /// Panics (a compile error in const context) on an invalid domain.
   #[doc(hidden)]
-  pub const fn __from_macro(
-    bare: &'static str,
-    https_without_path: &'static str,
-    https_with_root_path: &'static str,
-  ) -> Self {
+  pub const fn __from_macro(bare: &'static str, https_without_path: &'static str, https_with_root_path: &'static str) -> Self {
     crate::validate::assert_valid_domain(bare);
     Self { bare, https_without_path, https_with_root_path }
   }
@@ -145,9 +137,7 @@ mod tests {
       // Borrowed into 'static threads with no Arc or cloning; every thread
       // sees the same parsed instance.
       let main_thread_url = TEST_DOMAIN.https_url();
-      let handles: Vec<_> = (0..8)
-        .map(|_| std::thread::spawn(|| TEST_DOMAIN.https_url()))
-        .collect();
+      let handles: Vec<_> = (0..8).map(|_| std::thread::spawn(|| TEST_DOMAIN.https_url())).collect();
       for handle in handles {
         assert!(std::ptr::eq(handle.join().unwrap(), main_thread_url));
       }

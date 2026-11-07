@@ -14,7 +14,8 @@ use tokens::tokens::generic_inference_jobs::InferenceJobToken;
 use tokens::tokens::media_files::MediaFileToken;
 
 pub struct MarkFirstPartyMinimaxH3JobSucceededArgs<'e, 'c, E>
-  where E: 'e + Executor<'c, Database = MySql>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   pub job_token: &'e InferenceJobToken,
 
@@ -32,10 +33,9 @@ pub struct MarkFirstPartyMinimaxH3JobSucceededArgs<'e, 'c, E>
   pub phantom: PhantomData<&'c E>,
 }
 
-pub async fn mark_first_party_minimax_h3_job_succeeded<'e, 'c : 'e, E>(
-  args: MarkFirstPartyMinimaxH3JobSucceededArgs<'e, 'c, E>
-) -> Result<(), sqlx::Error>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn mark_first_party_minimax_h3_job_succeeded<'e, 'c: 'e, E>(args: MarkFirstPartyMinimaxH3JobSucceededArgs<'e, 'c, E>) -> Result<(), sqlx::Error>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   sqlx::query!(
     r#"
@@ -60,8 +60,8 @@ AND status NOT IN ('complete_success', 'complete_failure')
     args.maybe_inference_duration_millis.and_then(|millis| u32::try_from(millis).ok()),
     args.job_token.as_str(),
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
 
   Ok(())
 }

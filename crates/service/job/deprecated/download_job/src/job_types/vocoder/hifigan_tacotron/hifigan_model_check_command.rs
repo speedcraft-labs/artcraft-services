@@ -11,10 +11,10 @@ use subprocess_common::docker_options::DockerOptions;
 pub struct HifiGanModelCheckCommand {
   /// Where the HifiGan code lives
   hifigan_root_code_directory: String,
-  
+
   /// eg. `source python/bin/activate`
   maybe_virtual_env_activation_command: Option<String>,
-  
+
   hifigan_model_check_script_name: String,
 
   /// If this is run under Docker (eg. in development), these are the options.
@@ -22,12 +22,7 @@ pub struct HifiGanModelCheckCommand {
 }
 
 impl HifiGanModelCheckCommand {
-  pub fn new(
-    hifigan_root_code_directory: &str,
-    maybe_virtual_env_activation_command: Option<&str>,
-    hifigan_model_check_script_name: &str,
-    maybe_docker_options: Option<DockerOptions>,
-  ) -> Self {
+  pub fn new(hifigan_root_code_directory: &str, maybe_virtual_env_activation_command: Option<&str>, hifigan_model_check_script_name: &str, maybe_docker_options: Option<DockerOptions>) -> Self {
     Self {
       hifigan_root_code_directory: hifigan_root_code_directory.to_string(),
       maybe_virtual_env_activation_command: maybe_virtual_env_activation_command.map(|s| s.to_string()),
@@ -36,12 +31,7 @@ impl HifiGanModelCheckCommand {
     }
   }
 
-  pub fn execute<P: AsRef<Path>>(
-    &self,
-    checkpoint_path: P,
-    output_metadata_filename: P,
-  ) -> AnyhowResult<()> {
-
+  pub fn execute<P: AsRef<Path>>(&self, checkpoint_path: P, output_metadata_filename: P) -> AnyhowResult<()> {
     let mut command = String::new();
     command.push_str(&format!("cd {}", self.hifigan_root_code_directory));
 
@@ -65,15 +55,9 @@ impl HifiGanModelCheckCommand {
 
     info!("Command: {:?}", command);
 
-    let command_parts = [
-      "bash",
-      "-c",
-      &command
-    ];
+    let command_parts = ["bash", "-c", &command];
 
-    let mut p = Popen::create(&command_parts, PopenConfig {
-      ..Default::default()
-    })?;
+    let mut p = Popen::create(&command_parts, PopenConfig { ..Default::default() })?;
 
     info!("Pid : {:?}", p.pid());
 

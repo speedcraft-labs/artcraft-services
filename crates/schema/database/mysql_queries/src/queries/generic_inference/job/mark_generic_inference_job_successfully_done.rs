@@ -15,15 +15,14 @@ pub async fn mark_generic_inference_job_successfully_done(
   maybe_entity_token: Option<&str>,
   total_job_duration: Duration,
   inference_duration: Duration,
-) -> AnyhowResult<()>
-{
+) -> AnyhowResult<()> {
   // NB: MySql's unsigned int (32 bits) can store integers up to 4,294,967,295.
   // Given milliseconds, this is ~49.71 days, which should be plenty for us.
   let truncated_total_job_execution_millis = total_job_duration.as_millis() as u32;
   let truncated_inference_execution_millis = inference_duration.as_millis() as u32;
 
   let query_result = sqlx::query!(
-        r#"
+    r#"
 UPDATE generic_inference_jobs
 SET
   status = "complete_success",
@@ -37,14 +36,14 @@ SET
   successfully_completed_at = NOW()
 WHERE id = ?
         "#,
-        maybe_entity_type,
-        maybe_entity_token,
-        truncated_total_job_execution_millis,
-        truncated_inference_execution_millis,
-        job.id.0,
-    )
-      .execute(pool)
-      .await;
+    maybe_entity_type,
+    maybe_entity_token,
+    truncated_total_job_execution_millis,
+    truncated_inference_execution_millis,
+    job.id.0,
+  )
+  .execute(pool)
+  .await;
 
   match query_result {
     Err(err) => Err(anyhow!("error with query: {:?}", err)),

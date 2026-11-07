@@ -22,8 +22,11 @@ impl KinoviWan3p0CostState {
     VideoGenerationCostEstimate {
       cost_in_credits: Some(self.costs.kinovi_credits.round() as u64),
       cost_in_usd_cents: Some(self.costs.usd_cents_rounded_up),
-      is_free: false, is_unlimited: false, is_rate_limited: false,
-      has_watermark: false, failures_are_refunded: None,
+      is_free: false,
+      is_unlimited: false,
+      is_rate_limited: false,
+      has_watermark: false,
+      failures_are_refunded: None,
     }
   }
 }

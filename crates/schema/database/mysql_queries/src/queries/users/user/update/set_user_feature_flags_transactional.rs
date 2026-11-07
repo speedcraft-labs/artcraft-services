@@ -26,7 +26,7 @@ pub struct SetUserFeatureFlagTransactionalArgs<'a, 'b> {
 
 pub async fn set_user_feature_flags_transactional(args: SetUserFeatureFlagTransactionalArgs<'_, '_>) -> AnyhowResult<()> {
   let query_result = sqlx::query!(
-        r#"
+    r#"
 UPDATE users
 SET
     maybe_feature_flags = ?,
@@ -35,11 +35,11 @@ SET
 WHERE users.token = ?
 LIMIT 1
         "#,
-      args.maybe_feature_flags,
-      args.subject_user_token,
-    )
-      .execute(&mut **args.transaction)
-      .await;
+    args.maybe_feature_flags,
+    args.subject_user_token,
+  )
+  .execute(&mut **args.transaction)
+  .await;
 
   if let Err(err) = query_result {
     return Err(anyhow!("error with query: {:?}", err));
@@ -54,7 +54,8 @@ LIMIT 1
     actor_ip_address: &args.ip_address,
     is_actor_moderator: true,
     transaction: args.transaction,
-  }).await;
+  })
+  .await;
 
   Ok(())
 }

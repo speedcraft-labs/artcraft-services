@@ -23,6 +23,6 @@ FROM user_login_challenges WHERE device_token_sha256 = ? FOR UPDATE
 "#,
     args.device_hash
   )
-    .fetch_optional(args.mysql_executor)
-    .await
+  .fetch_optional(args.mysql_executor)
+  .await
 }

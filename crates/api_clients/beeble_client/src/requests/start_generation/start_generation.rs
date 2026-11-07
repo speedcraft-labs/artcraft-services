@@ -114,34 +114,21 @@ pub async fn start_generation(args: StartGenerationArgs) -> Result<StartGenerati
     idempotency_key: req.idempotency_key,
   };
 
-  let client = reqwest::Client::builder()
-    .build()
-    .map_err(|err| BeebleClientError::ReqwestClientError(err))?;
+  let client = reqwest::Client::builder().build().map_err(|err| BeebleClientError::ReqwestClientError(err))?;
 
-  let response = client.post(&url)
-    .header("x-api-key", &args.api_key.api_key)
-    .header("Content-Type", "application/json")
-    .json(&request_body)
-    .send()
-    .await
-    .map_err(|err| BeebleGenericApiError::ReqwestError(err))?;
+  let response = client.post(&url).header("x-api-key", &args.api_key.api_key).header("Content-Type", "application/json").json(&request_body).send().await.map_err(|err| BeebleGenericApiError::ReqwestError(err))?;
 
   let status = response.status();
 
-  let response_body = response.text()
-    .await
-    .map_err(|err| BeebleGenericApiError::ReqwestError(err))?;
+  let response_body = response.text().await.map_err(|err| BeebleGenericApiError::ReqwestError(err))?;
 
   info!("Beeble start generation response: status={}", status);
 
   if !status.is_success() {
-    return handle_error_response(status, &response_body, &ErrorContext {
-      maybe_callback_url: req.callback_url.as_deref(),
-    });
+    return handle_error_response(status, &response_body, &ErrorContext { maybe_callback_url: req.callback_url.as_deref() });
   }
 
-  let parsed: GenerationJobResponseBody = serde_json::from_str(&response_body)
-    .map_err(|err| BeebleGenericApiError::SerdeResponseParseError(err, response_body.clone()))?;
+  let parsed: GenerationJobResponseBody = serde_json::from_str(&response_body).map_err(|err| BeebleGenericApiError::SerdeResponseParseError(err, response_body.clone()))?;
 
   Ok(map_job_response(parsed))
 }
@@ -153,11 +140,7 @@ pub(crate) fn map_job_response(parsed: GenerationJobResponseBody) -> StartGenera
     progress: parsed.progress,
     generation_type: parsed.generation_type,
     alpha_mode: parsed.alpha_mode,
-    output: parsed.output.map(|o| GenerationOutputResult {
-      render: o.render,
-      source: o.source,
-      alpha: o.alpha,
-    }),
+    output: parsed.output.map(|o| GenerationOutputResult { render: o.render, source: o.source, alpha: o.alpha }),
     error: parsed.error,
     created_at: parsed.created_at,
   }
@@ -274,7 +257,8 @@ mod tests {
         callback_url: None,
         idempotency_key: None,
       },
-    }).await?;
+    })
+    .await?;
 
     println!("Job ID: {}", result.id);
     println!("Status: {}", result.status);
@@ -292,28 +276,26 @@ mod tests {
   }
 
   fn guess_content_type(filename: &str) -> &'static str {
-    if filename.ends_with(".mp4") { "video/mp4" }
-    else if filename.ends_with(".mov") { "video/quicktime" }
-    else if filename.ends_with(".png") { "image/png" }
-    else if filename.ends_with(".jpg") || filename.ends_with(".jpeg") { "image/jpeg" }
-    else if filename.ends_with(".webp") { "image/webp" }
-    else { "application/octet-stream" }
+    if filename.ends_with(".mp4") {
+      "video/mp4"
+    } else if filename.ends_with(".mov") {
+      "video/quicktime"
+    } else if filename.ends_with(".png") {
+      "image/png"
+    } else if filename.ends_with(".jpg") || filename.ends_with(".jpeg") {
+      "image/jpeg"
+    } else if filename.ends_with(".webp") {
+      "image/webp"
+    } else {
+      "application/octet-stream"
+    }
   }
 
-  async fn upload_asset_bytes(
-    api_key: &crate::creds::beeble_api_key::BeebleApiKey,
-    filename: &str,
-    bytes: Vec<u8>,
-  ) -> errors::AnyhowResult<crate::requests::create_upload_url::create_upload_url::CreateUploadUrlSuccess> {
-    use crate::requests::create_upload_url::create_upload_url::{
-      create_upload_url, CreateUploadUrlArgs,
-    };
+  async fn upload_asset_bytes(api_key: &crate::creds::beeble_api_key::BeebleApiKey, filename: &str, bytes: Vec<u8>) -> errors::AnyhowResult<crate::requests::create_upload_url::create_upload_url::CreateUploadUrlSuccess> {
+    use crate::requests::create_upload_url::create_upload_url::{create_upload_url, CreateUploadUrlArgs};
 
     // 1. Get presigned upload URL.
-    let upload = create_upload_url(CreateUploadUrlArgs {
-      api_key: api_key.clone(),
-      filename: filename.to_string(),
-    }).await.map_err(|e| anyhow::anyhow!("create_upload_url failed: {:?}", e))?;
+    let upload = create_upload_url(CreateUploadUrlArgs { api_key: api_key.clone(), filename: filename.to_string() }).await.map_err(|e| anyhow::anyhow!("create_upload_url failed: {:?}", e))?;
 
     println!("Upload ID: {}", upload.id);
     println!("Upload URL: {}", upload.upload_url);
@@ -324,11 +306,7 @@ mod tests {
     println!("Uploading {} bytes with Content-Type: {}", bytes.len(), content_type);
 
     let client = reqwest::Client::new();
-    let put_response = client.put(&upload.upload_url)
-      .header("Content-Type", content_type)
-      .body(bytes)
-      .send()
-      .await?;
+    let put_response = client.put(&upload.upload_url).header("Content-Type", content_type).body(bytes).send().await?;
 
     let put_status = put_response.status();
     let put_body = put_response.text().await.unwrap_or_default();
@@ -380,7 +358,9 @@ mod tests {
         callback_url: None,
         idempotency_key: None,
       },
-    }).await.map_err(|e| anyhow::anyhow!("start_generation failed: {:?}", e))?;
+    })
+    .await
+    .map_err(|e| anyhow::anyhow!("start_generation failed: {:?}", e))?;
 
     println!("Job ID: {}", result.id);
     println!("Status: {}", result.status);

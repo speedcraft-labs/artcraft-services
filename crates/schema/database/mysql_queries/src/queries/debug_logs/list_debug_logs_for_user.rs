@@ -67,9 +67,7 @@ struct RawUserDebugLogRow {
 }
 
 /// List debug logs for a user, most recent first, cursor-paginated by `id`.
-pub async fn list_debug_logs_for_user<'e, 'c: 'e, E>(
-  args: ListDebugLogsForUserArgs<'e, 'c, E>,
-) -> Result<ListDebugLogsForUserResult, sqlx::Error>
+pub async fn list_debug_logs_for_user<'e, 'c: 'e, E>(args: ListDebugLogsForUserArgs<'e, 'c, E>) -> Result<ListDebugLogsForUserResult, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -108,11 +106,12 @@ LIMIT ?
     id_cursor,
     fetch_limit,
   )
-    .fetch_all(args.mysql_executor)
-    .await?;
+  .fetch_all(args.mysql_executor)
+  .await?;
 
-  let mut debug_logs: Vec<UserDebugLogRow> = rows.into_iter().map(|row| {
-    UserDebugLogRow {
+  let mut debug_logs: Vec<UserDebugLogRow> = rows
+    .into_iter()
+    .map(|row| UserDebugLogRow {
       id: row.id,
       event_token: row.event_token,
       debug_log_type: row.debug_log_type,
@@ -125,8 +124,8 @@ LIMIT ?
       maybe_user_display_name: row.maybe_user_display_name,
       maybe_user_username: row.maybe_user_username,
       maybe_user_gravatar_hash: row.maybe_user_gravatar_hash,
-    }
-  }).collect();
+    })
+    .collect();
 
   let next_cursor = if debug_logs.len() > limit as usize {
     debug_logs.truncate(limit as usize);
@@ -135,8 +134,5 @@ LIMIT ?
     None
   };
 
-  Ok(ListDebugLogsForUserResult {
-    debug_logs,
-    next_cursor,
-  })
+  Ok(ListDebugLogsForUserResult { debug_logs, next_cursor })
 }

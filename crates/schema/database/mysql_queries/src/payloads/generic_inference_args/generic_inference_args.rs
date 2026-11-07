@@ -88,7 +88,7 @@ pub enum InferenceCategoryAbbreviated {
 
   #[serde(rename = "sv")] // NB: DO NOT CHANGE. It could break live jobs. Renamed to be fewer bytes.
   #[serde(alias = "seed_vc")]
-  SeedVc
+  SeedVc,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
@@ -107,13 +107,12 @@ pub enum FundamentalFrequencyMethodForJob {
 pub enum PolymorphicInferenceArgs {
   /// Lipsync Animation (Short name to save  space when serializing)
   /// This is SadTalker, not Wav2Lip.
-  La (LipsyncArgs),
+  La(LipsyncArgs),
 
   /// Text to speech. (Short name to save space when serializing.)
   Tts(TTSArgs),
-    // No arguments yet.
-    // It might be best to just not include this when not used.
-
+  // No arguments yet.
+  // It might be best to just not include this when not used.
   /// Voice conversion. (Short name to save space when serializing.)
   Vc {
     /// Argument for so-vits-svc
@@ -145,7 +144,6 @@ pub enum PolymorphicInferenceArgs {
   /// Image generation. (Short name to save space when serializing.)
   Ig(StableDiffusionArgs),
 
-
   /// Sora Image Generation. (Short name to save space when serializing.)
   Sg(SoraImageGenArgs),
 
@@ -176,7 +174,6 @@ pub enum PolymorphicInferenceArgs {
 }
 
 impl GenericInferenceArgs {
-
   pub fn from_json(json: &str) -> AnyhowResult<Self> {
     Ok(serde_json::from_str(json)?)
   }
@@ -236,13 +233,7 @@ mod tests {
 
   #[test]
   fn typical_tts_args_serialize() {
-    let args = GenericInferenceArgs {
-      inference_category: Some(InferenceCategoryAbbreviated::TextToSpeech),
-      args: Some(PolymorphicInferenceArgs::Tts(TTSArgs {
-        voice_token: Some("token".to_string()),
-        dataset_token: None,
-      })),
-    };
+    let args = GenericInferenceArgs { inference_category: Some(InferenceCategoryAbbreviated::TextToSpeech), args: Some(PolymorphicInferenceArgs::Tts(TTSArgs { voice_token: Some("token".to_string()), dataset_token: None })) };
 
     let json = serde_json::ser::to_string(&args).unwrap();
 
@@ -255,7 +246,6 @@ mod tests {
 
   #[test]
   fn typical_image_gen_args_serialize() {
-
     let video_media_token = MediaFileToken("video_media_token".to_string());
     let image_media_token = MediaFileToken("image_media_token".to_string());
     let sd_model_token = ModelWeightToken("sd_model_token".to_string());
@@ -300,20 +290,12 @@ mod tests {
 
   #[test]
   fn typical_voice_conversion_args_serialize() {
-    let args = GenericInferenceArgs {
-      inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion),
-      args: Some(PolymorphicInferenceArgs::Vc {
-        auto_predict_f0: Some(false),
-        override_f0_method: None,
-        transpose: None,
-      }),
-    };
+    let args = GenericInferenceArgs { inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion), args: Some(PolymorphicInferenceArgs::Vc { auto_predict_f0: Some(false), override_f0_method: None, transpose: None }) };
 
     let json = serde_json::ser::to_string(&args).unwrap();
 
     // NB: Assert the serialized form. If this changes and the test breaks, be careful about migrating.
-    assert_eq!(json,
-      r#"{"cat":"vc","args":{"Vc":{"a":false}}}"#.to_string());
+    assert_eq!(json, r#"{"cat":"vc","args":{"Vc":{"a":false}}}"#.to_string());
 
     // NB: Make sure we don't overflow the DB field capacity (TEXT column).
     assert!(json.len() < 1000);
@@ -323,18 +305,13 @@ mod tests {
   fn many_voice_conversion_args_serialize() {
     let args = GenericInferenceArgs {
       inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion),
-      args: Some(PolymorphicInferenceArgs::Vc {
-        auto_predict_f0: Some(false),
-        override_f0_method: Some(FundamentalFrequencyMethodForJob::Dio),
-        transpose: Some(-1),
-      }),
+      args: Some(PolymorphicInferenceArgs::Vc { auto_predict_f0: Some(false), override_f0_method: Some(FundamentalFrequencyMethodForJob::Dio), transpose: Some(-1) }),
     };
 
     let json = serde_json::ser::to_string(&args).unwrap();
 
     // NB: Assert the serialized form. If this changes and the test breaks, be careful about migrating.
-    assert_eq!(json,
-               r#"{"cat":"vc","args":{"Vc":{"a":false,"fm":"d","t":-1}}}"#.to_string());
+    assert_eq!(json, r#"{"cat":"vc","args":{"Vc":{"a":false,"fm":"d","t":-1}}}"#.to_string());
 
     // NB: Make sure we don't overflow the DB field capacity (TEXT column).
     assert!(json.len() < 1000);
@@ -354,8 +331,7 @@ mod tests {
     let json = serde_json::ser::to_string(&args).unwrap();
 
     // NB: Assert the serialized form. If this changes and the test breaks, be careful about migrating.
-    assert_eq!(json,
-               r#"{"cat":"vc","args":{"Vc":{}}}"#.to_string());
+    assert_eq!(json, r#"{"cat":"vc","args":{"Vc":{}}}"#.to_string());
 
     // NB: Make sure we don't overflow the DB field capacity (TEXT column).
     assert!(json.len() < 1000);
@@ -363,26 +339,18 @@ mod tests {
 
   #[test]
   fn serialize_nullable_form() {
-    let mut args : Option<GenericInferenceArgs> = None;
+    let mut args: Option<GenericInferenceArgs> = None;
     let json = serde_json::ser::to_string(&args).unwrap();
 
     // NB: Assert the serialized form. If this changes and the test breaks, be careful about migrating.
     assert_eq!(json, "null");
 
-    args = Some(GenericInferenceArgs {
-      inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion),
-      args: Some(PolymorphicInferenceArgs::Vc {
-        auto_predict_f0: Some(true),
-        override_f0_method: None,
-        transpose: None,
-      }),
-    });
+    args = Some(GenericInferenceArgs { inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion), args: Some(PolymorphicInferenceArgs::Vc { auto_predict_f0: Some(true), override_f0_method: None, transpose: None }) });
 
     let json = serde_json::ser::to_string(&args).unwrap();
 
     // NB: Assert the serialized form. If this changes and the test breaks, be careful about migrating.
-    assert_eq!(json,
-               r#"{"cat":"vc","args":{"Vc":{"a":true}}}"#.to_string());
+    assert_eq!(json, r#"{"cat":"vc","args":{"Vc":{"a":true}}}"#.to_string());
 
     // NB: Make sure we don't overflow the DB field capacity (TEXT column).
     assert!(json.len() < 1000);
@@ -390,20 +358,13 @@ mod tests {
 
   #[test]
   fn rmvpe() {
-    let args = GenericInferenceArgs {
-      inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion),
-      args: Some(PolymorphicInferenceArgs::Vc {
-        auto_predict_f0: None,
-        override_f0_method: Some(FundamentalFrequencyMethodForJob::Rmvpe),
-        transpose: None,
-      }),
-    };
+    let args =
+      GenericInferenceArgs { inference_category: Some(InferenceCategoryAbbreviated::VoiceConversion), args: Some(PolymorphicInferenceArgs::Vc { auto_predict_f0: None, override_f0_method: Some(FundamentalFrequencyMethodForJob::Rmvpe), transpose: None }) };
 
     let json = serde_json::ser::to_string(&args).unwrap();
 
     // NB: Assert the serialized form. If this changes and the test breaks, be careful about migrating.
-    assert_eq!(json,
-               r#"{"cat":"vc","args":{"Vc":{"fm":"r"}}}"#.to_string());
+    assert_eq!(json, r#"{"cat":"vc","args":{"Vc":{"fm":"r"}}}"#.to_string());
 
     // NB: Make sure we don't overflow the DB field capacity (TEXT column).
     assert!(json.len() < 1000);

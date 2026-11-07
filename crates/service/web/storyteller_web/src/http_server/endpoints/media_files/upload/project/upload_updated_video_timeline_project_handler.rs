@@ -42,16 +42,7 @@ pub async fn upload_updated_video_timeline_project_handler(
   path: Path<UploadUpdatedVideoTimelineProjectPathInfo>,
   MultipartForm(form): MultipartForm<UpdateProjectMultipartForm>,
 ) -> Result<Json<UploadUpdatedVideoTimelineProjectSuccessResponse>, CommonWebError> {
-  update_project(UpdateProjectArgs {
-    http_request: &http_request,
-    server_state: &server_state,
-    config: &VIDEO_TIMELINE_PROJECT_CONFIG,
-    media_file_token: &path.token,
-    form,
-  }).await?;
+  update_project(UpdateProjectArgs { http_request: &http_request, server_state: &server_state, config: &VIDEO_TIMELINE_PROJECT_CONFIG, media_file_token: &path.token, form }).await?;
 
-  Ok(Json(UploadUpdatedVideoTimelineProjectSuccessResponse {
-    success: true,
-    media_file_token: path.into_inner().token,
-  }))
+  Ok(Json(UploadUpdatedVideoTimelineProjectSuccessResponse { success: true, media_file_token: path.into_inner().token }))
 }

@@ -53,12 +53,9 @@ pub async fn poll_craft_app_releases(cache: CraftAppsReleaseCache, config: Craft
     Err(err) => {
       error!("Craft app release polling can't start: no HTTP client: {:?}", err);
       return;
-    }
+    },
   };
-  info!(
-    "Polling GitHub for {} craft app releases, each at most every {:?} (GitHub token: {}; coordinated through Redis: {}).",
-    config.apps.len(), config.interval, config.github_token.is_some(), config.coordination_enabled,
-  );
+  info!("Polling GitHub for {} craft app releases, each at most every {:?} (GitHub token: {}; coordinated through Redis: {}).", config.apps.len(), config.interval, config.github_token.is_some(), config.coordination_enabled,);
   let store = config.coordination_enabled.then(|| SharedStore::new(redis_pool, hostname));
   let mut poller = Poller::new(client, cache, config, store);
   // Warm memory from the fleet's shared copy right away: it costs no GitHub quota, and the
@@ -114,13 +111,7 @@ impl Poller {
     if self.backoff.is_active(now) {
       return report;
     }
-    let due: Vec<(String, String)> = self
-        .config
-        .apps
-        .iter()
-        .filter(|(key, _, _)| self.cache.app(key).is_some_and(|app| is_due(&app, now, self.config.interval)))
-        .map(|(key, _, repo)| (key.clone(), repo.clone()))
-        .collect();
+    let due: Vec<(String, String)> = self.config.apps.iter().filter(|(key, _, _)| self.cache.app(key).is_some_and(|app| is_due(&app, now, self.config.interval))).map(|(key, _, repo)| (key.clone(), repo.clone())).collect();
     if due.is_empty() {
       return report;
     }
@@ -133,7 +124,10 @@ impl Poller {
     self.update_backoff(&report.round, mode).await;
     info!(
       "Craft app releases ({:?}): {} fetched, {} unchanged, {} failed{}{}.",
-      mode, report.round.fetched, report.round.unchanged, report.round.failed,
+      mode,
+      report.round.fetched,
+      report.round.unchanged,
+      report.round.failed,
       if report.round.rate_limited.is_some() { ", rate limited" } else { "" },
       self.backoff.until.map(|until| format!("; backing off until {until}")).unwrap_or_default(),
     );
@@ -157,11 +151,11 @@ impl Poller {
         }
         self.backoff = backoff;
         true
-      }
+      },
       Err(err) => {
         self.redis_log.failed(&err, Instant::now());
         false
-      }
+      },
     }
   }
 
@@ -172,13 +166,13 @@ impl Poller {
     for (key, repo) in due {
       if let Some(store) = self.coordinated_store(mode) {
         match self.check_shared(&store, key).await {
-          Ok(SharedCheck::Ask) => {}
+          Ok(SharedCheck::Ask) => {},
           Ok(SharedCheck::Skip) => continue,
           Ok(SharedCheck::StopRound) => break,
           Err(err) => {
             self.redis_log.failed(&err, Instant::now());
             mode = PollMode::Standalone;
-          }
+          },
         }
       }
       if round.requests() > 0 {
@@ -195,7 +189,7 @@ impl Poller {
             mode = self.after_shared_write(shared, mode);
           }
           self.cache.store(key, release, etag, now);
-        }
+        },
         FetchOutcome::NotModified => {
           round.unchanged += 1;
           self.cache.confirm_unchanged(key, now);
@@ -203,13 +197,13 @@ impl Poller {
             let shared = store.write_unchanged(key, etag, now).await;
             mode = self.after_shared_write(shared, mode);
           }
-        }
+        },
         FetchOutcome::RateLimited { retry_at } => {
           warn!("GitHub rate limit reached polling {repo}; retry after {:?}.", retry_at);
           round.rate_limited = Some(retry_at);
           // The rest of the round would be refused too.
           break;
-        }
+        },
         FetchOutcome::Failed(why) => {
           warn!("Couldn't fetch the latest release of {repo}: {why}");
           round.failed += 1;
@@ -219,7 +213,7 @@ impl Poller {
             let shared = store.write_failure(key, failure).await;
             mode = self.after_shared_write(shared, mode);
           }
-        }
+        },
       }
     }
     (round, mode)
@@ -264,7 +258,7 @@ impl Poller {
       Err(err) => {
         self.redis_log.failed(&err, Instant::now());
         PollMode::Standalone
-      }
+      },
     }
   }
 
@@ -320,13 +314,7 @@ mod tests {
     assert!(info.last_fetched.is_some());
     let photocraft = info.apps["photocraft"].latest_release.as_ref().unwrap();
     assert!(photocraft.assets.iter().any(|a| a.platform.is_some() && a.sha256.is_some()));
-    let response = GetCraftAppsReleaseInfoResponse {
-      success: true,
-      release_info: info,
-      app_renames: Vec::new(),
-      repo_renames: Vec::new(),
-      important_notices: CraftAppsImportantNotices::default(),
-    };
+    let response = GetCraftAppsReleaseInfoResponse { success: true, release_info: info, app_renames: Vec::new(), repo_renames: Vec::new(), important_notices: CraftAppsImportantNotices::default() };
     let json = serde_json::to_string_pretty(&response).unwrap();
     if let Ok(path) = std::env::var("CRAFT_APPS_SAMPLE_OUT") {
       std::fs::write(path, &json).unwrap();
@@ -438,14 +426,7 @@ mod tests {
   }
 
   fn config() -> CraftAppsPollConfig {
-    CraftAppsPollConfig {
-      enabled: true,
-      coordination_enabled: true,
-      interval: Duration::from_secs(1800),
-      max_backoff: Duration::from_secs(14_400),
-      github_token: None,
-      apps: default_apps(),
-    }
+    CraftAppsPollConfig { enabled: true, coordination_enabled: true, interval: Duration::from_secs(1800), max_backoff: Duration::from_secs(14_400), github_token: None, apps: default_apps() }
   }
 
   fn registered_cache() -> CraftAppsReleaseCache {

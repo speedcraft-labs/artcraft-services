@@ -36,14 +36,7 @@ impl KinoviWan3p0DraftState {
     Ok(self.with_resolved_media(start, end, images, videos, audio))
   }
 
-  pub(crate) fn with_resolved_media(
-    &self,
-    maybe_start: Option<String>,
-    maybe_end: Option<String>,
-    maybe_images: Option<Vec<String>>,
-    maybe_videos: Option<Vec<String>>,
-    maybe_audio: Option<Vec<String>>,
-  ) -> KinoviWan3p0RequestState {
+  pub(crate) fn with_resolved_media(&self, maybe_start: Option<String>, maybe_end: Option<String>, maybe_images: Option<Vec<String>>, maybe_videos: Option<Vec<String>>, maybe_audio: Option<Vec<String>>) -> KinoviWan3p0RequestState {
     let builder = &self.builder;
     let aspect = match builder.aspect_ratio.unwrap() {
       RouterAspectRatio::WideSixteenByNine => KinoviWan3p0AspectRatio::Landscape16x9,

@@ -23,17 +23,13 @@ pub struct UserBookmark {
   pub maybe_deleted_at: Option<DateTime<Utc>>,
 }
 
-pub async fn get_user_bookmark<'e, 'c, E>(
-    user_bookmark_token: &'e UserBookmarkToken,
-    mysql_executor: E
-)
-    -> AnyhowResult<Option<UserBookmark>>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn get_user_bookmark<'e, 'c, E>(user_bookmark_token: &'e UserBookmarkToken, mysql_executor: E) -> AnyhowResult<Option<UserBookmark>>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
-
   let maybe_results = sqlx::query_as!(
-      RawUserBookmark,
-        r#"
+    RawUserBookmark,
+    r#"
 SELECT
     f.token as `token: tokens::tokens::user_bookmarks::UserBookmarkToken`,
 
@@ -56,10 +52,10 @@ JOIN users AS u
 WHERE
     f.token = ?
         "#,
-      user_bookmark_token
-    )
-      .fetch_one(mysql_executor)
-      .await;
+    user_bookmark_token
+  )
+  .fetch_one(mysql_executor)
+  .await;
 
   match maybe_results {
     Ok(user_bookmark) => Ok(Some(UserBookmark {
@@ -77,7 +73,7 @@ WHERE
     Err(err) => match err {
       sqlx::Error::RowNotFound => Ok(None),
       _ => Err(anyhow!("Error querying for IP ban: {:?}", err)),
-    }
+    },
   }
 }
 

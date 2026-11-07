@@ -40,17 +40,11 @@ use tokens::tokens::users::UserToken;
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 use crate::http_server::endpoints::generate::common::generation_debug_logs::GenerationDebugLogContext;
-use crate::http_server::endpoints::generate::common::probed_reference_videos::{
-  download_and_probe_reference_videos, fetch_reference_video_sources, ProbedReferenceVideos,
-};
-use crate::http_server::endpoints::omni_gen::generate::video::first_party_minimax_h3::enqueue_first_party_minimax_h3_job::{
-  enqueue_first_party_minimax_h3_job, first_party_minimax_h3_model, EnqueueFirstPartyMinimaxH3JobArgs,
-};
+use crate::http_server::endpoints::generate::common::probed_reference_videos::{download_and_probe_reference_videos, fetch_reference_video_sources, ProbedReferenceVideos};
+use crate::http_server::endpoints::omni_gen::generate::video::first_party_minimax_h3::enqueue_first_party_minimax_h3_job::{enqueue_first_party_minimax_h3_job, first_party_minimax_h3_model, EnqueueFirstPartyMinimaxH3JobArgs};
 use crate::http_server::endpoints::omni_gen::generate::video::helpers::hydrate_router_request::hydrate_to_router_request;
 use crate::http_server::endpoints::omni_gen::generate::video::helpers::resolve_kinovi_character_ids::resolve_kinovi_character_ids;
-use crate::http_server::endpoints::omni_gen::generate::video::helpers::write_prompt_records::{
-  write_prompt_records, WritePromptRecordsArgs,
-};
+use crate::http_server::endpoints::omni_gen::generate::video::helpers::write_prompt_records::{write_prompt_records, WritePromptRecordsArgs};
 use crate::http_server::endpoints::omni_gen::generate::video::insert_db_job::insert_fal_job::{insert_fal_job, InsertFalJobArgs};
 use crate::http_server::endpoints::omni_gen::generate::video::insert_db_job::insert_gmicloud_job::{insert_gmicloud_job, InsertGmiCloudJobArgs};
 use crate::http_server::endpoints::omni_gen::generate::video::insert_db_job::insert_grok_api_job::{insert_grok_api_job, InsertGrokApiJobArgs};
@@ -87,32 +81,22 @@ pub async fn run_authenticated_video_generation(
 ) -> Result<Json<OmniGenVideoGenerateResponse>, CommonWebError> {
   let debug_log_event_token = DebugLogEventToken::generate();
 
-  let maybe_prompt_model_type: Option<CommonModelType> = request.model
-    .as_ref()
-    .map(|m| m.to_common_model_type());
+  let maybe_prompt_model_type: Option<CommonModelType> = request.model.as_ref().map(|m| m.to_common_model_type());
 
-  let VideoGenerationAuth {
-    user_token,
-    maybe_avt_token,
-    maybe_platform_type,
-  } = auth;
+  let VideoGenerationAuth { user_token, maybe_avt_token, maybe_platform_type } = auth;
 
   // ==================== IDEMPOTENCY ==================== //
 
-  let idempotency_token = request.idempotency_token.as_deref()
-    .unwrap_or("")
-    .to_string();
+  let idempotency_token = request.idempotency_token.as_deref().unwrap_or("").to_string();
 
   if let Err(reason) = validate_idempotency_token_format(&idempotency_token) {
     return Err(CommonWebError::BadInputWithSimpleMessage(reason));
   }
 
-  insert_idempotency_token(&idempotency_token, &mut *mysql_connection)
-    .await
-    .map_err(|err| {
-      error!("Error inserting idempotency token: {:?}", err);
-      CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
-    })?;
+  insert_idempotency_token(&idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
+  })?;
 
   // ==================== RESOLVE MEDIA TOKENS ==================== //
 
@@ -138,30 +122,18 @@ pub async fn run_authenticated_video_generation(
     None
   } else {
     info!("Resolving {} media file tokens to CDN URLs", all_tokens.len());
-    let resolved = lookup_media_files_as_cdn_url_list_and_map(
-      &http_request,
-      &mut mysql_connection,
-      server_state.server_environment,
-server_state.maybe_media_cdn_override_url.as_deref(),
-      &all_tokens,
-    ).await?;
+    let resolved = lookup_media_files_as_cdn_url_list_and_map(&http_request, &mut mysql_connection, server_state.server_environment, server_state.maybe_media_cdn_override_url.as_deref(), &all_tokens).await?;
     Some(resolved.token_to_url_map)
   };
 
   // ==================== RESOLVE CHARACTERS ==================== //
 
-  let kinovi_character_id_map: Option<HashMap<CharacterToken, String>> =
-    resolve_kinovi_character_ids(
-      request.reference_character_tokens.as_deref(),
-      &mut mysql_connection,
-    ).await?;
+  let kinovi_character_id_map: Option<HashMap<CharacterToken, String>> = resolve_kinovi_character_ids(request.reference_character_tokens.as_deref(), &mut mysql_connection).await?;
 
   let is_wan = matches!(request.model, Some(CommonVideoModel::Wan3p0 | CommonVideoModel::Wan3p0Prime));
   let mut router_builder = hydrate_to_router_request(request)?;
   if is_wan {
-    router_builder = normalize_wan_3p0_builder(router_builder).map_err(|error| {
-      CommonWebError::BadInputWithSimpleMessage(error.to_string())
-    })?;
+    router_builder = normalize_wan_3p0_builder(router_builder).map_err(|error| CommonWebError::BadInputWithSimpleMessage(error.to_string()))?;
   }
 
   // ==================== REFERENCE VIDEO INPUT SECONDS ==================== //
@@ -175,13 +147,7 @@ server_state.maybe_media_cdn_override_url.as_deref(),
 
   if is_wan || matches!(request.model, Some(CommonVideoModel::Seedance2p5 | CommonVideoModel::Seedance2p5Ultra)) {
     if let Some(video_tokens) = request.reference_video_media_tokens.as_deref().filter(|tokens| !tokens.is_empty()) {
-      let video_sources = fetch_reference_video_sources(
-        video_tokens,
-        &http_request,
-        server_state.server_environment,
-        server_state.maybe_media_cdn_override_url.as_deref(),
-        &mut mysql_connection,
-      ).await?;
+      let video_sources = fetch_reference_video_sources(video_tokens, &http_request, server_state.server_environment, server_state.maybe_media_cdn_override_url.as_deref(), &mut mysql_connection).await?;
 
       // Downloads + ffprobe are slow — release the pool slot across them,
       // then re-acquire for billing. Seedance uses a billing fallback for
@@ -189,11 +155,7 @@ server_state.maybe_media_cdn_override_url.as_deref(),
       drop(mysql_connection);
       let probed = download_and_probe_reference_videos(&video_sources).await;
       if is_wan {
-        router_builder.total_reference_video_input_seconds = Some(
-          validate_wan_3p0_reference_duration(
-            router_builder.duration_seconds.unwrap_or(5), &probed.durations_millis,
-          )?,
-        );
+        router_builder.total_reference_video_input_seconds = Some(validate_wan_3p0_reference_duration(router_builder.duration_seconds.unwrap_or(5), &probed.durations_millis)?);
       }
       mysql_connection = server_state.mysql_pool.acquire().await?;
 
@@ -204,8 +166,7 @@ server_state.maybe_media_cdn_override_url.as_deref(),
   // ==================== HYDRATE ROUTER REQUEST ==================== //
 
   if !is_wan {
-    router_builder.total_reference_video_input_seconds =
-      maybe_probed_reference_videos.as_ref().map(|probed| probed.total_input_seconds);
+    router_builder.total_reference_video_input_seconds = maybe_probed_reference_videos.as_ref().map(|probed| probed.total_input_seconds);
   }
 
   // ==================== PIPELINE DISPATCH ==================== //
@@ -243,7 +204,9 @@ server_state.maybe_media_cdn_override_url.as_deref(),
     message: &serde_json::to_string(&*request).unwrap_or_default(),
     mysql_executor: &mut *mysql_connection,
     phantom: Default::default(),
-  }).await {
+  })
+  .await
+  {
     warn!("Failed to insert HTTP request debug log: {:?}", err);
   }
 
@@ -264,7 +227,8 @@ server_state.maybe_media_cdn_override_url.as_deref(),
       ip_address: &ip_address,
       debug_log_event_token: &debug_log_event_token,
       mysql_connection,
-    }).await;
+    })
+    .await;
   }
 
   // NB: The pipeline takes over the connection for its remaining pre-request DB writes (billing,
@@ -272,12 +236,7 @@ server_state.maybe_media_cdn_override_url.as_deref(),
   // call — holding a pool slot across that call is what starves the pool and causes PoolTimedOut
   // on unrelated endpoints. We re-acquire below to write the result.
 
-  let debug_log_context = GenerationDebugLogContext {
-    event_token: &debug_log_event_token,
-    user_token,
-    ip_address: &ip_address,
-    request_url: &request_url,
-  };
+  let debug_log_context = GenerationDebugLogContext { event_token: &debug_log_event_token, user_token, ip_address: &ip_address, request_url: &request_url };
 
   let pipeline_result = run_pipeline_v2(RunPipelineV2Args {
     router_builder: &router_builder,
@@ -289,7 +248,8 @@ server_state.maybe_media_cdn_override_url.as_deref(),
     debug_log_context: &debug_log_context,
     predownloaded_media_paths: maybe_probed_reference_videos.as_ref().map(|probed| probed.local_paths_by_url()),
     mysql_connection,
-  }).await;
+  })
+  .await;
 
   // ==================== DEBUG LOG: PIPELINE ERROR ==================== //
 
@@ -308,12 +268,14 @@ server_state.maybe_media_cdn_override_url.as_deref(),
           message: &format!("Video generation pipeline failed: {:?}", err),
           mysql_executor: &mut *error_log_connection,
           phantom: Default::default(),
-        }).await {
+        })
+        .await
+        {
           warn!("Failed to insert pipeline error debug log: {:?}", log_err);
         }
       }
       return Err(err);
-    }
+    },
   };
 
   let mut mysql_connection = server_state.mysql_pool.acquire().await?;
@@ -330,13 +292,7 @@ server_state.maybe_media_cdn_override_url.as_deref(),
 
   // -- Prompt + context items --
 
-  let prompt_token = write_prompt_records(WritePromptRecordsArgs {
-    request: &request,
-    user_token,
-    maybe_prompt_model_type,
-    ip_address: &ip_address,
-    transaction: &mut transaction,
-  }).await;
+  let prompt_token = write_prompt_records(WritePromptRecordsArgs { request: &request, user_token, maybe_prompt_model_type, ip_address: &ip_address, transaction: &mut transaction }).await;
 
   // -- Inference job --
 
@@ -368,9 +324,10 @@ server_state.maybe_media_cdn_override_url.as_deref(),
           ip_address: &ip_address,
           transaction: &mut transaction,
         },
-      }).await?;
+      })
+      .await?;
       (result.primary_job_token, result.all_job_tokens)
-    }
+    },
     GenerateVideoResponse::Fal(payload) => {
       let external_id = payload.request_id.as_deref().ok_or_else(|| {
         error!("Fal generation response missing request_id");
@@ -392,19 +349,12 @@ server_state.maybe_media_cdn_override_url.as_deref(),
           ip_address: &ip_address,
           transaction: &mut transaction,
         },
-      }).await?;
+      })
+      .await?;
 
-      (
-        token.clone(), 
-        vec![token],
-      )
-    }
-    GenerateVideoResponse::Artcraft(payload) => {
-      (
-        payload.inference_job_token.clone(),
-        vec![payload.inference_job_token.clone()],
-      )
-    }
+      (token.clone(), vec![token])
+    },
+    GenerateVideoResponse::Artcraft(payload) => (payload.inference_job_token.clone(), vec![payload.inference_job_token.clone()]),
     GenerateVideoResponse::GmiCloud(payload) => {
       info!("Inserting GmiCloud job with token: {:?}", pipeline_result.billing.apriori_job_token);
       let token = insert_gmicloud_job(InsertGmiCloudJobArgs {
@@ -422,13 +372,11 @@ server_state.maybe_media_cdn_override_url.as_deref(),
           ip_address: &ip_address,
           transaction: &mut transaction,
         },
-      }).await?;
+      })
+      .await?;
 
-      (
-        token.clone(),
-        vec![token],
-      )
-    }
+      (token.clone(), vec![token])
+    },
     GenerateVideoResponse::Grok(payload) => {
       info!("Inserting Grok (xAI) API job with token: {:?}", pipeline_result.billing.apriori_job_token);
       let token = insert_grok_api_job(InsertGrokApiJobArgs {
@@ -446,17 +394,15 @@ server_state.maybe_media_cdn_override_url.as_deref(),
           ip_address: &ip_address,
           transaction: &mut transaction,
         },
-      }).await?;
+      })
+      .await?;
 
-      (
-        token.clone(),
-        vec![token],
-      )
-    }
+      (token.clone(), vec![token])
+    },
     other => {
       error!("Unexpected generation response variant: {:?}", other);
       return Err(CommonWebError::server_error_with_message("Unexpected generation response"));
-    }
+    },
   };
 
   transaction.commit().await.map_err(|err| {
@@ -464,9 +410,5 @@ server_state.maybe_media_cdn_override_url.as_deref(),
     CommonWebError::from_error(err)
   })?;
 
-  Ok(Json(OmniGenVideoGenerateResponse {
-    success: true,
-    inference_job_token: primary_job_token,
-    all_job_tokens,
-  }))
+  Ok(Json(OmniGenVideoGenerateResponse { success: true, inference_job_token: primary_job_token, all_job_tokens }))
 }

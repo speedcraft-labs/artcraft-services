@@ -51,20 +51,11 @@ async fn user_media_endpoint_versions_preserve_legacy_contract() {
   let db = IsolatedTestDatabase::create().await;
   let owner = create_test_user(&db.pool).await.unwrap();
   for _ in 0..26 {
-    create_test_video_media_file(&db.pool, &owner.user_token, Some(1234))
-      .await
-      .unwrap();
+    create_test_video_media_file(&db.pool, &owner.user_token, Some(1234)).await.unwrap();
   }
   let state = build_test_server_state(db.pool.clone(), "http://127.0.0.1:1".to_string());
-  let cookie = state
-    .session_cookie_manager
-    .create_cookie(&owner.session_token, &owner.user_token)
-    .unwrap()
-    .into_owned();
-  let app = test::init_service(add_media_file_routes(
-    App::new().app_data(web::Data::new(Arc::new(state))),
-  ))
-  .await;
+  let cookie = state.session_cookie_manager.create_cookie(&owner.session_token, &owner.user_token).unwrap().into_owned();
+  let app = test::init_service(add_media_file_routes(App::new().app_data(web::Data::new(Arc::new(state))))).await;
   let v1 = format!("/v1/media_files/list/user/{}", owner.username);
   let v2 = format!("/v1/media_files/list_v2/user/{}", owner.username);
   let session = Some(cookie.value());
@@ -72,10 +63,7 @@ async fn user_media_endpoint_versions_preserve_legacy_contract() {
   // Default upload exclusion, page size, and original JSON shape stay intact.
   let (status, excluded) = get(&app, &v1, session).await;
   assert_eq!(status, StatusCode::OK);
-  assert_eq!(
-    excluded,
-    json!({"success": true, "results": [], "pagination": {"current": 0, "total_page_count": 1}})
-  );
+  assert_eq!(excluded, json!({"success": true, "results": [], "pagination": {"current": 0, "total_page_count": 1}}));
   let (status, legacy) = get(&app, &format!("{v1}?include_user_uploads=true"), session).await;
   assert_eq!(status, StatusCode::OK);
   assert_eq!(legacy.as_object().unwrap().len(), 3);
@@ -96,12 +84,7 @@ async fn user_media_endpoint_versions_preserve_legacy_contract() {
   assert_eq!(last["results"].as_array().unwrap().len(), 1);
   assert_eq!(last["pagination"], json!({"current": 1, "total_page_count": 2}));
   // The rejected count-mode option has no effect on the v1 contract.
-  let (_, ignored_option) = get(
-    &app,
-    &format!("{v1}?include_user_uploads=true&include_total_count=false"),
-    session,
-  )
-  .await;
+  let (_, ignored_option) = get(&app, &format!("{v1}?include_user_uploads=true&include_total_count=false"), session).await;
   assert_eq!(ignored_option, legacy);
 
   let (status, first_v2) = get(&app, &format!("{v2}?include_user_uploads=true"), session).await;
@@ -124,34 +107,18 @@ async fn user_media_endpoint_versions_preserve_legacy_contract() {
   assert_eq!(empty_v2["pagination"], json!({"current": 2, "has_more": false}));
 
   for operation in ["list", "list_v2"] {
-    let path = format!(
-      "/v1/media_files/{operation}/user/{}?include_user_uploads=true",
-      owner.username
-    );
+    let path = format!("/v1/media_files/{operation}/user/{}?include_user_uploads=true", owner.username);
     let (status, anonymous) = get(&app, &path, None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(
-      anonymous["results"],
-      json!([]),
-      "private fixtures must require their owner session"
-    );
-    let (status, missing) = get(
-      &app,
-      &format!("/v1/media_files/{operation}/user/missing_fixture?include_user_uploads=true"),
-      session,
-    )
-    .await;
+    assert_eq!(anonymous["results"], json!([]), "private fixtures must require their owner session");
+    let (status, missing) = get(&app, &format!("/v1/media_files/{operation}/user/missing_fixture?include_user_uploads=true"), session).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(missing["results"], json!([]));
     let (status, filtered) = get(&app, &format!("{path}&filter_media_classes=image"), session).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(filtered["results"], json!([]));
   }
-  for query in [
-    "page_size=0".to_string(),
-    "page_size=101".to_string(),
-    format!("page_size=60&page_index={}", usize::MAX),
-  ] {
+  for query in ["page_size=0".to_string(), "page_size=101".to_string(), format!("page_size=60&page_index={}", usize::MAX)] {
     let (status, _) = get(&app, &format!("{v2}?{query}"), session).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
   }

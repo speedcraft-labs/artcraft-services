@@ -29,7 +29,7 @@ VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW() + INTERVAL 20 MINUTE)
     args.ip_address,
     args.status.to_str()
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
   Ok(())
 }

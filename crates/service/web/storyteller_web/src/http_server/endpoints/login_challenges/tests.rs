@@ -145,7 +145,12 @@ async fn decline_expiry_and_invalid_consent_never_mint_sessions() {
     assert_eq!(test::call_service(&app, request.to_request()).await.status(), StatusCode::FORBIDDEN);
   }
   let mcp = create_test_mcp_session(&h.db.pool, &h.user.user_token).await.unwrap();
-  let request = test::TestRequest::post().uri("/v1/login_challenges/decide").insert_header(("Origin", ORIGIN)).insert_header(("Authorization", format!("Bearer {}", mcp.private_session_token.as_str()))).set_json(json!({"approval_token": approval, "approve": true})).to_request();
+  let request = test::TestRequest::post()
+    .uri("/v1/login_challenges/decide")
+    .insert_header(("Origin", ORIGIN))
+    .insert_header(("Authorization", format!("Bearer {}", mcp.private_session_token.as_str())))
+    .set_json(json!({"approval_token": approval, "approve": true}))
+    .to_request();
   assert_eq!(test::call_service(&app, request).await.status(), StatusCode::UNAUTHORIZED);
   let declined: LoginChallengeResponse = test::read_body_json(post(&app, &h, "decide", json!({"approval_token": approval, "approve": false}), true).await).await;
   assert_eq!(declined.maybe_failure_type, Some(LoginChallengeFailure::UserDeclined));
@@ -218,10 +223,7 @@ async fn expiry_is_checked_after_waiting_for_the_redemption_lock() {
   let hash = security::secret_hash(&created.device_token).unwrap();
   fixtures::set_challenge_deadline(&h.db.pool, &hash, 1).await;
   let mut lock = h.db.pool.begin().await.unwrap();
-  lock_by_device(LockByDeviceArgs {
-    device_hash: &hash,
-    mysql_executor: &mut *lock,
-  }).await.unwrap().unwrap();
+  lock_by_device(LockByDeviceArgs { device_hash: &hash, mysql_executor: &mut *lock }).await.unwrap().unwrap();
   let (response, _) = tokio::join!(post(&app, &h, "poll", json!({"device_token": created.device_token}), false), async {
     tokio::time::sleep(Duration::from_millis(1500)).await;
     lock.commit().await.unwrap();
@@ -258,17 +260,13 @@ async fn competing_decisions_are_immutable_and_abandoned_requests_expire() {
     }
     let hash = security::secret_hash(&created.device_token).unwrap();
     fixtures::set_challenge_deadline(&h.db.pool, &hash, -1).await;
-    assert_eq!(expire_abandoned_challenges(ExpireAbandonedChallengesArgs {
-      mysql_executor: &h.db.pool,
-    }).await.unwrap(), 1);
+    assert_eq!(expire_abandoned_challenges(ExpireAbandonedChallengesArgs { mysql_executor: &h.db.pool }).await.unwrap(), 1);
     let audit = fixtures::audit(&h.db.pool, &hash).await;
     assert_eq!(audit.failure, Some(UserLoginChallengeFailureType::Expired));
     assert!(audit.failure_ip.is_none());
     assert!(audit.session_id.is_none());
   }
-  assert_eq!(expire_abandoned_challenges(ExpireAbandonedChallengesArgs {
-    mysql_executor: &h.db.pool,
-  }).await.unwrap(), 0);
+  assert_eq!(expire_abandoned_challenges(ExpireAbandonedChallengesArgs { mysql_executor: &h.db.pool }).await.unwrap(), 0);
   h.db.destroy().await;
 }
 

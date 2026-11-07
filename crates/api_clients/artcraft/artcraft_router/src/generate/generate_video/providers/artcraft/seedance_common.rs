@@ -3,9 +3,7 @@
 //! ArtCraft credits equal USD cents (100 credits = $1.00).
 
 use enums::common::generation::common_resolution::CommonResolution;
-use kinovi_web_client::generate::video::generate_seedance_2p5::{
-  MAX_BILLED_INPUT_SECONDS, MIN_BILLED_INPUT_SECONDS,
-};
+use kinovi_web_client::generate::video::generate_seedance_2p5::{MAX_BILLED_INPUT_SECONDS, MIN_BILLED_INPUT_SECONDS};
 
 // 4K is priced uniformly across the non-Fast Seedance 2.0 models. Rates are held
 // in hundredths of a USD cent per second so the math is exact integer arithmetic
@@ -18,12 +16,8 @@ const FOUR_K_CENTI_CENTS_PER_SECOND: u64 = 9250;
 /// videos attached. Each model prices reference videos through its own
 /// with-reference rate card. The cost scales with duration and batch count,
 /// rounded up to whole cents.
-pub fn seedance_2p0_four_k_usd_cents(
-  duration_seconds: u16,
-  batch_count: u16,
-) -> u64 {
-  let total_centi_cents =
-    FOUR_K_CENTI_CENTS_PER_SECOND * duration_seconds as u64 * batch_count as u64;
+pub fn seedance_2p0_four_k_usd_cents(duration_seconds: u16, batch_count: u16) -> u64 {
+  let total_centi_cents = FOUR_K_CENTI_CENTS_PER_SECOND * duration_seconds as u64 * batch_count as u64;
 
   // Round up to whole cents.
   total_centi_cents.div_ceil(100)
@@ -62,22 +56,8 @@ const BYTEPLUS_MINI_VIDEO_REFERENCE_SURCHARGE_CENTS_PER_SECOND_720P: f64 = 1.85;
 /// Only 480p and 720p are offered; any other resolution prices at 720p. A
 /// reference video adds the per-second surcharge. The fractional total is
 /// rounded UP to a whole cent.
-pub fn seedance_2p0_mini_usd_cents(
-  resolution: CommonResolution,
-  duration_seconds: u16,
-  batch_count: u16,
-  has_video_reference: bool,
-) -> u64 {
-  mini_usd_cents(
-    resolution,
-    duration_seconds,
-    batch_count,
-    has_video_reference,
-    MINI_CENTS_PER_SECOND_480P,
-    MINI_VIDEO_REFERENCE_SURCHARGE_CENTS_PER_SECOND_480P,
-    MINI_CENTS_PER_SECOND_720P,
-    MINI_VIDEO_REFERENCE_SURCHARGE_CENTS_PER_SECOND_720P,
-  )
+pub fn seedance_2p0_mini_usd_cents(resolution: CommonResolution, duration_seconds: u16, batch_count: u16, has_video_reference: bool) -> u64 {
+  mini_usd_cents(resolution, duration_seconds, batch_count, has_video_reference, MINI_CENTS_PER_SECOND_480P, MINI_VIDEO_REFERENCE_SURCHARGE_CENTS_PER_SECOND_480P, MINI_CENTS_PER_SECOND_720P, MINI_VIDEO_REFERENCE_SURCHARGE_CENTS_PER_SECOND_720P)
 }
 
 /// ArtCraft's price (USD cents) for the Seedance 2.0 BytePlus Mini and
@@ -86,12 +66,7 @@ pub fn seedance_2p0_mini_usd_cents(
 /// Only 480p and 720p are offered; any other resolution prices at 720p. A
 /// reference video adds the per-second surcharge. The fractional total is
 /// rounded UP to a whole cent.
-pub fn seedance_2p0_byteplus_mini_usd_cents(
-  resolution: CommonResolution,
-  duration_seconds: u16,
-  batch_count: u16,
-  has_video_reference: bool,
-) -> u64 {
+pub fn seedance_2p0_byteplus_mini_usd_cents(resolution: CommonResolution, duration_seconds: u16, batch_count: u16, has_video_reference: bool) -> u64 {
   mini_usd_cents(
     resolution,
     duration_seconds,
@@ -120,10 +95,7 @@ const SEEDANCE_2P5_PREVIEW_CENTS_PER_SECOND_720P: f64 = 42.76469136;
 /// Only 480p and 720p are offered; any other resolution prices at 720p.
 /// References never affect the price and there is no batching. The fractional
 /// total is rounded UP to a whole cent.
-pub fn seedance_2p5_preview_usd_cents(
-  resolution: CommonResolution,
-  duration_seconds: u16,
-) -> u64 {
+pub fn seedance_2p5_preview_usd_cents(resolution: CommonResolution, duration_seconds: u16) -> u64 {
   let cents_per_second = match resolution {
     CommonResolution::FourEightyP => SEEDANCE_2P5_PREVIEW_CENTS_PER_SECOND_480P,
     // Everything else (including 720p and unsupported resolutions) prices at 720p.
@@ -156,13 +128,7 @@ const SEEDANCE_2P5_VIDEO_REFERENCE_CENTS_PER_SECOND_1080P: f64 = 38.49728574;
 /// drops but the billed seconds are the output duration PLUS the total
 /// seconds of reference video input (clamped to the 4..=30 second billing
 /// range). Multiply by batch count before rounding UP to a whole cent.
-pub fn seedance_2p5_usd_cents(
-  resolution: CommonResolution,
-  duration_seconds: u16,
-  batch_count: u16,
-  has_video_references: bool,
-  maybe_total_input_seconds: Option<u16>,
-) -> u64 {
+pub fn seedance_2p5_usd_cents(resolution: CommonResolution, duration_seconds: u16, batch_count: u16, has_video_references: bool, maybe_total_input_seconds: Option<u16>) -> u64 {
   let (cents_per_second, billed_seconds) = if has_video_references {
     let rate = match resolution {
       CommonResolution::FourEightyP => SEEDANCE_2P5_VIDEO_REFERENCE_CENTS_PER_SECOND_480P,
@@ -180,9 +146,7 @@ pub fn seedance_2p5_usd_cents(
     // far below cost.
     let billed_input_seconds = match maybe_total_input_seconds {
       None | Some(0) => u16::from(MAX_BILLED_INPUT_SECONDS),
-      Some(seconds) => {
-        seconds.clamp(u16::from(MIN_BILLED_INPUT_SECONDS), u16::from(MAX_BILLED_INPUT_SECONDS))
-      }
+      Some(seconds) => seconds.clamp(u16::from(MIN_BILLED_INPUT_SECONDS), u16::from(MAX_BILLED_INPUT_SECONDS)),
     };
     (rate, u64::from(duration_seconds) + u64::from(billed_input_seconds))
   } else {
@@ -220,13 +184,7 @@ const SEEDANCE_2P5_ULTRA_VIDEO_REFERENCE_CENTS_PER_SECOND_1080P: f64 = 41.844875
 /// drops but the billed seconds are the output duration PLUS the total
 /// seconds of reference video input. Multiply by batch count before rounding
 /// UP to a whole cent.
-pub fn seedance_2p5_ultra_usd_cents(
-  resolution: CommonResolution,
-  duration_seconds: u16,
-  batch_count: u16,
-  has_video_references: bool,
-  maybe_total_input_seconds: Option<u16>,
-) -> u64 {
+pub fn seedance_2p5_ultra_usd_cents(resolution: CommonResolution, duration_seconds: u16, batch_count: u16, has_video_references: bool, maybe_total_input_seconds: Option<u16>) -> u64 {
   let (cents_per_second, billed_seconds) = if has_video_references {
     let rate = match resolution {
       CommonResolution::FourEightyP => SEEDANCE_2P5_ULTRA_VIDEO_REFERENCE_CENTS_PER_SECOND_480P,
@@ -244,9 +202,7 @@ pub fn seedance_2p5_ultra_usd_cents(
     // far below cost.
     let billed_input_seconds = match maybe_total_input_seconds {
       None | Some(0) => u16::from(MAX_BILLED_INPUT_SECONDS),
-      Some(seconds) => {
-        seconds.clamp(u16::from(MIN_BILLED_INPUT_SECONDS), u16::from(MAX_BILLED_INPUT_SECONDS))
-      }
+      Some(seconds) => seconds.clamp(u16::from(MIN_BILLED_INPUT_SECONDS), u16::from(MAX_BILLED_INPUT_SECONDS)),
     };
     (rate, u64::from(duration_seconds) + u64::from(billed_input_seconds))
   } else {
@@ -352,20 +308,14 @@ mod tests {
     fn video_reference_always_costs_more() {
       for res in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
         for dur in [4u16, 5, 10, 15] {
-          assert!(
-            cents(res, dur, true) > cents(res, dur, false),
-            "video ref should cost more at {res:?} {dur}s",
-          );
+          assert!(cents(res, dur, true) > cents(res, dur, false), "video ref should cost more at {res:?} {dur}s",);
         }
       }
     }
 
     #[test]
     fn unsupported_resolution_prices_at_720p() {
-      assert_eq!(
-        seedance_2p0_mini_usd_cents(CommonResolution::TenEightyP, 5, 1, false),
-        seedance_2p0_mini_usd_cents(CommonResolution::SevenTwentyP, 5, 1, false),
-      );
+      assert_eq!(seedance_2p0_mini_usd_cents(CommonResolution::TenEightyP, 5, 1, false), seedance_2p0_mini_usd_cents(CommonResolution::SevenTwentyP, 5, 1, false),);
     }
 
     #[test]
@@ -427,11 +377,7 @@ mod tests {
       for res in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
         for dur in [4u16, 5, 10, 15] {
           for has_ref in [false, true] {
-            assert!(
-              seedance_2p0_byteplus_mini_usd_cents(res, dur, 1, has_ref)
-                >= seedance_2p0_mini_usd_cents(res, dur, 1, has_ref),
-              "byteplus mini (6%) should be >= regular mini (5%) at {res:?} {dur}s ref={has_ref}",
-            );
+            assert!(seedance_2p0_byteplus_mini_usd_cents(res, dur, 1, has_ref) >= seedance_2p0_mini_usd_cents(res, dur, 1, has_ref), "byteplus mini (6%) should be >= regular mini (5%) at {res:?} {dur}s ref={has_ref}",);
           }
         }
       }
@@ -439,10 +385,7 @@ mod tests {
 
     #[test]
     fn unsupported_resolution_prices_at_720p() {
-      assert_eq!(
-        seedance_2p0_byteplus_mini_usd_cents(CommonResolution::TenEightyP, 5, 1, false),
-        seedance_2p0_byteplus_mini_usd_cents(CommonResolution::SevenTwentyP, 5, 1, false),
-      );
+      assert_eq!(seedance_2p0_byteplus_mini_usd_cents(CommonResolution::TenEightyP, 5, 1, false), seedance_2p0_byteplus_mini_usd_cents(CommonResolution::SevenTwentyP, 5, 1, false),);
     }
 
     #[test]

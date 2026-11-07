@@ -28,14 +28,10 @@ pub struct MarkFirstPartyMinimaxH3JobStartedArgs<'a, 'tx> {
   pub transaction: &'a mut Transaction<'tx, MySql>,
 }
 
-pub async fn mark_first_party_minimax_h3_job_started(
-  args: MarkFirstPartyMinimaxH3JobStartedArgs<'_, '_>
-) -> Result<(), sqlx::Error> {
-  let maybe_worker_hostname = args.maybe_worker_hostname
-    .map(|hostname| clamp_chars(hostname, MAX_WORKER_FIELD_CHARS));
+pub async fn mark_first_party_minimax_h3_job_started(args: MarkFirstPartyMinimaxH3JobStartedArgs<'_, '_>) -> Result<(), sqlx::Error> {
+  let maybe_worker_hostname = args.maybe_worker_hostname.map(|hostname| clamp_chars(hostname, MAX_WORKER_FIELD_CHARS));
 
-  let maybe_cluster_name = args.maybe_cluster_name
-    .map(|cluster| clamp_chars(cluster, MAX_WORKER_FIELD_CHARS));
+  let maybe_cluster_name = args.maybe_cluster_name.map(|cluster| clamp_chars(cluster, MAX_WORKER_FIELD_CHARS));
 
   sqlx::query!(
     r#"
@@ -54,8 +50,8 @@ WHERE token = ?
     maybe_cluster_name,
     args.job_token.as_str(),
   )
-    .execute(&mut **args.transaction)
-    .await?;
+  .execute(&mut **args.transaction)
+  .await?;
 
   Ok(())
 }

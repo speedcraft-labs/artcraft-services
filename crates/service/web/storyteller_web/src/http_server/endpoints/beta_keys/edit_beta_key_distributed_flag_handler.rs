@@ -57,20 +57,15 @@ pub async fn edit_beta_key_distributed_flag_handler(
   request: Json<EditBetaKeyDistributedFlagRequest>,
   path: Path<EditBetaKeyDistributedFlagPathInfo>,
   server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<EditBetaKeyDistributedFlagSuccessResponse>, CommonWebError>
-{
+) -> Result<Json<EditBetaKeyDistributedFlagSuccessResponse>, CommonWebError> {
   let user_session = require_moderator(&http_request, &server_state.session_checker, &server_state.mysql_pool).await?;
 
-  edit_beta_key_distributed_flag(&path.token, request.is_distributed, &server_state.mysql_pool)
-      .await
-      .map_err(|err| {
-        warn!("Error editing beta key note: {:?}", err);
-        CommonWebError::from_anyhow_error(err)
-      })?;
+  edit_beta_key_distributed_flag(&path.token, request.is_distributed, &server_state.mysql_pool).await.map_err(|err| {
+    warn!("Error editing beta key note: {:?}", err);
+    CommonWebError::from_anyhow_error(err)
+  })?;
 
-  let response = EditBetaKeyDistributedFlagSuccessResponse {
-    success: true,
-  };
+  let response = EditBetaKeyDistributedFlagSuccessResponse { success: true };
 
   Ok(Json(response))
 }

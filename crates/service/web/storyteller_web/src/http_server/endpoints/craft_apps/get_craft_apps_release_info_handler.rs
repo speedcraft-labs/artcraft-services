@@ -22,9 +22,7 @@ const CACHE_MAX_AGE_SECS: u32 = 60;
     (status = 200, body = GetCraftAppsReleaseInfoResponse),
   ),
 )]
-pub async fn get_craft_apps_release_info_handler(
-  server_state: web::Data<Arc<ServerState>>,
-) -> HttpResponse {
+pub async fn get_craft_apps_release_info_handler(server_state: web::Data<Arc<ServerState>>) -> HttpResponse {
   let release_info = server_state.craft_apps_release_cache.snapshot();
   let cache_control = cache_control_for(&release_info);
   let response = GetCraftAppsReleaseInfoResponse {
@@ -35,9 +33,7 @@ pub async fn get_craft_apps_release_info_handler(
     repo_renames: Vec::new(),
     important_notices: CraftAppsImportantNotices::default(),
   };
-  HttpResponse::Ok()
-      .insert_header(cache_control)
-      .json(response)
+  HttpResponse::Ok().insert_header(cache_control).json(response)
 }
 
 /// Cacheable only once every app has been fetched (`last_fetched` is set). Until then (an

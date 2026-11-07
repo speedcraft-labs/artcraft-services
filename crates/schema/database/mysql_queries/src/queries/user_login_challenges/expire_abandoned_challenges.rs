@@ -21,7 +21,7 @@ WHERE status IN (?, ?) AND expires_at <= NOW() ORDER BY expires_at LIMIT 1000
     UserLoginChallengeStatus::Pending.to_str(),
     UserLoginChallengeStatus::Approved.to_str()
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
   Ok(result.rows_affected())
 }

@@ -47,9 +47,7 @@ pub struct AppStateLegacyPermissionFlags {
   pub can_delete_users: bool,
 }
 
-pub fn get_permissions(
-  maybe_user: Option<&UserSessionExtended>
-) -> AppStatePermissions {
+pub fn get_permissions(maybe_user: Option<&UserSessionExtended>) -> AppStatePermissions {
   match maybe_user {
     None => LOGGED_OUT_PERMISSIONS.clone(),
     Some(user) => AppStatePermissions {
@@ -80,7 +78,7 @@ pub fn get_permissions(
   }
 }
 
-const LOGGED_OUT_PERMISSIONS : AppStatePermissions  = AppStatePermissions {
+const LOGGED_OUT_PERMISSIONS: AppStatePermissions = AppStatePermissions {
   is_moderator: false,
   feature_flags: BTreeSet::new(),
   legacy_permission_flags: AppStateLegacyPermissionFlags {

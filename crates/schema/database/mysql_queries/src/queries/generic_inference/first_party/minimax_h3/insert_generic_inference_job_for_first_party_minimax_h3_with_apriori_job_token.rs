@@ -25,13 +25,11 @@ use crate::errors::database_query_error::DatabaseQueryError;
 use crate::payloads::generic_inference_args::generic_inference_args::GenericInferenceArgs;
 use crate::queries::generic_inference::common::job_cost_estimates::JobCostEstimates;
 use crate::queries::generic_inference::first_party::minimax_h3::first_party_minimax_h3_model::FirstPartyMinimaxH3Model;
-use crate::queries::generic_inference::common::insert_full_generic_inference_job_record::{
-  insert_full_generic_inference_job_record,
-  InsertFullGenericInferenceJobRecordArgs,
-};
+use crate::queries::generic_inference::common::insert_full_generic_inference_job_record::{insert_full_generic_inference_job_record, InsertFullGenericInferenceJobRecordArgs};
 
 pub struct InsertGenericInferenceForFirstPartyMinimaxH3WithAprioriJobTokenArgs<'e, 'c, E>
-  where E: 'e + Executor<'c, Database = MySql>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   /// Which first-party Minimax H3 model to enqueue.
   pub minimax_model: FirstPartyMinimaxH3Model,
@@ -68,10 +66,9 @@ pub struct InsertGenericInferenceForFirstPartyMinimaxH3WithAprioriJobTokenArgs<'
   pub phantom: PhantomData<&'c E>,
 }
 
-pub async fn insert_generic_inference_job_for_first_party_minimax_h3_with_apriori_job_token<'e, 'c : 'e, E>(
-  args: InsertGenericInferenceForFirstPartyMinimaxH3WithAprioriJobTokenArgs<'e, 'c, E>
-) -> Result<InferenceJobToken, DatabaseQueryError>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn insert_generic_inference_job_for_first_party_minimax_h3_with_apriori_job_token<'e, 'c: 'e, E>(args: InsertGenericInferenceForFirstPartyMinimaxH3WithAprioriJobTokenArgs<'e, 'c, E>) -> Result<InferenceJobToken, DatabaseQueryError>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   let job_type = args.minimax_model.inference_job_type();
   let model_type = args.minimax_model.inference_model_type();
@@ -135,11 +132,10 @@ pub async fn insert_generic_inference_job_for_first_party_minimax_h3_with_aprior
     requires_keepalive: false,
     max_duration_seconds: 0,
     is_debug_request: false,
+  })
+  .await?;
 
-  }).await?;
-
-  info!("Insert generic inference job for first-party Minimax H3 ({:?}): {} with record ID {}",
-    args.minimax_model, args.apriori_job_token, record_id);
+  info!("Insert generic inference job for first-party Minimax H3 ({:?}): {} with record ID {}", args.minimax_model, args.apriori_job_token, record_id);
 
   Ok(args.apriori_job_token.clone())
 }

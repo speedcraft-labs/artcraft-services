@@ -36,15 +36,9 @@ pub fn run_http_server(args: CreateServerArgs) -> AnyhowResult<Server> {
 
   let server_state = HttpServerSharedState {
     job_stats: args.job_stats.clone(),
-    consecutive_failure_unhealthy_threshold: easyenv::get_env_num(
-      "CONSECUTIVE_FAILURE_UNHEALTHY_THRESHOLD",
-      3,
-    )?,
+    consecutive_failure_unhealthy_threshold: easyenv::get_env_num("CONSECUTIVE_FAILURE_UNHEALTHY_THRESHOLD", 3)?,
     heartbeats: args.heartbeats,
-    heartbeat_stale_threshold: Duration::from_secs(easyenv::get_env_num(
-      "HEARTBEAT_STALE_THRESHOLD_SECONDS",
-      DEFAULT_HEARTBEAT_STALE_THRESHOLD_SECONDS,
-    )?),
+    heartbeat_stale_threshold: Duration::from_secs(easyenv::get_env_num("HEARTBEAT_STALE_THRESHOLD_SECONDS", DEFAULT_HEARTBEAT_STALE_THRESHOLD_SECONDS)?),
     pager: args.pager,
     hostname,
   };
@@ -59,25 +53,17 @@ pub fn run_http_server(args: CreateServerArgs) -> AnyhowResult<Server> {
     App::new()
       .app_data(server_state_arc.clone())
       .wrap(Logger::new(&log_format).exclude("/_status"))
-      .service(
-        web::resource("/")
-          .route(web::get().to(|| HttpResponse::Ok()))
-          .route(web::head().to(|| HttpResponse::Ok())),
-      )
-      .service(
-        web::resource("/_status")
-          .route(web::get().to(get_health_check_handler))
-          .route(web::head().to(|| HttpResponse::Ok())),
-      )
+      .service(web::resource("/").route(web::get().to(|| HttpResponse::Ok())).route(web::head().to(|| HttpResponse::Ok())))
+      .service(web::resource("/_status").route(web::get().to(get_health_check_handler)).route(web::head().to(|| HttpResponse::Ok())))
   })
-    .bind(&bind_address)
-    .unwrap_or_else(|err| {
-      eprintln!("FATAL: Failed to bind to address '{}': {}", bind_address, err);
-      eprintln!("The address is likely already in use by another process.");
-      std::process::exit(1);
-    })
-    .workers(num_workers)
-    .run();
+  .bind(&bind_address)
+  .unwrap_or_else(|err| {
+    eprintln!("FATAL: Failed to bind to address '{}': {}", bind_address, err);
+    eprintln!("The address is likely already in use by another process.");
+    std::process::exit(1);
+  })
+  .workers(num_workers)
+  .run();
 
   Ok(handle)
 }

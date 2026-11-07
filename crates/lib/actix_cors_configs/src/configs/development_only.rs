@@ -7,23 +7,22 @@ use url::{Host, Url};
 pub fn add_development_only(cors: Cors) -> Cors {
   // Any localhost is allowed.
   cors.allowed_origin_fn(|origin, _req_head| {
-        let maybe_url = origin.to_str()
-            .map(|origin| Url::parse(origin));
+    let maybe_url = origin.to_str().map(|origin| Url::parse(origin));
 
-        let url = match maybe_url {
-          Ok(Ok(url)) => url,
-          _ => {
-            warn!("Invalid origin: {:?}", origin);
-            return false
-          },
-        };
+    let url = match maybe_url {
+      Ok(Ok(url)) => url,
+      _ => {
+        warn!("Invalid origin: {:?}", origin);
+        return false;
+      },
+    };
 
-        match url.host() {
-          Some(Host::Domain("localhost")) => true,
-          Some(Host::Ipv4(Ipv4Addr::LOCALHOST)) => true,
-          _ => false,
-        }
-      })
+    match url.host() {
+      Some(Host::Domain("localhost")) => true,
+      Some(Host::Ipv4(Ipv4Addr::LOCALHOST)) => true,
+      _ => false,
+    }
+  })
 }
 
 #[cfg(test)]
@@ -37,13 +36,7 @@ mod tests {
   #[actix_rt::test]
   async fn any_localhost_is_allowed() {
     let cors = development_only_cors();
-    for origin in [
-      "http://localhost",
-      "http://localhost:3000",
-      "https://localhost:8443",
-      "http://127.0.0.1",
-      "http://127.0.0.1:5173",
-    ] {
+    for origin in ["http://localhost", "http://localhost:3000", "https://localhost:8443", "http://127.0.0.1", "http://127.0.0.1:5173"] {
       assert_origin_ok(&cors, origin).await;
     }
   }
@@ -66,7 +59,6 @@ mod tests {
   }
 
   fn development_only_cors() -> Cors {
-    add_development_only(Cors::default())
-        .block_on_origin_mismatch(true)
+    add_development_only(Cors::default()).block_on_origin_mismatch(true)
   }
 }

@@ -5,7 +5,7 @@ use serde_derive::Serialize;
 use utoipa::ToSchema;
 
 /// Audio model to default to if none is specified
-const DEFAULT_AUDIO_MODEL : CommonAudioModel = CommonAudioModel::SunoMusic;
+const DEFAULT_AUDIO_MODEL: CommonAudioModel = CommonAudioModel::SunoMusic;
 
 /// Response body for the audio models endpoint.
 #[derive(Serialize, ToSchema, Clone)]
@@ -36,7 +36,6 @@ pub struct OmniGenAudioProviderModelDetails {
 
 #[derive(Serialize, ToSchema, Clone)]
 pub struct OmniGenAudioModelDetails {
-
   pub model: CommonAudioModel,
 
   #[serde(skip_serializing_if = "Option::is_none")]

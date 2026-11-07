@@ -19,9 +19,7 @@ where
 /// Fetch a session by its management `token` (NOT the private credential), including terminated
 /// sessions — callers check ownership and `maybe_deleted_at` themselves. Never returns the
 /// `private_session_token`.
-pub async fn get_mcp_session_by_token<'e, 'c: 'e, E>(
-  args: GetMcpSessionByTokenArgs<'e, 'c, E>,
-) -> Result<Option<McpSessionRow>, sqlx::Error>
+pub async fn get_mcp_session_by_token<'e, 'c: 'e, E>(args: GetMcpSessionByTokenArgs<'e, 'c, E>) -> Result<Option<McpSessionRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -45,8 +43,8 @@ LIMIT 1
     "#,
     args.token.as_str(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(maybe_row.map(|r| McpSessionRow {
     token: r.token,

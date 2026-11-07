@@ -3,12 +3,8 @@ use std::marker::PhantomData;
 use chrono::{DateTime, Duration as ChronoDuration, NaiveDate, TimeZone, Utc};
 use log::{error, info, warn};
 
-use mysql_queries::queries::user_daily_spends::aggregate_daily_spends_for_date::{
-  aggregate_daily_spends_for_date, AggregateDailySpendsForDateArgs,
-};
-use mysql_queries::queries::user_daily_spends::upsert_user_daily_spend::{
-  upsert_user_daily_spend, UpsertUserDailySpendArgs,
-};
+use mysql_queries::queries::user_daily_spends::aggregate_daily_spends_for_date::{aggregate_daily_spends_for_date, AggregateDailySpendsForDateArgs};
+use mysql_queries::queries::user_daily_spends::upsert_user_daily_spend::{upsert_user_daily_spend, UpsertUserDailySpendArgs};
 
 use crate::job::alert_on_error::alert_pager;
 use crate::job_dependencies::JobDependencies;
@@ -35,17 +31,13 @@ pub async fn backfill_daily_spends(deps: &JobDependencies) {
         if count > 0 {
           info!("  {date}: upserted {count} daily row(s).");
         }
-      }
+      },
       Err(err) => {
         error!("Daily-spends aggregation failed for {date}: {err:?}");
-        alert_pager(
-          &deps.pager,
-          "user-spend-analytics: daily aggregation error",
-          &format!("date={date}: {err:?}"),
-        );
+        alert_pager(&deps.pager, "user-spend-analytics: daily aggregation error", &format!("date={date}: {err:?}"));
         let _ = deps.job_stats.increment_failure_count();
         tokio::time::sleep(deps.error_recovery).await;
-      }
+      },
     }
 
     tokio::time::sleep(deps.query_delay).await;
@@ -59,17 +51,10 @@ pub async fn backfill_daily_spends(deps: &JobDependencies) {
 }
 
 async fn process_date(deps: &JobDependencies, date: NaiveDate) -> Result<usize, sqlx::Error> {
-  let range_start: DateTime<Utc> =
-    Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).expect("valid midnight"));
+  let range_start: DateTime<Utc> = Utc.from_utc_datetime(&date.and_hms_opt(0, 0, 0).expect("valid midnight"));
   let range_end = range_start + ChronoDuration::days(1);
 
-  let aggregates = aggregate_daily_spends_for_date(AggregateDailySpendsForDateArgs {
-    range_start,
-    range_end,
-    mysql_executor: &deps.mysql_pool,
-    phantom: PhantomData,
-  })
-  .await?;
+  let aggregates = aggregate_daily_spends_for_date(AggregateDailySpendsForDateArgs { range_start, range_end, mysql_executor: &deps.mysql_pool, phantom: PhantomData }).await?;
 
   let mut upserted = 0usize;
   for aggregate in &aggregates {
@@ -96,17 +81,13 @@ async fn process_date(deps: &JobDependencies, date: NaiveDate) -> Result<usize, 
       Ok(()) => {
         upserted += 1;
         let _ = deps.job_stats.increment_success_count();
-      }
+      },
       Err(err) => {
         error!("Daily upsert failed for user {} on {date}: {err:?}", aggregate.user_token.as_str());
-        alert_pager(
-          &deps.pager,
-          "user-spend-analytics: daily upsert error",
-          &format!("user={} date={date}: {err:?}", aggregate.user_token.as_str()),
-        );
+        alert_pager(&deps.pager, "user-spend-analytics: daily upsert error", &format!("user={} date={date}: {err:?}", aggregate.user_token.as_str()));
         let _ = deps.job_stats.increment_failure_count();
         tokio::time::sleep(deps.error_recovery).await;
-      }
+      },
     }
   }
 

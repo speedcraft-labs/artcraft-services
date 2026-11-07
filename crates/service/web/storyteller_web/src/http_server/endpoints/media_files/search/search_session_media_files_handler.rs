@@ -97,11 +97,11 @@ pub struct SearchMediaFileListItem {
   pub maybe_animation_type: Option<MediaFileAnimationType>,
 
   /// (DEPRECATED) URL path to the media file
-  #[deprecated(note="This field doesn't point to the full URL. Use media_links instead to leverage the CDN.")]
+  #[deprecated(note = "This field doesn't point to the full URL. Use media_links instead to leverage the CDN.")]
   pub public_bucket_path: String,
 
   /// (DEPRECATED) Full URL to the media file
-  #[deprecated(note="This points to the bucket. Use media_links instead to leverage the CDN.")]
+  #[deprecated(note = "This points to the bucket. Use media_links instead to leverage the CDN.")]
   pub public_bucket_url: String,
 
   /// Rich CDN links to the media, including thumbnails, previews, and more.
@@ -116,7 +116,6 @@ pub struct SearchMediaFileListItem {
 
   //  /// Statistics about the media file
   //  pub stats: SimpleEntityStats,
-
   pub creator_set_visibility: Visibility,
 
   // Whether the media file is featured.
@@ -143,7 +142,6 @@ pub struct SearchMediaFileListItem {
   //  /// Duration for audio and video files, if available.
   //  /// Measured in milliseconds.
   //  pub maybe_duration_millis: Option<u64>,
-
   pub created_at: DateTime<Utc>,
   pub updated_at: DateTime<Utc>,
 }
@@ -161,18 +159,11 @@ pub struct SearchMediaFileListItem {
     (status = 500, description = "Server error", body = CommonWebError),
   ),
 )]
-pub async fn search_session_media_files_handler(
-    http_request: HttpRequest,
-    query: Query<SearchMediaFilesQueryParams>,
-    server_state: web::Data<Arc<ServerState>>
-) -> Result<Json<SearchMediaFilesSuccessResponse>, CommonWebError>
-{
+pub async fn search_session_media_files_handler(http_request: HttpRequest, query: Query<SearchMediaFilesQueryParams>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<SearchMediaFilesSuccessResponse>, CommonWebError> {
   // NB(bt,2024-07-01): This isn't great. Though we HMAC our cookies, this could
   // result in bad situations where we don't invalidate sessions, etc. We're only
   // doing this to prevent the database round trip on a fast "lookup" API.
-  let session_result = server_state
-      .session_cookie_manager
-      .decode_session_payload_from_request(&http_request);
+  let session_result = server_state.session_cookie_manager.decode_session_payload_from_request(&http_request);
 
   let session = match session_result {
     Ok(Some(session)) => session,
@@ -182,7 +173,7 @@ pub async fn search_session_media_files_handler(
     Err(err) => {
       warn!("Session decode error: {:?}", err);
       return Err(CommonWebError::from_error(err));
-    }
+    },
   };
 
   let user_token = match session.maybe_user_token {
@@ -191,7 +182,7 @@ pub async fn search_session_media_files_handler(
   };
 
   let mut maybe_filter_media_types = get_scoped_media_types(query.filter_media_type.as_deref());
-  let mut maybe_filter_media_classes  = get_scoped_media_classes(query.filter_media_classes.as_deref());
+  let mut maybe_filter_media_classes = get_scoped_media_classes(query.filter_media_classes.as_deref());
   let mut maybe_filter_engine_categories = get_scoped_engine_categories(query.filter_engine_categories.as_deref());
 
   let results = search_media_files(SearchArgs {
@@ -202,86 +193,65 @@ pub async fn search_session_media_files_handler(
     maybe_media_types: maybe_filter_media_types,
     maybe_engine_categories: maybe_filter_engine_categories,
     client: &server_state.elasticsearch,
-  }).await;
+  })
+  .await;
 
   let results = match results {
     Ok(results) => results,
     Err(err) => {
       warn!("Searching error: {:?}", err);
       return Err(CommonWebError::from_anyhow_error(err));
-    }
+    },
   };
 
   // NB: Search documents don't carry the thumbnail version, so look it up for videos.
-  let video_tokens = results.iter()
-      .filter(|result| result.maybe_public_bucket_extension.as_deref() == Some(".mp4"))
-      .map(|result| result.token.clone())
-      .collect::<Vec<_>>();
+  let video_tokens = results.iter().filter(|result| result.maybe_public_bucket_extension.as_deref() == Some(".mp4")).map(|result| result.token.clone()).collect::<Vec<_>>();
   let thumbnail_infos = lookup_video_thumbnail_info_by_tokens(&video_tokens, &server_state.mysql_pool).await;
 
   let media_domain = get_media_domain(&http_request);
 
-  let results = results.into_iter()
-      .map(|result| {
-        let public_bucket_path = MediaFileBucketPath::from_object_hash(
-          &result.public_bucket_directory_hash,
-          result.maybe_public_bucket_prefix.as_deref(),
-          result.maybe_public_bucket_extension.as_deref());
-        SearchMediaFileListItem {
-          token: result.token.clone(),
-          media_class: result.media_class,
-          media_type: result.media_type,
-          maybe_engine_category: result.maybe_engine_category,
-          maybe_animation_type: result.maybe_animation_type,
-          media_links: MediaLinksBuilder::from_media_path_and_env(
-            media_domain, 
-            server_state.server_environment,
-            &public_bucket_path,
-            thumbnail_infos.get(&result.token)
-                .copied()
-                .unwrap_or_else(|| VideoThumbnailInfo::new(None, result.created_at))
-          ),
-          public_bucket_path: public_bucket_path
-              .get_full_object_path_str()
-              .to_string(),
-          public_bucket_url: bucket_url_string_from_media_path(&public_bucket_path, media_domain, server_state.server_environment),
-          cover_image: MediaFileCoverImageDetails::from_optional_db_fields(
-            &result.token,
-            media_domain,
-            server_state.server_environment,
-            result.maybe_cover_image_public_bucket_hash.as_deref(),
-            result.maybe_cover_image_public_bucket_prefix.as_deref(),
-            result.maybe_cover_image_public_bucket_extension.as_deref(),
-          ),
-          maybe_creator: UserDetailsLight::from_optional_db_fields_owned(
-            result.maybe_creator_user_token,
-            result.maybe_creator_username,
-            result.maybe_creator_display_name,
-            result.maybe_creator_gravatar_hash,
-          ),
-          //  stats: SimpleEntityStats {
-          //    positive_rating_count: result.maybe_ratings_positive_count.unwrap_or(0),
-          //    bookmark_count: result.maybe_bookmark_count.unwrap_or(0),
-          //  },
-          is_featured: result.is_featured,
-          is_user_upload: result.is_user_upload.unwrap_or(false),
-          is_intermediate_system_file: result.is_intermediate_system_file.unwrap_or(false),
-          creator_set_visibility: result.creator_set_visibility,
-          maybe_title: result.maybe_title,
-          //  maybe_text_transcript: result.maybe_text_transcript,
-          //  maybe_style_name: result.maybe_prompt_args
-          //      .as_ref()
-          //      .and_then(|args| args.style_name.as_ref())
-          //      .and_then(|style| style.to_style_name()),
-          //  maybe_duration_millis: result.maybe_duration_millis,
-          created_at: result.created_at,
-          updated_at: result.updated_at,
-        }
-      })
-      .collect::<Vec<_>>();
+  let results = results
+    .into_iter()
+    .map(|result| {
+      let public_bucket_path = MediaFileBucketPath::from_object_hash(&result.public_bucket_directory_hash, result.maybe_public_bucket_prefix.as_deref(), result.maybe_public_bucket_extension.as_deref());
+      SearchMediaFileListItem {
+        token: result.token.clone(),
+        media_class: result.media_class,
+        media_type: result.media_type,
+        maybe_engine_category: result.maybe_engine_category,
+        maybe_animation_type: result.maybe_animation_type,
+        media_links: MediaLinksBuilder::from_media_path_and_env(media_domain, server_state.server_environment, &public_bucket_path, thumbnail_infos.get(&result.token).copied().unwrap_or_else(|| VideoThumbnailInfo::new(None, result.created_at))),
+        public_bucket_path: public_bucket_path.get_full_object_path_str().to_string(),
+        public_bucket_url: bucket_url_string_from_media_path(&public_bucket_path, media_domain, server_state.server_environment),
+        cover_image: MediaFileCoverImageDetails::from_optional_db_fields(
+          &result.token,
+          media_domain,
+          server_state.server_environment,
+          result.maybe_cover_image_public_bucket_hash.as_deref(),
+          result.maybe_cover_image_public_bucket_prefix.as_deref(),
+          result.maybe_cover_image_public_bucket_extension.as_deref(),
+        ),
+        maybe_creator: UserDetailsLight::from_optional_db_fields_owned(result.maybe_creator_user_token, result.maybe_creator_username, result.maybe_creator_display_name, result.maybe_creator_gravatar_hash),
+        //  stats: SimpleEntityStats {
+        //    positive_rating_count: result.maybe_ratings_positive_count.unwrap_or(0),
+        //    bookmark_count: result.maybe_bookmark_count.unwrap_or(0),
+        //  },
+        is_featured: result.is_featured,
+        is_user_upload: result.is_user_upload.unwrap_or(false),
+        is_intermediate_system_file: result.is_intermediate_system_file.unwrap_or(false),
+        creator_set_visibility: result.creator_set_visibility,
+        maybe_title: result.maybe_title,
+        //  maybe_text_transcript: result.maybe_text_transcript,
+        //  maybe_style_name: result.maybe_prompt_args
+        //      .as_ref()
+        //      .and_then(|args| args.style_name.as_ref())
+        //      .and_then(|style| style.to_style_name()),
+        //  maybe_duration_millis: result.maybe_duration_millis,
+        created_at: result.created_at,
+        updated_at: result.updated_at,
+      }
+    })
+    .collect::<Vec<_>>();
 
-  Ok(Json(SearchMediaFilesSuccessResponse {
-    success: true,
-    results,
-  }))
+  Ok(Json(SearchMediaFilesSuccessResponse { success: true, results }))
 }

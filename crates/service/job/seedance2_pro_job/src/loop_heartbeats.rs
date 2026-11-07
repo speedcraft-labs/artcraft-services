@@ -28,9 +28,7 @@ pub struct HeartbeatAge {
 
 impl LoopHeartbeats {
   pub fn new() -> Self {
-    Self {
-      inner: Arc::new(RwLock::new(HashMap::new())),
-    }
+    Self { inner: Arc::new(RwLock::new(HashMap::new())) }
   }
 
   /// Record that the named loop made progress just now. The first call for a
@@ -45,13 +43,7 @@ impl LoopHeartbeats {
     let map = self.inner.read().expect("loop heartbeats lock poisoned");
     let now = Instant::now();
 
-    let mut ages: Vec<HeartbeatAge> = map
-        .iter()
-        .map(|(loop_name, last_beat)| HeartbeatAge {
-          loop_name,
-          age: now.saturating_duration_since(*last_beat),
-        })
-        .collect();
+    let mut ages: Vec<HeartbeatAge> = map.iter().map(|(loop_name, last_beat)| HeartbeatAge { loop_name, age: now.saturating_duration_since(*last_beat) }).collect();
 
     ages.sort_by(|a, b| b.age.cmp(&a.age));
     ages

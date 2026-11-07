@@ -214,13 +214,10 @@ pub async fn create_material(args: CreateMaterialArgs<'_>) -> Result<CreateMater
   let cookie = args.session.cookies.as_str();
   let referer = format!("{}/", base_url);
 
-  let client = Client::builder()
-    .emulation(Emulation::Firefox143)
-    .timeout(KINOVI_REQUEST_TIMEOUT)
-    .build()
-    .map_err(|err| KinoviWebClientError::WreqClientError(err))?;
+  let client = Client::builder().emulation(Emulation::Firefox143).timeout(KINOVI_REQUEST_TIMEOUT).build().map_err(|err| KinoviWebClientError::WreqClientError(err))?;
 
-  let response = client.post(&create_material_url)
+  let response = client
+    .post(&create_material_url)
     .header("User-Agent", FIREFOX_USER_AGENT)
     .header("Accept", "*/*")
     .header("Accept-Language", "en-US,en;q=0.9")
@@ -241,32 +238,17 @@ pub async fn create_material(args: CreateMaterialArgs<'_>) -> Result<CreateMater
     .map_err(|err| KinoviWebGenericApiError::WreqError(err))?;
 
   let status = response.status();
-  let response_body = response.text()
-    .await
-    .map_err(|err| KinoviWebGenericApiError::WreqError(err))?;
+  let response_body = response.text().await.map_err(|err| KinoviWebGenericApiError::WreqError(err))?;
 
   info!("Response status: {}, body: {}", status, response_body);
 
   if !status.is_success() {
-    return Err(KinoviWebGenericApiError::UncategorizedBadResponseWithStatusAndBody {
-      status_code: status,
-      body: response_body,
-    }.into());
+    return Err(KinoviWebGenericApiError::UncategorizedBadResponseWithStatusAndBody { status_code: status, body: response_body }.into());
   }
 
-  let batch_response: Vec<BatchResponseItem> = serde_json::from_str(&response_body)
-    .map_err(|err| KinoviWebGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.clone()))?;
+  let batch_response: Vec<BatchResponseItem> = serde_json::from_str(&response_body).map_err(|err| KinoviWebGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.clone()))?;
 
-  let material = batch_response
-    .into_iter()
-    .next()
-    .ok_or_else(|| KinoviWebGenericApiError::UnexpectedResponseShape {
-      explanation: "Empty batch response array".to_string(),
-      raw_body: response_body.clone(),
-    })?
-    .result
-    .data
-    .json;
+  let material = batch_response.into_iter().next().ok_or_else(|| KinoviWebGenericApiError::UnexpectedResponseShape { explanation: "Empty batch response array".to_string(), raw_body: response_body.clone() })?.result.data.json;
 
   Ok(CreateMaterialResponse { material })
 }
@@ -276,26 +258,11 @@ pub async fn create_material(args: CreateMaterialArgs<'_>) -> Result<CreateMater
 /// marking the field as `undefined` (mirroring the site's requests exactly).
 fn build_batch_request(req: CreateMaterialRequest) -> BatchRequest {
   let meta = match req.format {
-    KinoviMaterialFormat::Photo => Some(MaterialMeta {
-      values: MaterialMetaValues { duration: ["undefined"] },
-      v: 1,
-    }),
+    KinoviMaterialFormat::Photo => Some(MaterialMeta { values: MaterialMetaValues { duration: ["undefined"] }, v: 1 }),
     KinoviMaterialFormat::Video => None,
   };
 
-  BatchRequest {
-    zero: BatchRequestInner {
-      json: MaterialJson {
-        url: req.url,
-        format: req.format.as_api_str(),
-        width: req.width,
-        height: req.height,
-        duration: req.maybe_duration_seconds,
-        size: req.size_bytes,
-      },
-      meta,
-    },
-  }
+  BatchRequest { zero: BatchRequestInner { json: MaterialJson { url: req.url, format: req.format.as_api_str(), width: req.width, height: req.height, duration: req.maybe_duration_seconds, size: req.size_bytes }, meta } }
 }
 
 #[cfg(test)]
@@ -329,10 +296,7 @@ mod tests {
         size_bytes: 4773897,
       });
       let json = serde_json::to_string(&body).unwrap();
-      assert_eq!(
-        json,
-        r#"{"0":{"json":{"url":"https://static.seedance2-pro.com/materials/20260801/1785592619812-7add4749.mp4","format":"video","width":1280,"height":720,"duration":8,"size":4773897}}}"#,
-      );
+      assert_eq!(json, r#"{"0":{"json":{"url":"https://static.seedance2-pro.com/materials/20260801/1785592619812-7add4749.mp4","format":"video","width":1280,"height":720,"duration":8,"size":4773897}}}"#,);
     }
 
     #[test]
@@ -409,26 +373,14 @@ mod tests {
 
     #[test]
     fn known_statuses_deserialize() {
-      assert_eq!(
-        serde_json::from_str::<KinoviMaterialDetectStatus>(r#""PROCESSING""#).unwrap(),
-        KinoviMaterialDetectStatus::Processing,
-      );
-      assert_eq!(
-        serde_json::from_str::<KinoviMaterialDetectStatus>(r#""SUCCEEDED""#).unwrap(),
-        KinoviMaterialDetectStatus::Succeeded,
-      );
-      assert_eq!(
-        serde_json::from_str::<KinoviMaterialDetectStatus>(r#""FAILED""#).unwrap(),
-        KinoviMaterialDetectStatus::Failed,
-      );
+      assert_eq!(serde_json::from_str::<KinoviMaterialDetectStatus>(r#""PROCESSING""#).unwrap(), KinoviMaterialDetectStatus::Processing,);
+      assert_eq!(serde_json::from_str::<KinoviMaterialDetectStatus>(r#""SUCCEEDED""#).unwrap(), KinoviMaterialDetectStatus::Succeeded,);
+      assert_eq!(serde_json::from_str::<KinoviMaterialDetectStatus>(r#""FAILED""#).unwrap(), KinoviMaterialDetectStatus::Failed,);
     }
 
     #[test]
     fn unknown_status_falls_back_to_unknown() {
-      assert_eq!(
-        serde_json::from_str::<KinoviMaterialDetectStatus>(r#""SOME_NEW_STATUS""#).unwrap(),
-        KinoviMaterialDetectStatus::Unknown,
-      );
+      assert_eq!(serde_json::from_str::<KinoviMaterialDetectStatus>(r#""SOME_NEW_STATUS""#).unwrap(), KinoviMaterialDetectStatus::Unknown,);
     }
   }
 
@@ -443,36 +395,20 @@ mod tests {
       setup_test_logging(LevelFilter::Trace);
       let session = test_session()?;
 
-      let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-        test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL,
-      ).await?;
+      let image_bytes = crate::test_utils::http_download::http_download_to_bytes(test_data::web::image_urls::JUNO_AT_LAKE_IMAGE_URL).await?;
       let size_bytes = image_bytes.len() as u64;
 
-      let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-        session: &session,
-        extension: "jpg".to_string(),
-        host_override: None,
-      }).await?;
+      let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session: &session, extension: "jpg".to_string(), host_override: None }).await?;
 
-      let upload_result = upload_file(UploadFileArgs {
-        upload_url: prepare_result.upload_url,
-        file_bytes: image_bytes,
-        host_override: None,
-      }).await?;
+      let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
       println!("Uploaded: {}", upload_result.public_url);
 
       let result = create_material(CreateMaterialArgs {
         session: &session,
         host_override: None,
-        request: CreateMaterialRequest {
-          url: upload_result.public_url,
-          format: KinoviMaterialFormat::Photo,
-          width: 1365,
-          height: 2048,
-          maybe_duration_seconds: None,
-          size_bytes,
-        },
-      }).await?;
+        request: CreateMaterialRequest { url: upload_result.public_url, format: KinoviMaterialFormat::Photo, width: 1365, height: 2048, maybe_duration_seconds: None, size_bytes },
+      })
+      .await?;
 
       println!("Material: {:#?}", result.material);
       assert!(result.material.material_id.starts_with("mat_"));
@@ -490,7 +426,6 @@ mod tests {
   // ── Helpers ──
 
   fn read_response_body(filename: &str) -> String {
-    std::fs::read_to_string(format!("test_data/responses/{}", filename))
-      .expect("Failed to read test data file")
+    std::fs::read_to_string(format!("test_data/responses/{}", filename)).expect("Failed to read test data file")
   }
 }

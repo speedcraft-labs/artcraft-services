@@ -25,11 +25,7 @@ pub async fn dummy_health_check_handler() -> HttpResponse {
   };
 
   match serde_json::to_string(&response) {
-    Ok(body) => HttpResponse::Ok()
-        .content_type("application/json")
-        .body(body),
-    Err(_err) => HttpResponse::Ok()
-        .content_type("application/json")
-        .body("{\"success\": false}"),
+    Ok(body) => HttpResponse::Ok().content_type("application/json").body(body),
+    Err(_err) => HttpResponse::Ok().content_type("application/json").body("{\"success\": false}"),
   }
 }

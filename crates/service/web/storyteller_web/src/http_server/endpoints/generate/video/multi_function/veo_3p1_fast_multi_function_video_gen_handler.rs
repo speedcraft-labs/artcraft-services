@@ -13,7 +13,9 @@ use crate::state::server_state::ServerState;
 use crate::util::lookup::lookup_image_urls_as_map::lookup_image_urls_as_map;
 use actix_web::web::Json;
 use actix_web::{web, HttpRequest};
-use artcraft_api_defs::generate::video::multi_function::veo_3p1_fast_multi_function_video_gen::{Veo3p1FastMultiFunctionVideoGenAspectRatio, Veo3p1FastMultiFunctionVideoGenDuration, Veo3p1FastMultiFunctionVideoGenRequest, Veo3p1FastMultiFunctionVideoGenResolution, Veo3p1FastMultiFunctionVideoGenResponse};
+use artcraft_api_defs::generate::video::multi_function::veo_3p1_fast_multi_function_video_gen::{
+  Veo3p1FastMultiFunctionVideoGenAspectRatio, Veo3p1FastMultiFunctionVideoGenDuration, Veo3p1FastMultiFunctionVideoGenRequest, Veo3p1FastMultiFunctionVideoGenResolution, Veo3p1FastMultiFunctionVideoGenResponse,
+};
 use bucket_paths::legacy::typified_paths::public::media_files::bucket_file_path::MediaFileBucketPath;
 use enums::by_table::prompt_context_items::prompt_context_semantic_type::PromptContextSemanticType;
 use enums::by_table::prompts::prompt_type::PromptType;
@@ -24,9 +26,16 @@ use enums::common::visibility::Visibility;
 use enums::common::generation::common_generation_mode::CommonGenerationMode;
 use fal_client::creds::open_ai_api_key::OpenAiApiKey;
 use fal_client::requests::traits::fal_request_cost_calculator_trait::FalRequestCostCalculator;
-use fal_client::requests_old::webhook::video::image::enqueue_veo_3p1_fast_first_last_frame_image_to_video_webhook::{enqueue_veo_3p1_fast_first_last_frame_image_to_video_webhook, EnqueueVeo3p1FastFirstLastFrameImageToVideoArgs, EnqueueVeo3p1FastFirstLastFrameImageToVideoAspectRatio, EnqueueVeo3p1FastFirstLastFrameImageToVideoDurationSeconds, EnqueueVeo3p1FastFirstLastFrameImageToVideoRequest, EnqueueVeo3p1FastFirstLastFrameImageToVideoResolution};
-use fal_client::requests_old::webhook::video::image::enqueue_veo_3p1_fast_image_to_video_webhook::{enqueue_veo_3p1_fast_image_to_video_webhook, EnqueueVeo3p1FastImageToVideoArgs, EnqueueVeo3p1FastImageToVideoAspectRatio, EnqueueVeo3p1FastImageToVideoDurationSeconds, EnqueueVeo3p1FastImageToVideoRequest, EnqueueVeo3p1FastImageToVideoResolution};
-use fal_client::requests_old::webhook::video::text::enqueue_veo_3p1_fast_text_to_video_webhook::{enqueue_veo_3p1_fast_text_to_video_webhook, EnqueueVeo3p1FastTextToVideoArgs, EnqueueVeo3p1FastTextToVideoRequest, EnqueueVeo3p1FastTextToVideoAspectRatio, EnqueueVeo3p1FastTextToVideoDurationSeconds, EnqueueVeo3p1FastTextToVideoResolution};
+use fal_client::requests_old::webhook::video::image::enqueue_veo_3p1_fast_first_last_frame_image_to_video_webhook::{
+  enqueue_veo_3p1_fast_first_last_frame_image_to_video_webhook, EnqueueVeo3p1FastFirstLastFrameImageToVideoArgs, EnqueueVeo3p1FastFirstLastFrameImageToVideoAspectRatio, EnqueueVeo3p1FastFirstLastFrameImageToVideoDurationSeconds,
+  EnqueueVeo3p1FastFirstLastFrameImageToVideoRequest, EnqueueVeo3p1FastFirstLastFrameImageToVideoResolution,
+};
+use fal_client::requests_old::webhook::video::image::enqueue_veo_3p1_fast_image_to_video_webhook::{
+  enqueue_veo_3p1_fast_image_to_video_webhook, EnqueueVeo3p1FastImageToVideoArgs, EnqueueVeo3p1FastImageToVideoAspectRatio, EnqueueVeo3p1FastImageToVideoDurationSeconds, EnqueueVeo3p1FastImageToVideoRequest, EnqueueVeo3p1FastImageToVideoResolution,
+};
+use fal_client::requests_old::webhook::video::text::enqueue_veo_3p1_fast_text_to_video_webhook::{
+  enqueue_veo_3p1_fast_text_to_video_webhook, EnqueueVeo3p1FastTextToVideoArgs, EnqueueVeo3p1FastTextToVideoRequest, EnqueueVeo3p1FastTextToVideoAspectRatio, EnqueueVeo3p1FastTextToVideoDurationSeconds, EnqueueVeo3p1FastTextToVideoResolution,
+};
 use http_server_common::request::get_request_ip::get_request_ip;
 use log::{error, info, warn};
 use mysql_queries::queries::generic_inference::api_providers::fal::insert_generic_inference_job_for_fal_queue::FalCategory;
@@ -57,33 +66,24 @@ use utoipa::ToSchema;
 pub async fn veo_3p1_fast_multi_function_video_gen_handler(
   http_request: HttpRequest,
   request: Json<Veo3p1FastMultiFunctionVideoGenRequest>,
-  server_state: web::Data<Arc<ServerState>>
+  server_state: web::Data<Arc<ServerState>>,
 ) -> Result<Json<Veo3p1FastMultiFunctionVideoGenResponse>, CommonWebError> {
-  
   payments_error_test(&request.prompt.as_deref().unwrap_or(""))?;
-  
-  let mut mysql_connection = server_state.mysql_pool
-      .acquire()
-      .await?;
-  
-  let maybe_user_session = server_state
-      .session_checker
-      .maybe_get_user_session_from_connection(&http_request, &mut mysql_connection)
-      .await
-      .map_err(|e| {
-        warn!("Session checker error: {:?}", e);
-        CommonWebError::from_error(e)
-      })?;
 
-  let maybe_avt_token = server_state
-      .avt_cookie_manager
-      .get_avt_token_from_request(&http_request);
+  let mut mysql_connection = server_state.mysql_pool.acquire().await?;
+
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session_from_connection(&http_request, &mut mysql_connection).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
+
+  let maybe_avt_token = server_state.avt_cookie_manager.get_avt_token_from_request(&http_request);
 
   let user_token = match maybe_user_session.as_ref() {
     Some(session) => &session.user_token,
     None => {
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   if let Err(reason) = validate_idempotency_token_format(&request.uuid_idempotency_token) {
@@ -95,7 +95,7 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
   if let Some(start_frame_token) = request.start_frame_image_media_token.as_ref() {
     let mut tokens = Vec::new();
     tokens.push(start_frame_token.to_owned());
-    
+
     if let Some(end_frame_token) = request.end_frame_image_media_token.as_ref() {
       // NB: Masks are only relevant when this is an image editing exercise.
       tokens.push(end_frame_token.to_owned());
@@ -108,13 +108,8 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
     None => HashMap::new(),
     Some(media_tokens) => {
       info!("Looking up image media tokens: {:?}", media_tokens);
-      lookup_image_urls_as_map(
-        &http_request,
-        &mut mysql_connection,
-        server_state.server_environment,
-        &media_tokens,
-      ).await?
-    }
+      lookup_image_urls_as_map(&http_request, &mut mysql_connection, server_state.server_environment, &media_tokens).await?
+    },
   };
 
   let maybe_start_frame_image_url = match request.start_frame_image_media_token.as_ref() {
@@ -123,8 +118,8 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
       Some(url) => Some(url.to_string()),
       None => {
         return Err(CommonWebError::BadInputWithSimpleMessage("Media for start frame not found.".to_string()));
-      }
-    }
+      },
+    },
   };
 
   let maybe_end_frame_image_url = match request.end_frame_image_media_token.as_ref() {
@@ -133,21 +128,19 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
       Some(url) => Some(url.to_string()),
       None => {
         return Err(CommonWebError::BadInputWithSimpleMessage("Media for end frame not found.".to_string()));
-      }
-    }
+      },
+    },
   };
-  
-  insert_idempotency_token(&request.uuid_idempotency_token, &mut *mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Error inserting idempotency token: {:?}", err);
-        CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
-      })?;
+
+  insert_idempotency_token(&request.uuid_idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
+  })?;
 
   info!("Fal webhook URL: {}", server_state.inference_providers.fal.webhook_url);
 
   let apriori_job_token = InferenceJobToken::generate();
-  
+
   let fal_result;
   let generation_mode;
 
@@ -155,9 +148,8 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
 
   if let Some(start_frame_url) = maybe_start_frame_image_url {
     if let Some(end_frame_url) = maybe_end_frame_image_url {
-
       info!("image-to-video case (start and end frame)");
-    generation_mode = CommonGenerationMode::Keyframe;
+      generation_mode = CommonGenerationMode::Keyframe;
 
       let duration = match request.duration {
         Some(Veo3p1FastMultiFunctionVideoGenDuration::FourSeconds) => EnqueueVeo3p1FastFirstLastFrameImageToVideoDurationSeconds::Four,
@@ -191,28 +183,16 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
 
       let cost = flf_request.calculate_cost_in_cents();
 
-      let args = EnqueueVeo3p1FastFirstLastFrameImageToVideoArgs {
-        request: flf_request,
-        webhook_url: &server_state.inference_providers.fal.webhook_url,
-        api_key: &server_state.inference_providers.fal.api_key,
-      };
+      let args = EnqueueVeo3p1FastFirstLastFrameImageToVideoArgs { request: flf_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
       info!("Charging wallet: {}", cost);
 
-      attempt_wallet_deduction_else_common_web_error(
-        user_token,
-        Some(apriori_job_token.as_str()),
-        cost,
-        &mut mysql_connection,
-      ).await?;
+      attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-      fal_result = enqueue_veo_3p1_fast_first_last_frame_image_to_video_webhook(args)
-          .await
-          .map_err(|err| {
-            warn!("Error calling veo_3p1_fast_first_last_frame_image_to_video_webhook: {:?}", err);
-            CommonWebError::from_error(err)
-          })?;
-
+      fal_result = enqueue_veo_3p1_fast_first_last_frame_image_to_video_webhook(args).await.map_err(|err| {
+        warn!("Error calling veo_3p1_fast_first_last_frame_image_to_video_webhook: {:?}", err);
+        CommonWebError::from_error(err)
+      })?;
     } else {
       info!("image-to-video case (start frame only)");
       generation_mode = CommonGenerationMode::Keyframe;
@@ -248,33 +228,21 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
 
       let cost = i2v_request.calculate_cost_in_cents();
 
-      let args = EnqueueVeo3p1FastImageToVideoArgs {
-        request: i2v_request,
-        webhook_url: &server_state.inference_providers.fal.webhook_url,
-        api_key: &server_state.inference_providers.fal.api_key,
-      };
+      let args = EnqueueVeo3p1FastImageToVideoArgs { request: i2v_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
       info!("Charging wallet: {}", cost);
 
-      attempt_wallet_deduction_else_common_web_error(
-        user_token,
-        Some(apriori_job_token.as_str()),
-        cost,
-        &mut mysql_connection,
-      ).await?;
+      attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-      fal_result = enqueue_veo_3p1_fast_image_to_video_webhook(args)
-          .await
-          .map_err(|err| {
-            warn!("Error calling enqueue_veo_3p1_fast_image_to_video_webhook: {:?}", err);
-            CommonWebError::from_error(err)
-          })?;
+      fal_result = enqueue_veo_3p1_fast_image_to_video_webhook(args).await.map_err(|err| {
+        warn!("Error calling enqueue_veo_3p1_fast_image_to_video_webhook: {:?}", err);
+        CommonWebError::from_error(err)
+      })?;
     }
-
   } else {
     info!("text-to-video case");
     generation_mode = CommonGenerationMode::Text;
-    
+
     let duration = match request.duration {
       Some(Veo3p1FastMultiFunctionVideoGenDuration::FourSeconds) => EnqueueVeo3p1FastTextToVideoDurationSeconds::Four,
       Some(Veo3p1FastMultiFunctionVideoGenDuration::SixSeconds) => EnqueueVeo3p1FastTextToVideoDurationSeconds::Six,
@@ -311,53 +279,36 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
 
     info!("Charging wallet: {}", cost);
 
-    attempt_wallet_deduction_else_common_web_error(
-      user_token,
-      Some(apriori_job_token.as_str()),
-      cost,
-      &mut mysql_connection,
-    ).await?;
+    attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-    let args = EnqueueVeo3p1FastTextToVideoArgs {
-      request: t2v_request,
-      webhook_url: &server_state.inference_providers.fal.webhook_url,
-      api_key: &server_state.inference_providers.fal.api_key,
-    };
+    let args = EnqueueVeo3p1FastTextToVideoArgs { request: t2v_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
-    fal_result = enqueue_veo_3p1_fast_text_to_video_webhook(args)
-        .await
-        .map_err(|err| {
-          warn!("Error calling enqueue_veo_3p1_fast_text_to_video_webhook: {:?}", err);
-          CommonWebError::from_error(err)
-        })?;
+    fal_result = enqueue_veo_3p1_fast_text_to_video_webhook(args).await.map_err(|err| {
+      warn!("Error calling enqueue_veo_3p1_fast_text_to_video_webhook: {:?}", err);
+      CommonWebError::from_error(err)
+    })?;
   }
 
-  let external_job_id = fal_result.request_id
-      .ok_or_else(|| {
-        warn!("Fal request_id is None");
-        CommonWebError::server_error_with_message("Fal request_id is None")
-      })?;
+  let external_job_id = fal_result.request_id.ok_or_else(|| {
+    warn!("Fal request_id is None");
+    CommonWebError::server_error_with_message("Fal request_id is None")
+  })?;
 
   info!("Fal request_id: {}", external_job_id);
 
   let ip_address = get_request_ip(&http_request);
 
-  let mut transaction = mysql_connection
-      .begin()
-      .await
-      .map_err(|err| {
-        error!("Error starting MySQL transaction: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
+  let mut transaction = mysql_connection.begin().await.map_err(|err| {
+    error!("Error starting MySQL transaction: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   // NB: Don't fail the job if the query fails.
   let prompt_result = insert_prompt(InsertPromptArgs {
     maybe_bitrate: None,
     maybe_apriori_prompt_token: None,
     prompt_type: PromptType::ArtcraftApp,
-    maybe_creator_user_token: maybe_user_session
-        .as_ref()
-        .map(|s| &s.user_token),
+    maybe_creator_user_token: maybe_user_session.as_ref().map(|s| &s.user_token),
     maybe_model_type: Some(CommonModelType::Veo3p1Fast),
     maybe_generation_provider: Some(GenerationProvider::Artcraft),
     maybe_positive_prompt: request.prompt.as_deref(),
@@ -380,39 +331,30 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
     creator_ip_address: &ip_address,
     mysql_executor: &mut *transaction,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   let prompt_token = match prompt_result {
     Ok(token) => Some(token),
     Err(err) => {
       warn!("Error inserting prompt: {:?}", err);
       None // Don't fail the job if the prompt insertion fails.
-    }
+    },
   };
 
   if let Some(token) = prompt_token.as_ref() {
     let mut context_items = Vec::with_capacity(2);
-    
+
     if let Some(media_token) = &request.start_frame_image_media_token {
-      context_items.push(PromptContextItem {
-        media_token: media_token.clone(),
-        context_semantic_type: PromptContextSemanticType::VidStartFrame,
-      });
+      context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::VidStartFrame });
     }
 
     if let Some(media_token) = &request.end_frame_image_media_token {
-      context_items.push(PromptContextItem {
-        media_token: media_token.clone(),
-        context_semantic_type: PromptContextSemanticType::VidEndFrame,
-      });
+      context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::VidEndFrame });
     }
 
     if !context_items.is_empty() {
-      let result = insert_batch_prompt_context_items(InsertBatchArgs {
-        prompt_token: token.clone(),
-        items: context_items,
-        transaction: &mut transaction,
-      }).await;
+      let result = insert_batch_prompt_context_items(InsertBatchArgs { prompt_token: token.clone(), items: context_items, transaction: &mut transaction }).await;
 
       if let Err(err) = result {
         // NB: Fail open.
@@ -439,28 +381,23 @@ pub async fn veo_3p1_fast_multi_function_video_gen_handler(
     starting_job_status_override: None,
     maybe_frontend_failure_category: None,
     maybe_failure_reason: None,
-      maybe_debug_log_event_token: None,
+    maybe_debug_log_event_token: None,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   let job_token = match db_result {
     Ok(token) => token,
     Err(err) => {
       warn!("Error inserting generic inference job for FAL queue: {:?}", err);
       return Err(CommonWebError::from_error(err));
-    }
+    },
   };
 
-  let _r = transaction
-      .commit()
-      .await
-      .map_err(|err| {
-        error!("Error committing MySQL transaction: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
+  let _r = transaction.commit().await.map_err(|err| {
+    error!("Error committing MySQL transaction: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
-  Ok(Json(Veo3p1FastMultiFunctionVideoGenResponse {
-    success: true,
-    inference_job_token: job_token,
-  }))
+  Ok(Json(Veo3p1FastMultiFunctionVideoGenResponse { success: true, inference_job_token: job_token }))
 }

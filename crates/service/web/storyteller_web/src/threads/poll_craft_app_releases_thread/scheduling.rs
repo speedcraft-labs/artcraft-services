@@ -89,10 +89,7 @@ pub fn backoff_after(config: &CraftAppsPollConfig, round: &RoundResult, previous
 fn next_wait(config: &CraftAppsPollConfig, round: &RoundResult, consecutive_trouble: &mut u32, now: DateTime<Utc>) -> Duration {
   let base = if let Some(retry_at) = round.rate_limited {
     *consecutive_trouble = consecutive_trouble.saturating_add(1);
-    let until_reset = retry_at
-        .and_then(|t| (t - now).to_std().ok())
-        .map(|d| d + RESET_MARGIN)
-        .unwrap_or(Duration::ZERO);
+    let until_reset = retry_at.and_then(|t| (t - now).to_std().ok()).map(|d| d + RESET_MARGIN).unwrap_or(Duration::ZERO);
     let backoff = scaled(config.interval, *consecutive_trouble);
     until_reset.max(backoff).min(config.max_backoff)
   } else if round.fetched == 0 && round.unchanged == 0 && round.failed > 0 {
@@ -254,26 +251,11 @@ mod tests {
   }
 
   fn config() -> CraftAppsPollConfig {
-    CraftAppsPollConfig {
-      enabled: true,
-      coordination_enabled: true,
-      interval: Duration::from_secs(1800),
-      max_backoff: Duration::from_secs(14_400),
-      github_token: None,
-      apps: default_apps(),
-    }
+    CraftAppsPollConfig { enabled: true, coordination_enabled: true, interval: Duration::from_secs(1800), max_backoff: Duration::from_secs(14_400), github_token: None, apps: default_apps() }
   }
 
   fn app(fetched: Option<DateTime<Utc>>, failed: Option<DateTime<Utc>>, failures: u32) -> CachedCraftApp {
-    CachedCraftApp {
-      name: "PhotoCraft".into(),
-      repo: "storytold/photocraft".into(),
-      latest_release: None,
-      app_last_fetched: fetched,
-      etag: None,
-      last_failed_at: failed,
-      consecutive_failures: failures,
-    }
+    CachedCraftApp { name: "PhotoCraft".into(), repo: "storytold/photocraft".into(), latest_release: None, app_last_fetched: fetched, etag: None, last_failed_at: failed, consecutive_failures: failures }
   }
 
   fn secs(n: i64) -> chrono::Duration {

@@ -40,16 +40,7 @@ pub struct GenerateWan3p0ImageToVideoRequest {
 
 impl Default for GenerateWan3p0ImageToVideoRequest {
   fn default() -> Self {
-    Self {
-      prompt: String::new(),
-      maybe_aspect_ratio: None,
-      maybe_output_resolution: None,
-      duration_seconds: 5,
-      maybe_seed: None,
-      maybe_generate_audio: None,
-      maybe_start_frame_url: None,
-      maybe_end_frame_url: None,
-    }
+    Self { prompt: String::new(), maybe_aspect_ratio: None, maybe_output_resolution: None, duration_seconds: 5, maybe_seed: None, maybe_generate_audio: None, maybe_start_frame_url: None, maybe_end_frame_url: None }
   }
 }
 
@@ -69,29 +60,13 @@ impl GenerateWan3p0ImageToVideoRequest {
     if self.maybe_end_frame_url.is_some() && self.maybe_start_frame_url.is_none() {
       return Err(invalid_field("maybe_end_frame_url", "", "an end frame requires a start frame"));
     }
-    let mut params = Wan3p0ApiParams::new(
-      Wan3p0Model::ImageToVideo,
-      self.prompt,
-      self.maybe_aspect_ratio,
-      self.maybe_output_resolution,
-      self.duration_seconds,
-      self.maybe_seed,
-      self.maybe_generate_audio,
-    )?;
+    let mut params = Wan3p0ApiParams::new(Wan3p0Model::ImageToVideo, self.prompt, self.maybe_aspect_ratio, self.maybe_output_resolution, self.duration_seconds, self.maybe_seed, self.maybe_generate_audio)?;
     params.uploaded_urls = Some(self.maybe_start_frame_url.into_iter().chain(self.maybe_end_frame_url).collect());
     params.validate_media(self.duration_seconds, None)?;
     Ok(params)
   }
 }
 
-pub async fn generate_wan_3p0_image_to_video(
-  args: GenerateWan3p0ImageToVideoArgs<'_>,
-) -> Result<GenerateWan3p0ImageToVideoResponse, KinoviWebError> {
-  workflow_run_task_custom(WorkflowRunTaskCustomArgs {
-    business_type: BUSINESS_TYPE,
-    api_params: args.request.build_api_params()?,
-    session: args.session,
-    host_override: args.maybe_host_override,
-  })
-  .await
+pub async fn generate_wan_3p0_image_to_video(args: GenerateWan3p0ImageToVideoArgs<'_>) -> Result<GenerateWan3p0ImageToVideoResponse, KinoviWebError> {
+  workflow_run_task_custom(WorkflowRunTaskCustomArgs { business_type: BUSINESS_TYPE, api_params: args.request.build_api_params()?, session: args.session, host_override: args.maybe_host_override }).await
 }

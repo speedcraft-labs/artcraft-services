@@ -18,9 +18,7 @@ use enums::common::generation::common_resolution::CommonResolution;
 use enums::common::generation::common_video_model::CommonVideoModel;
 
 use crate::http_server::endpoints::omni_gen::generate::video::tests::support::{
-  assert_real_input_videos_charge, assert_reference_video_charge_then_refund,
-  assert_successful_generation_charges, assert_variant_charges_premium, Batch, CreditsDelta,
-  ExpectedCredits, Seconds, TestHarness,
+  assert_real_input_videos_charge, assert_reference_video_charge_then_refund, assert_successful_generation_charges, assert_variant_charges_premium, Batch, CreditsDelta, ExpectedCredits, Seconds, TestHarness,
 };
 
 // ── Seedance 2.5 ──
@@ -146,9 +144,7 @@ mod seedance_2p5 {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -180,9 +176,7 @@ mod seedance_2p5 {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -208,9 +202,7 @@ mod seedance_2p5 {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -333,9 +325,7 @@ mod seedance_2p5 {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -367,9 +357,7 @@ mod seedance_2p5 {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -396,9 +384,7 @@ mod seedance_2p5 {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p5, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
@@ -530,9 +516,7 @@ mod seedance_2p5_u {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -564,9 +548,7 @@ mod seedance_2p5_u {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -592,9 +574,7 @@ mod seedance_2p5_u {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -717,9 +697,7 @@ mod seedance_2p5_u {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -751,9 +729,7 @@ mod seedance_2p5_u {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -780,13 +756,10 @@ mod seedance_2p5_u {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
-
 
 // ── Input-video DURATION billing (real probed durations) ──
 // The stub media CDN serves REAL generated videos with exact durations, so
@@ -798,7 +771,6 @@ mod seedance_2p5_u {
 mod input_video_duration_billing {
   use super::*;
 
-
   /// Baseline: no input videos bills the NO-reference rate over the output
   /// duration only (480p 11.76954733 ¢/s, 720p 26.70781893 ¢/s).
   #[tokio::test]
@@ -806,14 +778,8 @@ mod input_video_duration_billing {
   async fn no_input_videos_bill_the_no_reference_rate() {
     let harness = TestHarness::create().await;
 
-    assert_successful_generation_charges(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), Batch(1), ExpectedCredits(354),
-    ).await;
-    assert_successful_generation_charges(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::SevenTwentyP),
-      Seconds(30), Batch(1), ExpectedCredits(802),
-    ).await;
+    assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), Batch(1), ExpectedCredits(354)).await;
+    assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::SevenTwentyP), Seconds(30), Batch(1), ExpectedCredits(802)).await;
   }
 
   /// Single input videos of 1, 2, 3, and 4 seconds ALL bill 4 input seconds
@@ -826,10 +792,7 @@ mod input_video_duration_billing {
     // 30s output + 4 input = 34 billed × 7.24279835 ¢/s = 246.26 → 247.
     let cases: &[&[u64]] = &[&[1_000], &[2_000], &[3_000], &[4_000]];
     for input_millis in cases {
-      assert_real_input_videos_charge(
-        &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-        Seconds(30), input_millis, ExpectedCredits(247),
-      ).await;
+      assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), input_millis, ExpectedCredits(247)).await;
     }
   }
 
@@ -850,10 +813,7 @@ mod input_video_duration_billing {
       (&[30_000], ExpectedCredits(435)), // 60 billed (the worst case)
     ];
     for (input_millis, expected) in cases {
-      assert_real_input_videos_charge(
-        &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-        Seconds(30), input_millis, *expected,
-      ).await;
+      assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), input_millis, *expected).await;
     }
   }
 
@@ -878,10 +838,7 @@ mod input_video_duration_billing {
       (&[10_000, 10_000, 10_000], ExpectedCredits(435)), // 10+10+10 = 30 → 60 billed
     ];
     for (input_millis, expected) in cases {
-      assert_real_input_videos_charge(
-        &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-        Seconds(30), input_millis, *expected,
-      ).await;
+      assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), input_millis, *expected).await;
     }
   }
 
@@ -893,14 +850,8 @@ mod input_video_duration_billing {
     let harness = TestHarness::create().await;
 
     // 30s output + 4s clamped input = 34 billed × 7.24279835 ¢/s → 247.
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[1_500], ExpectedCredits(247),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[3_900], ExpectedCredits(247),
-    ).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[1_500], ExpectedCredits(247)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[3_900], ExpectedCredits(247)).await;
   }
 
   /// Above the 4-second floor, each input bills its ceil-rounded duration.
@@ -915,26 +866,11 @@ mod input_video_duration_billing {
     //  10.5s → 11 → 41 billed × 7.24279835 = 296.95 → 297
     //   6.5s → 7  → 37 billed × 15.84362140 = 586.21 → 587 (720p)
     //   6.5s → 7  → 37 billed × 38.49728574 = 1424.40 → 1425 (1080p)
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[4_500], ExpectedCredits(254),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[6_500], ExpectedCredits(268),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[10_500], ExpectedCredits(297),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::SevenTwentyP),
-      Seconds(30), &[6_500], ExpectedCredits(587),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::TenEightyP),
-      Seconds(30), &[6_500], ExpectedCredits(1425),
-    ).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[4_500], ExpectedCredits(254)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[6_500], ExpectedCredits(268)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[10_500], ExpectedCredits(297)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::SevenTwentyP), Seconds(30), &[6_500], ExpectedCredits(587)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::TenEightyP), Seconds(30), &[6_500], ExpectedCredits(1425)).await;
   }
 
   /// The 4-second minimum applies to the TOTAL, not per video: a 2.5s +
@@ -946,10 +882,7 @@ mod input_video_duration_billing {
     let harness = TestHarness::create().await;
 
     // 30s output + 10 input = 40 billed × 7.24279835 = 289.71 → 290.
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[2_500, 6_500], ExpectedCredits(290),
-    ).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[2_500, 6_500], ExpectedCredits(290)).await;
   }
 
   /// Total input seconds cap at 30: a 29.5s video (→ 30) and a pair of 20s
@@ -960,14 +893,8 @@ mod input_video_duration_billing {
     let harness = TestHarness::create().await;
 
     // 30s output + 30 input = 60 billed × 7.24279835 = 434.57 → 435.
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[29_500], ExpectedCredits(435),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[20_000, 20_000], ExpectedCredits(435),
-    ).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[29_500], ExpectedCredits(435)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5, Some(CommonResolution::FourEightyP), Seconds(30), &[20_000, 20_000], ExpectedCredits(435)).await;
   }
 
   /// Ultra applies the same input-second rules at its own rates.
@@ -983,26 +910,11 @@ mod input_video_duration_billing {
     //  2.5s + 6.5s → 3+7=10 → 40 billed → 342.39 → 343 (total-based, no per-video clamp)
     //   6.5s → 7 → 37 billed × 18.72427984 = 692.80 → 693 (720p)
     //   6.5s → 7 → 37 billed × 41.84487580 = 1548.26 → 1549 (1080p)
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[2_500], ExpectedCredits(292),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[10_500], ExpectedCredits(351),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::FourEightyP),
-      Seconds(30), &[2_500, 6_500], ExpectedCredits(343),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::SevenTwentyP),
-      Seconds(30), &[6_500], ExpectedCredits(693),
-    ).await;
-    assert_real_input_videos_charge(
-      &harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::TenEightyP),
-      Seconds(30), &[6_500], ExpectedCredits(1549),
-    ).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::FourEightyP), Seconds(30), &[2_500], ExpectedCredits(292)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::FourEightyP), Seconds(30), &[10_500], ExpectedCredits(351)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::FourEightyP), Seconds(30), &[2_500, 6_500], ExpectedCredits(343)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::SevenTwentyP), Seconds(30), &[6_500], ExpectedCredits(693)).await;
+    assert_real_input_videos_charge(&harness, CommonVideoModel::Seedance2p5Ultra, Some(CommonResolution::TenEightyP), Seconds(30), &[6_500], ExpectedCredits(1549)).await;
   }
 }
 
@@ -1034,12 +946,7 @@ mod premium {
     ];
 
     for (resolution, seconds, batch, base, variant, delta) in cases {
-      assert_variant_charges_premium(
-        &harness,
-        CommonVideoModel::Seedance2p5,
-        CommonVideoModel::Seedance2p5Ultra,
-        *resolution, *seconds, *batch, *base, *variant, *delta,
-      ).await;
+      assert_variant_charges_premium(&harness, CommonVideoModel::Seedance2p5, CommonVideoModel::Seedance2p5Ultra, *resolution, *seconds, *batch, *base, *variant, *delta).await;
     }
   }
 }

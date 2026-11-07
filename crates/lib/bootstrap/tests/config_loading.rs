@@ -41,8 +41,7 @@ mod development {
   fn environment_and_local_configs_take_precedence_but_backup_fills_missing_values() {
     let (_temporary, root) = checkout("artcraft-services");
     write_config(&root, CONFIG_DIRECTORY, "development-secrets", &format!("{VALUE}=local\n"));
-    write_config(&root, BACKUP_DIRECTORY, "development-secrets",
-      &format!("{VALUE}=backup\n{MISSING_VALUE}=backup-only\n"));
+    write_config(&root, BACKUP_DIRECTORY, "development-secrets", &format!("{VALUE}=backup\n{MISSING_VALUE}=backup-only\n"));
 
     run_bootstrap(&root, "development", "local", "", true);
     run_bootstrap(&root, "development", "environment", "", true);
@@ -79,12 +78,7 @@ fn bootstrap_child_process() {
     return;
   }
 
-  bootstrap(BootstrapArgs {
-    app_name: "bootstrap-test",
-    default_logging_override: None,
-    config_search_directories: &[".", "./config", CONFIG_DIRECTORY],
-    ignore_legacy_dot_env_file: true,
-  }).unwrap();
+  bootstrap(BootstrapArgs { app_name: "bootstrap-test", default_logging_override: None, config_search_directories: &[".", "./config", CONFIG_DIRECTORY], ignore_legacy_dot_env_file: true }).unwrap();
 
   assert_eq!(env::var(VALUE).unwrap(), env::var("EXPECTED_VALUE").unwrap());
   assert_eq!(env::var(COMMON_VALUE).unwrap_or_default(), env::var("EXPECTED_COMMON_VALUE").unwrap());
@@ -97,23 +91,23 @@ fn bootstrap_child_process() {
 
 fn run_bootstrap(directory: &Path, environment: &str, expected: &str, expected_common: &str, expect_backup: bool) {
   let mut command = Command::new(env::current_exe().unwrap());
-  command.args(["--exact", "bootstrap_child_process", "--nocapture"])
-      .current_dir(directory)
-      .env_clear()
-      .env(CHILD_PROCESS, "1")
-      .env("RUST_LOG", "error")
-      .env("SERVER_ENVIRONMENT", environment)
-      .env("EXPECTED_VALUE", expected)
-      .env("EXPECTED_COMMON_VALUE", expected_common)
-      .env("EXPECT_BACKUP_VALUE", expect_backup.to_string());
+  command
+    .args(["--exact", "bootstrap_child_process", "--nocapture"])
+    .current_dir(directory)
+    .env_clear()
+    .env(CHILD_PROCESS, "1")
+    .env("RUST_LOG", "error")
+    .env("SERVER_ENVIRONMENT", environment)
+    .env("EXPECTED_VALUE", expected)
+    .env("EXPECTED_COMMON_VALUE", expected_common)
+    .env("EXPECT_BACKUP_VALUE", expect_backup.to_string());
 
   if expected == "environment" {
     command.env(VALUE, "environment");
   }
 
   let output = command.output().unwrap();
-  assert!(output.status.success(), "bootstrap failed in {directory:?}:\n{}\n{}",
-    String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+  assert!(output.status.success(), "bootstrap failed in {directory:?}:\n{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
 }
 
 fn checkout(name: &str) -> (TempDir, PathBuf) {

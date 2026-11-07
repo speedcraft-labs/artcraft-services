@@ -12,23 +12,10 @@ use crate::http_server::common_responses::media::media_links_builder::VideoThumb
 /// media-file list row. Shared by every list endpoint that returns
 /// media files (folders, tags, ...) so the CDN-link construction stays
 /// in one place.
-pub fn build_media_links_and_cover(
-  row: &MediaFileListRow,
-  media_domain: MediaDomain,
-  server_environment: ServerEnvironment,
-) -> (MediaLinks, MediaFileCoverImageDetails) {
-  let bucket_path = MediaFileBucketPath::from_object_hash(
-    &row.public_bucket_directory_hash,
-    row.maybe_public_bucket_prefix.as_deref(),
-    row.maybe_public_bucket_extension.as_deref(),
-  );
+pub fn build_media_links_and_cover(row: &MediaFileListRow, media_domain: MediaDomain, server_environment: ServerEnvironment) -> (MediaLinks, MediaFileCoverImageDetails) {
+  let bucket_path = MediaFileBucketPath::from_object_hash(&row.public_bucket_directory_hash, row.maybe_public_bucket_prefix.as_deref(), row.maybe_public_bucket_extension.as_deref());
 
-  let media_links = MediaLinksBuilder::from_media_path_and_env(
-    media_domain,
-    server_environment,
-    &bucket_path,
-    VideoThumbnailInfo::new(row.maybe_thumbnail_version, row.created_at),
-  );
+  let media_links = MediaLinksBuilder::from_media_path_and_env(media_domain, server_environment, &bucket_path, VideoThumbnailInfo::new(row.maybe_thumbnail_version, row.created_at));
 
   let cover_image = MediaFileCoverImageDetails::from_optional_db_fields(
     &row.media_file_token,

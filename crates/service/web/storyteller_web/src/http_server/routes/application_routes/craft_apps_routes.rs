@@ -8,21 +8,13 @@ use crate::http_server::endpoints::craft_apps::get_craft_apps_release_info_handl
 pub fn add_craft_apps_routes<T, B>(app: App<T>) -> App<T>
 where
   B: MessageBody,
-  T: ServiceFactory<
-    ServiceRequest,
-    Config = (),
-    Response = ServiceResponse<B>,
-    Error = Error,
-    InitError = (),
-  >,
+  T: ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<B>, Error = Error, InitError = ()>,
 {
-  app.service(
-    web::scope("/v1/craft_apps")
+  app.service(web::scope("/v1/craft_apps")
       // Release info for ArtCraft Launcher (polled instead of GitHub).
       .service(
         web::resource("/release_info")
           .route(web::get().to(get_craft_apps_release_info_handler))
           .route(web::head().to(|| HttpResponse::Ok())),
-      ),
-  )
+      ))
 }

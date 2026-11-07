@@ -36,7 +36,6 @@ crate::impl_model_downloader!(
   "/tmp/downloads/sadtalker/SadTalker_V0.0.2_512.safetensors"
 );
 
-
 crate::impl_model_downloader!(
   SadTalkerEnhancerAlignment,
   "sad talker enhancer alignment",
@@ -55,14 +54,7 @@ crate::impl_model_downloader!(
   "/tmp/downloads/sadtalker/detection_Resnet50_Final.pth"
 );
 
-crate::impl_model_downloader!(
-  SadTalkerEnhancerGfpgan,
-  "sad talker enhancer GFPGAN",
-  "SAD_ENHANCER_GFPGAN_BUCKET_PATH",
-  "/animation_sadtalker/enhancer/GFPGANv1.4.pth",
-  "SAD_ENHANCER_GFPGAN_FILESYSTEM_PATH",
-  "/tmp/downloads/sadtalker/GFPGANv1.4.pth"
-);
+crate::impl_model_downloader!(SadTalkerEnhancerGfpgan, "sad talker enhancer GFPGAN", "SAD_ENHANCER_GFPGAN_BUCKET_PATH", "/animation_sadtalker/enhancer/GFPGANv1.4.pth", "SAD_ENHANCER_GFPGAN_FILESYSTEM_PATH", "/tmp/downloads/sadtalker/GFPGANv1.4.pth");
 
 crate::impl_model_downloader!(
   SadTalkerEnhancerParsenet,
@@ -99,16 +91,7 @@ impl SadTalkerDownloaders {
   }
 
   pub fn all_downloaders(&self) -> Vec<&dyn ModelDownloader> {
-    vec![
-      &self.model_first_mapping,
-      &self.model_second_mapping,
-      &self.model_first_tensor,
-      &self.model_second_tensor,
-      &self.enhancer_alignment,
-      &self.enhancer_resnet,
-      &self.enhancer_gfpgan,
-      &self.enhancer_parsenet,
-    ]
+    vec![&self.model_first_mapping, &self.model_second_mapping, &self.model_first_tensor, &self.model_second_tensor, &self.enhancer_alignment, &self.enhancer_resnet, &self.enhancer_gfpgan, &self.enhancer_parsenet]
   }
 }
 

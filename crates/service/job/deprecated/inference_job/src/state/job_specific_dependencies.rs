@@ -43,11 +43,7 @@ pub struct JobSpecificDependencies {
 }
 
 impl JobSpecificDependencies {
-
-  pub async fn setup_for_jobs(
-    scoped_job_type_execution: &ScopedJobTypeExecution,
-    scoped_model_type_execution: &ScopedModelTypeExecution
-  ) -> AnyhowResult<Self> {
+  pub async fn setup_for_jobs(scoped_job_type_execution: &ScopedJobTypeExecution, scoped_model_type_execution: &ScopedModelTypeExecution) -> AnyhowResult<Self> {
     let mut maybe_rvc_v2_dependencies = None;
     let mut maybe_sad_talker_dependencies = None;
     let mut maybe_svc_dependencies = None;
@@ -67,10 +63,10 @@ impl JobSpecificDependencies {
     let mut maybe_seed_vc_dependencies = None;
 
     if scoped_model_type_execution.can_run_job(InferenceModelType::ComfyUi)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::LivePortrait)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::VideoRender)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::FaceFusion)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::ComfyUi)
+      || scoped_job_type_execution.can_run_job(InferenceJobType::LivePortrait)
+      || scoped_job_type_execution.can_run_job(InferenceJobType::VideoRender)
+      || scoped_job_type_execution.can_run_job(InferenceJobType::FaceFusion)
+      || scoped_job_type_execution.can_run_job(InferenceJobType::ComfyUi)
     {
       print_with_space("Setting ComfyUI dependencies...");
       maybe_comfy_ui_dependencies = Some(ComfyDependencies::setup().await?);
@@ -96,30 +92,22 @@ impl JobSpecificDependencies {
       maybe_seed_vc_dependencies = Some(SeedVcDependencies::setup()?);
     }
 
-    if scoped_model_type_execution.can_run_job(InferenceModelType::RvcV2)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::RvcV2)
-    {
+    if scoped_model_type_execution.can_run_job(InferenceModelType::RvcV2) || scoped_job_type_execution.can_run_job(InferenceJobType::RvcV2) {
       print_with_space("Setting RVCv2 dependencies...");
       maybe_rvc_v2_dependencies = Some(RvcV2Dependencies::setup()?);
     }
 
-    if scoped_model_type_execution.can_run_job(InferenceModelType::SadTalker)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::SadTalker)
-    {
+    if scoped_model_type_execution.can_run_job(InferenceModelType::SadTalker) || scoped_job_type_execution.can_run_job(InferenceJobType::SadTalker) {
       print_with_space("Setting SadTalker dependencies...");
       maybe_sad_talker_dependencies = Some(SadTalkerDependencies::setup()?);
     }
 
-    if scoped_model_type_execution.can_run_job(InferenceModelType::SoVitsSvc)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::SoVitsSvc)
-    {
+    if scoped_model_type_execution.can_run_job(InferenceModelType::SoVitsSvc) || scoped_job_type_execution.can_run_job(InferenceJobType::SoVitsSvc) {
       print_with_space("Setting SVC dependencies...");
       maybe_svc_dependencies = Some(SvcDependencies::setup()?);
     }
 
-    if scoped_model_type_execution.can_run_job(InferenceModelType::Tacotron2)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::Tacotron2)
-    {
+    if scoped_model_type_execution.can_run_job(InferenceModelType::Tacotron2) || scoped_job_type_execution.can_run_job(InferenceJobType::Tacotron2) {
       print_with_space("Setting Tacotron2 dependencies...");
       maybe_tacotron2_dependencies = Some(Tacotron2Dependencies::setup()?);
     }
@@ -129,9 +117,7 @@ impl JobSpecificDependencies {
       maybe_vall_e_x_dependencies = Some(VallExDependencies::setup()?);
     }
 
-    if scoped_model_type_execution.can_run_job(InferenceModelType::StyleTTS2)
-        || scoped_job_type_execution.can_run_job(InferenceJobType::StyleTTS2)
-    {
+    if scoped_model_type_execution.can_run_job(InferenceModelType::StyleTTS2) || scoped_job_type_execution.can_run_job(InferenceJobType::StyleTTS2) {
       print_with_space("Setting StyleTTS2 dependencies...");
       maybe_styletts2_dependencies = Some(StyleTTS2Dependencies::setup()?);
     }

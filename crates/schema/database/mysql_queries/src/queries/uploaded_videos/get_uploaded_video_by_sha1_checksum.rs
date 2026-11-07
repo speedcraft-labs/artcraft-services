@@ -19,9 +19,7 @@ where
 
 /// Look up an `uploaded_videos` record by its `sha1_checksum`. `Ok(None)` if no
 /// row matches. Useful for de-duplicating re-uploads of the same bytes.
-pub async fn get_uploaded_video_by_sha1_checksum<'e, 'c: 'e, E>(
-  args: GetUploadedVideoBySha1ChecksumArgs<'e, 'c, E>,
-) -> Result<Option<UploadedVideoRow>, sqlx::Error>
+pub async fn get_uploaded_video_by_sha1_checksum<'e, 'c: 'e, E>(args: GetUploadedVideoBySha1ChecksumArgs<'e, 'c, E>) -> Result<Option<UploadedVideoRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -47,8 +45,8 @@ LIMIT 1
     "#,
     args.sha1_checksum,
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| UploadedVideoRow {
     token: r.token,

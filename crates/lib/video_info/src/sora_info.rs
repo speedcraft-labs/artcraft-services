@@ -76,8 +76,7 @@ impl SoraInfo {
     Ok(SoraInfo {
       producer: "OpenAI".to_string(),
       model_name: find(data, SORA_MARKER).map(|_| "sora".to_string()),
-      created_description: find_description_containing(data, b"OpenAI")
-        .or_else(|| find_description_containing(data, b"Generated")),
+      created_description: find_description_containing(data, b"OpenAI").or_else(|| find_description_containing(data, b"Generated")),
       digital_source_type: text_after_key(data, b"digitalSourceType"),
       claim_generator: text_after_key(data, b"claim_generator"),
       manifest_id: find_prefixed_uuid(data, b"urn:c2pa:"),

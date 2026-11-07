@@ -54,9 +54,7 @@ pub struct TtsInferenceJobStatusForResponse {
 /// Legacy TTS inference is shut down and the job tables are no longer served.
 /// Every job is reported as terminally "dead" (without touching MySQL or
 /// Redis) so old clients stop polling.
-pub async fn get_tts_inference_job_status_handler(
-  path: Path<GetTtsInferenceStatusPathInfo>,
-) -> Result<Json<GetTtsInferenceStatusSuccessResponse>, CommonWebError> {
+pub async fn get_tts_inference_job_status_handler(path: Path<GetTtsInferenceStatusPathInfo>) -> Result<Json<GetTtsInferenceStatusSuccessResponse>, CommonWebError> {
   let job_token = path.into_inner().token;
 
   if job_token.trim() == "None" {

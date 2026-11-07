@@ -28,23 +28,13 @@ const SUFFIX_JPG: &str = ".jpg";
 /// 1. Download result images and upload them as media files.
 /// 2. Activate the character with the new media tokens.
 /// 3. Mark the inference job as completed.
-pub async fn process_successful_character(
-  deps: &JobDependencies,
-  job: &PendingKinoviWebCharacterJob,
-  character: &CharacterStatus,
-) -> AnyhowResult<()> {
-
-  info!(
-    "Processing successful character {} for job {}",
-    character.character_id, job.job_token.as_str(),
-  );
+pub async fn process_successful_character(deps: &JobDependencies, job: &PendingKinoviWebCharacterJob, character: &CharacterStatus) -> AnyhowResult<()> {
+  info!("Processing successful character {} for job {}", character.character_id, job.job_token.as_str(),);
 
   // --- Look up our character record ---
 
-  let character_token = get_character_token_by_kinovi_id(&character.character_id, &deps.mysql_pool)
-      .await
-      .map_err(|err| anyhow!("Error looking up character by kinovi_id: {:?}", err))?
-      .ok_or_else(|| anyhow!("Character not found for kinovi_id: {}", character.character_id))?;
+  let character_token =
+    get_character_token_by_kinovi_id(&character.character_id, &deps.mysql_pool).await.map_err(|err| anyhow!("Error looking up character by kinovi_id: {:?}", err))?.ok_or_else(|| anyhow!("Character not found for kinovi_id: {}", character.character_id))?;
 
   // --- Download and upload result images ---
 
@@ -66,7 +56,7 @@ pub async fn process_successful_character(
       Err(err) => {
         warn!("Error processing result image {}: {:?}", result_image.url, err);
         continue;
-      }
+      },
     };
 
     if is_avatar && maybe_avatar_media_token.is_none() {
@@ -78,30 +68,13 @@ pub async fn process_successful_character(
 
   // --- Activate character ---
 
-  activate_character_with_media(
-    &character_token,
-    maybe_avatar_media_token.as_ref(),
-    maybe_full_image_media_token.as_ref(),
-    character.asset_id.as_deref(),
-    &deps.mysql_pool,
-  )
-      .await
-      .map_err(|err| anyhow!("Error activating character: {:?}", err))?;
+  activate_character_with_media(&character_token, maybe_avatar_media_token.as_ref(), maybe_full_image_media_token.as_ref(), character.asset_id.as_deref(), &deps.mysql_pool).await.map_err(|err| anyhow!("Error activating character: {:?}", err))?;
 
   info!("Activated character {} (token={})", character.character_id, character_token);
 
   // --- Mark job as completed ---
 
-  mark_generic_inference_job_successfully_done_by_token(
-    &deps.mysql_pool,
-    &job.job_token,
-    Some(InferenceResultType::Character),
-    Some(character_token.as_str()),
-    None,
-    None,
-  )
-      .await
-      .map_err(|err| anyhow!("Error marking job as done: {:?}", err))?;
+  mark_generic_inference_job_successfully_done_by_token(&deps.mysql_pool, &job.job_token, Some(InferenceResultType::Character), Some(character_token.as_str()), None, None).await.map_err(|err| anyhow!("Error marking job as done: {:?}", err))?;
 
   info!("Marked job {} as completed.", job.job_token.as_str());
 
@@ -111,26 +84,17 @@ pub async fn process_successful_character(
 // =============== Private helpers ===============
 
 /// Download an image from a URL, upload to bucket, and create a media file record.
-async fn download_and_create_media_file(
-  deps: &JobDependencies,
-  job: &PendingKinoviWebCharacterJob,
-  image_url: &str,
-) -> AnyhowResult<tokens::tokens::media_files::MediaFileToken> {
+async fn download_and_create_media_file(deps: &JobDependencies, job: &PendingKinoviWebCharacterJob, image_url: &str) -> AnyhowResult<tokens::tokens::media_files::MediaFileToken> {
   info!("Downloading character image: {}", image_url);
 
   let image_bytes: Vec<u8> = download_result_bytes(&deps.download_client, image_url).await?;
 
   info!("Downloaded {} bytes from {}", image_bytes.len(), image_url);
 
-  let checksum = sha256_hash_bytes(&image_bytes)
-    .map_err(|err| anyhow!("error hashing image: {:?}", err))?;
+  let checksum = sha256_hash_bytes(&image_bytes).map_err(|err| anyhow!("error hashing image: {:?}", err))?;
 
   // Determine extension from URL or default to png.
-  let suffix = if image_url.contains(".jpg") || image_url.contains(".jpeg") {
-    SUFFIX_JPG
-  } else {
-    SUFFIX_PNG
-  };
+  let suffix = if image_url.contains(".jpg") || image_url.contains(".jpeg") { SUFFIX_JPG } else { SUFFIX_PNG };
 
   let media_type = if suffix == SUFFIX_JPG { MediaFileType::Jpg } else { MediaFileType::Png };
   let mime_type = if suffix == SUFFIX_JPG { "image/jpeg" } else { "image/png" };
@@ -140,10 +104,7 @@ async fn download_and_create_media_file(
 
   info!("Uploading character image to bucket: {}", object_path);
 
-  deps.public_bucket_client
-    .upload_file_with_content_type_process(object_path, &image_bytes, mime_type)
-    .await
-    .map_err(|err| anyhow!("error uploading image to bucket: {:?}", err))?;
+  deps.public_bucket_client.upload_file_with_content_type_process(object_path, &image_bytes, mime_type).await.map_err(|err| anyhow!("error uploading image to bucket: {:?}", err))?;
 
   let media_file_token = MediaFileInsertBuilder::new()
     .maybe_creator_user(job.maybe_creator_user_token.as_ref())

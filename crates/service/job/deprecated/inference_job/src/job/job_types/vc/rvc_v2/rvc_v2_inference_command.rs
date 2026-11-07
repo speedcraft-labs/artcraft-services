@@ -92,17 +92,14 @@ impl RvcV2InferenceCommand {
   }
 
   pub fn from_env() -> AnyhowResult<Self> {
-    let so_vits_svc_root_code_directory = easyenv::get_env_pathbuf_required(
-      "RVC_V2_INFERENCE_ROOT_DIRECTORY")?;
+    let so_vits_svc_root_code_directory = easyenv::get_env_pathbuf_required("RVC_V2_INFERENCE_ROOT_DIRECTORY")?;
 
     // NB: The command is installed (typically as `svc`) rather than called as a python script.
     // Lately we've had to call it as `python3 -m so_vits_svc_fork.fakeyou_infer`
-    let maybe_inference_command = easyenv::get_env_string_optional(
-      "RVC_V2_INFERENCE_COMMAND");
+    let maybe_inference_command = easyenv::get_env_string_optional("RVC_V2_INFERENCE_COMMAND");
 
     // Optional, eg. `./infer.py`. Typically we'll use the command form instead.
-    let maybe_inference_executable = easyenv::get_env_pathbuf_optional(
-      "RVC_V2_INFERENCE_EXECUTABLE");
+    let maybe_inference_executable = easyenv::get_env_pathbuf_optional("RVC_V2_INFERENCE_EXECUTABLE");
 
     let executable_or_command = match maybe_inference_command {
       Some(command) => ExecutableOrCommand::Command(command),
@@ -112,51 +109,26 @@ impl RvcV2InferenceCommand {
       },
     };
 
-    let maybe_virtual_env_activation_command = easyenv::get_env_string_optional(
-      "RVC_V2_INFERENCE_MAYBE_VENV_COMMAND");
+    let maybe_virtual_env_activation_command = easyenv::get_env_string_optional("RVC_V2_INFERENCE_MAYBE_VENV_COMMAND");
 
-    let maybe_default_config_path = easyenv::get_env_pathbuf_optional(
-      "RVC_V2_INFERENCE_MAYBE_DEFAULT_CONFIG_PATH");
+    let maybe_default_config_path = easyenv::get_env_pathbuf_optional("RVC_V2_INFERENCE_MAYBE_DEFAULT_CONFIG_PATH");
 
-    let maybe_execution_timeout =
-        easyenv::get_env_duration_seconds_optional("RVC_V2_TIMEOUT_SECONDS");
+    let maybe_execution_timeout = easyenv::get_env_duration_seconds_optional("RVC_V2_TIMEOUT_SECONDS");
 
-    let maybe_docker_options = easyenv::get_env_string_optional(
-      "RVC_V2_INFERENCE_MAYBE_DOCKER_IMAGE")
-        .map(|image_name| {
-          DockerOptions {
-            image_name,
-            maybe_bind_mount: Some(DockerFilesystemMount::tmp_to_tmp()),
-            maybe_environment_variables: None,
-            maybe_gpu: Some(DockerGpu::All),
-          }
-        });
+    let maybe_docker_options =
+      easyenv::get_env_string_optional("RVC_V2_INFERENCE_MAYBE_DOCKER_IMAGE").map(|image_name| DockerOptions { image_name, maybe_bind_mount: Some(DockerFilesystemMount::tmp_to_tmp()), maybe_environment_variables: None, maybe_gpu: Some(DockerGpu::All) });
 
-    Ok(Self {
-      rvc_v2_root_code_directory: so_vits_svc_root_code_directory,
-      executable_or_command,
-      maybe_virtual_env_activation_command,
-      maybe_default_config_path,
-      maybe_docker_options,
-      maybe_execution_timeout,
-    })
+    Ok(Self { rvc_v2_root_code_directory: so_vits_svc_root_code_directory, executable_or_command, maybe_virtual_env_activation_command, maybe_default_config_path, maybe_docker_options, maybe_execution_timeout })
   }
 
-  pub fn execute_inference<P: AsRef<Path>, Q: AsRef<Path>>(
-    &self,
-    args: InferenceArgs<P, Q>,
-  ) -> CommandExitStatus {
+  pub fn execute_inference<P: AsRef<Path>, Q: AsRef<Path>>(&self, args: InferenceArgs<P, Q>) -> CommandExitStatus {
     match self.do_execute_inference(args) {
       Ok(exit_status) => exit_status,
       Err(error) => CommandExitStatus::FailureWithReason { reason: format!("error: {:?}", error) },
     }
   }
 
-  fn do_execute_inference<P: AsRef<Path>, Q: AsRef<Path>>(
-    &self,
-    args: InferenceArgs<P, Q>,
-  ) -> AnyhowResult<CommandExitStatus> {
-
+  fn do_execute_inference<P: AsRef<Path>, Q: AsRef<Path>>(&self, args: InferenceArgs<P, Q>) -> AnyhowResult<CommandExitStatus> {
     let mut command = String::new();
     command.push_str(&format!("cd {}", path_to_string(&self.rvc_v2_root_code_directory)));
 
@@ -174,11 +146,11 @@ impl RvcV2InferenceCommand {
       ExecutableOrCommand::Executable(ref executable) => {
         command.push_str(&path_to_string(executable));
         command.push_str(" infer ");
-      }
+      },
       ExecutableOrCommand::Command(ref cmd) => {
         command.push_str(cmd);
         command.push_str(" ");
-      }
+      },
     }
 
     // ===== Begin Python Args =====
@@ -230,11 +202,7 @@ impl RvcV2InferenceCommand {
 
     info!("Command: {:?}", command);
 
-    let command_parts = [
-      "bash",
-      "-c",
-      &command
-    ];
+    let command_parts = ["bash", "-c", &command];
 
     let env_vars = get_filtered_env_vars();
 
@@ -258,7 +226,7 @@ impl RvcV2InferenceCommand {
         let exit_status = p.wait()?;
         info!("Subprocess exit status: {:?}", exit_status);
         Ok(CommandExitStatus::from_exit_status(exit_status))
-      }
+      },
       Some(timeout) => {
         info!("Executing with timeout: {:?}", &timeout);
         let exit_status = p.wait_timeout(timeout)?;
@@ -269,13 +237,13 @@ impl RvcV2InferenceCommand {
             info!("Subprocess didn't end after timeout: {:?}; terminating...", &timeout);
             let _r = p.terminate()?;
             Ok(CommandExitStatus::Timeout)
-          }
+          },
           Some(exit_status) => {
             info!("Subprocess timed wait exit status: {:?}", exit_status);
             Ok(CommandExitStatus::from_exit_status(exit_status))
-          }
+          },
         }
-      }
+      },
     }
   }
 }

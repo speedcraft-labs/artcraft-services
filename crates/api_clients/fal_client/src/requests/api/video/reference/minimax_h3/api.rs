@@ -1,7 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
-use crate::requests::api::video::reference::minimax_h3::raw_request::{
-  MinimaxH3ReferenceToVideoInput, MinimaxH3ReferenceToVideoOutput,
-};
+use crate::requests::api::video::reference::minimax_h3::raw_request::{MinimaxH3ReferenceToVideoInput, MinimaxH3ReferenceToVideoOutput};
 use crate::requests::api::video::text::minimax_h3::api::MinimaxH3Resolution;
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
@@ -89,8 +87,7 @@ mod tests {
   use errors::AnyhowResult;
   use std::fs::read_to_string;
 
-  const EXAMPLE_IMAGE_URL: &str =
-    "https://storage.googleapis.com/falserverless/example_inputs/hailuo23/pro_i2v_in.jpg";
+  const EXAMPLE_IMAGE_URL: &str = "https://storage.googleapis.com/falserverless/example_inputs/hailuo23/pro_i2v_in.jpg";
 
   // ── Real requests (manually run; require a live key and cost money) ──
 
@@ -163,15 +160,7 @@ mod tests {
 
   #[test]
   fn raw_request_omits_unset_optionals() {
-    let request = MinimaxH3ReferenceToVideoRequest {
-      prompt: "minimal".to_string(),
-      reference_image_urls: None,
-      reference_video_urls: None,
-      reference_audio_urls: None,
-      duration: None,
-      resolution: None,
-      aspect_ratio: None,
-    };
+    let request = MinimaxH3ReferenceToVideoRequest { prompt: "minimal".to_string(), reference_image_urls: None, reference_video_urls: None, reference_audio_urls: None, duration: None, resolution: None, aspect_ratio: None };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
     assert_eq!(json, serde_json::json!({ "prompt": "minimal" }));
   }

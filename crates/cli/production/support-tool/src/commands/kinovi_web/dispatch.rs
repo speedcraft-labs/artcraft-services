@@ -6,15 +6,7 @@ use super::subcommands;
 
 /// All canonical subcommand names for this module.
 /// Used by the underscore-insensitive arg normalizer.
-pub const SUBCOMMAND_NAMES: &[&str] = &[
-  "account_info",
-  "audit_credits",
-  "audit_orders",
-  "audit_payments",
-  "failed_job_histogram",
-  "find_job",
-  "generate_video",
-];
+pub const SUBCOMMAND_NAMES: &[&str] = &["account_info", "audit_credits", "audit_orders", "audit_payments", "failed_job_histogram", "find_job", "generate_video"];
 
 #[derive(Args)]
 pub struct KinoviWebArgs {
@@ -104,17 +96,10 @@ mod tests {
 
     #[test]
     fn every_command_accepts_all_accounts_and_cookie_overrides_before_or_after_subcommand() {
-      for (value, account) in [
-        ("volcengine", KinoviAccount::Volcengine),
-        ("byteplus", KinoviAccount::BytePlus),
-        ("byteplusultra", KinoviAccount::BytePlusUltra),
-      ] {
+      for (value, account) in [("volcengine", KinoviAccount::Volcengine), ("byteplus", KinoviAccount::BytePlus), ("byteplusultra", KinoviAccount::BytePlusUltra)] {
         for command in COMMANDS {
           let flags = ["--kinovi-account", value, "--cookies-env", "CUSTOM_COOKIES"];
-          for args in [
-            [flags.as_slice(), *command].concat(),
-            [*command, flags.as_slice()].concat(),
-          ] {
+          for args in [[flags.as_slice(), *command].concat(), [*command, flags.as_slice()].concat()] {
             let args = parse_kinovi(&args);
             assert_eq!(args.kinovi_account, account);
             assert_eq!(args.maybe_cookies_env.as_deref(), Some("CUSTOM_COOKIES"));
@@ -138,9 +123,7 @@ mod tests {
 
     #[test]
     fn rejects_unknown_accounts() {
-      let err = Cli::try_parse_from([
-        "support-tool", "kinovi_web", "account_info", "--kinovi-account", "unknown",
-      ]).err().expect("unknown accounts should be rejected");
+      let err = Cli::try_parse_from(["support-tool", "kinovi_web", "account_info", "--kinovi-account", "unknown"]).err().expect("unknown accounts should be rejected");
       assert_eq!(err.kind(), ErrorKind::InvalidValue);
     }
   }

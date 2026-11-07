@@ -15,7 +15,8 @@ use tokens::tokens::generic_inference_jobs::InferenceJobToken;
 const MAX_FAILURE_REASON_CHARS: usize = 512;
 
 pub struct MarkFirstPartyMinimaxH3JobFailedArgs<'e, 'c, E>
-  where E: 'e + Executor<'c, Database = MySql>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   pub job_token: &'e InferenceJobToken,
 
@@ -42,16 +43,13 @@ pub struct MarkFirstPartyMinimaxH3JobFailedArgs<'e, 'c, E>
   pub phantom: PhantomData<&'c E>,
 }
 
-pub async fn mark_first_party_minimax_h3_job_failed<'e, 'c : 'e, E>(
-  args: MarkFirstPartyMinimaxH3JobFailedArgs<'e, 'c, E>
-) -> Result<(), sqlx::Error>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn mark_first_party_minimax_h3_job_failed<'e, 'c: 'e, E>(args: MarkFirstPartyMinimaxH3JobFailedArgs<'e, 'c, E>) -> Result<(), sqlx::Error>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
-  let maybe_failure_reason = args.maybe_failure_reason
-    .map(|reason| clamp_chars(reason, MAX_FAILURE_REASON_CHARS));
+  let maybe_failure_reason = args.maybe_failure_reason.map(|reason| clamp_chars(reason, MAX_FAILURE_REASON_CHARS));
 
-  let maybe_internal_debugging_failure_reason = args.maybe_internal_debugging_failure_reason
-    .map(|reason| clamp_chars(reason, MAX_FAILURE_REASON_CHARS));
+  let maybe_internal_debugging_failure_reason = args.maybe_internal_debugging_failure_reason.map(|reason| clamp_chars(reason, MAX_FAILURE_REASON_CHARS));
 
   sqlx::query!(
     r#"
@@ -74,8 +72,8 @@ AND status NOT IN ('complete_success', 'complete_failure')
     args.maybe_inference_duration_millis.and_then(|millis| u32::try_from(millis).ok()),
     args.job_token.as_str(),
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
 
   Ok(())
 }

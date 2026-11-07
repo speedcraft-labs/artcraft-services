@@ -9,14 +9,8 @@ use enums::common::generation::common_audio_model::CommonAudioModel as CommonAud
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 
-pub fn hydrate_to_router_request(
-  request: &OmniGenAudioCostAndGenerateRequest,
-) -> Result<GenerateAudioRequestBuilder, CommonWebError> {
-  let api_model = request.model
-    .as_ref()
-    .ok_or_else(|| CommonWebError::BadInputWithSimpleMessage(
-      "model is required".to_string(),
-    ))?;
+pub fn hydrate_to_router_request(request: &OmniGenAudioCostAndGenerateRequest) -> Result<GenerateAudioRequestBuilder, CommonWebError> {
+  let api_model = request.model.as_ref().ok_or_else(|| CommonWebError::BadInputWithSimpleMessage("model is required".to_string()))?;
 
   let model = convert_model(api_model)?;
 
@@ -25,10 +19,8 @@ pub fn hydrate_to_router_request(
     provider: RouterProvider::Artcraft,
     prompt: request.prompt.clone(),
     style_prompt: request.style_prompt.clone(),
-    audio_references: request.audio_media_tokens.clone()
-      .map(AudioListRef::MediaFileTokens),
-    image_references: request.image_media_tokens.clone()
-      .map(ImageListRef::MediaFileTokens),
+    audio_references: request.audio_media_tokens.clone().map(AudioListRef::MediaFileTokens),
+    image_references: request.image_media_tokens.clone().map(ImageListRef::MediaFileTokens),
     keep_lyrics: request.keep_lyrics,
     is_instrumental: request.is_instrumental,
     is_loopable: request.is_loopable,
@@ -43,13 +35,7 @@ pub fn hydrate_to_router_request(
   })
 }
 
-fn convert_model(
-  model: &CommonAudioModelEnum,
-) -> Result<RouterAudioModel, CommonWebError> {
+fn convert_model(model: &CommonAudioModelEnum) -> Result<RouterAudioModel, CommonWebError> {
   let json = serde_json::to_string(model)?;
-  serde_json::from_str(&json).map_err(|e| {
-    CommonWebError::BadInputWithSimpleMessage(
-      format!("Unsupported audio model: {}", e),
-    )
-  })
+  serde_json::from_str(&json).map_err(|e| CommonWebError::BadInputWithSimpleMessage(format!("Unsupported audio model: {}", e)))
 }

@@ -5,11 +5,7 @@ use crate::pricing::kinovi_cost_calculator_trait::KinoviCostCalculatorTrait;
 use crate::pricing::kinovi_pricing_rate::KinoviPricingRate;
 use crate::pricing::kinovi_pricing_tier::KinoviPricingTier;
 use crate::requests::kinovi_host::KinoviHost;
-use crate::requests::workflow_run_task::workflow_run_task::{
-  workflow_run_task, KinoviAspectRatioRaw, KinoviBatchCountRaw, KinoviBitrateRaw,
-  KinoviModelTypeRaw, KinoviOutputResolutionRaw, WorkflowRunTaskArgs,
-  WorkflowRunTaskRequest,
-};
+use crate::requests::workflow_run_task::workflow_run_task::{workflow_run_task, KinoviAspectRatioRaw, KinoviBatchCountRaw, KinoviBitrateRaw, KinoviModelTypeRaw, KinoviOutputResolutionRaw, WorkflowRunTaskArgs, WorkflowRunTaskRequest};
 
 // ── Args ──
 
@@ -103,26 +99,14 @@ pub enum KinoviSeedance2p0FastBitrate {
 // Default resolution (None) is 720p. Batch count multiplies the total cost.
 
 /// Per-second base credit rates by resolution.
-const SEEDANCE_2P0_FAST_480P: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 14.0,
-  maybe_enterprise_credits: Some(10.5),
-};
-const SEEDANCE_2P0_FAST_720P: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 28.0,
-  maybe_enterprise_credits: Some(21.0),
-};
+const SEEDANCE_2P0_FAST_480P: KinoviPricingRate = KinoviPricingRate { consumer_credits: 14.0, maybe_enterprise_credits: Some(10.5) };
+const SEEDANCE_2P0_FAST_720P: KinoviPricingRate = KinoviPricingRate { consumer_credits: 28.0, maybe_enterprise_credits: Some(21.0) };
 
 /// Per-second video-reference surcharge rates by resolution. Flat per
 /// generation regardless of how many reference videos are attached
 /// (assumption — Kinovi's pricing page only shows one).
-const SEEDANCE_2P0_FAST_480P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 4.0,
-  maybe_enterprise_credits: Some(3.0),
-};
-const SEEDANCE_2P0_FAST_720P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate {
-  consumer_credits: 6.0,
-  maybe_enterprise_credits: Some(4.5),
-};
+const SEEDANCE_2P0_FAST_480P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate { consumer_credits: 4.0, maybe_enterprise_credits: Some(3.0) };
+const SEEDANCE_2P0_FAST_720P_VIDEO_REF_SURCHARGE: KinoviPricingRate = KinoviPricingRate { consumer_credits: 6.0, maybe_enterprise_credits: Some(4.5) };
 
 impl KinoviCostCalculatorTrait for GenerateSeedance2p0FastRequest {
   type Cost = KinoviSeedanceFractionalGenerationCost;
@@ -152,25 +136,15 @@ impl KinoviCostCalculatorTrait for GenerateSeedance2p0FastRequest {
 
     let output_seconds = f64::from(self.duration_seconds) * batch_multiplier;
     let base_credits = base_rate.credits(tier) * output_seconds;
-    let maybe_video_reference_surcharge_credits = if self.has_video_reference() {
-      Some(surcharge_rate.credits(tier) * output_seconds)
-    } else {
-      None
-    };
+    let maybe_video_reference_surcharge_credits = if self.has_video_reference() { Some(surcharge_rate.credits(tier) * output_seconds) } else { None };
 
-    KinoviSeedanceFractionalGenerationCost::from_base_and_surcharge_at_tier(
-      tier,
-      base_credits,
-      maybe_video_reference_surcharge_credits,
-    )
+    KinoviSeedanceFractionalGenerationCost::from_base_and_surcharge_at_tier(tier, base_credits, maybe_video_reference_surcharge_credits)
   }
 }
 
 impl GenerateSeedance2p0FastRequest {
   fn has_video_reference(&self) -> bool {
-    self.reference_video_urls
-      .as_ref()
-      .is_some_and(|urls| !urls.is_empty())
+    self.reference_video_urls.as_ref().is_some_and(|urls| !urls.is_empty())
   }
 }
 
@@ -185,9 +159,7 @@ pub struct GenerateSeedance2p0FastResponse {
 
 // ── Entry point ──
 
-pub async fn generate_seedance_2p0_fast(
-  args: GenerateSeedance2p0FastArgs<'_>,
-) -> Result<GenerateSeedance2p0FastResponse, KinoviWebError> {
+pub async fn generate_seedance_2p0_fast(args: GenerateSeedance2p0FastArgs<'_>) -> Result<GenerateSeedance2p0FastResponse, KinoviWebError> {
   let req = args.request;
 
   let raw_request = WorkflowRunTaskRequest {
@@ -209,18 +181,9 @@ pub async fn generate_seedance_2p0_fast(
     maybe_generate_audio: req.maybe_generate_audio,
   };
 
-  let raw_response = workflow_run_task(WorkflowRunTaskArgs {
-    request: raw_request,
-    session: args.session,
-    host_override: args.host_override,
-  }).await?;
+  let raw_response = workflow_run_task(WorkflowRunTaskArgs { request: raw_request, session: args.session, host_override: args.host_override }).await?;
 
-  Ok(GenerateSeedance2p0FastResponse {
-    task_id: raw_response.task_id,
-    order_id: raw_response.order_id,
-    task_ids: raw_response.task_ids,
-    order_ids: raw_response.order_ids,
-  })
+  Ok(GenerateSeedance2p0FastResponse { task_id: raw_response.task_id, order_id: raw_response.order_id, task_ids: raw_response.task_ids, order_ids: raw_response.order_ids })
 }
 
 // ── Mapping helpers ──
@@ -456,11 +419,7 @@ mod tests {
         for (tier, make, duration, base, surcharge) in cases {
           let costs = with_video_ref(make(*duration)).calculate_costs(*tier);
           assert_eq!(costs.base_cost.kinovi_credits, *base, "base at {duration}s ({tier:?})");
-          assert_eq!(
-            costs.video_reference_surcharge_cost.map(|c| c.kinovi_credits),
-            Some(*surcharge),
-            "surcharge at {duration}s ({tier:?})",
-          );
+          assert_eq!(costs.video_reference_surcharge_cost.map(|c| c.kinovi_credits), Some(*surcharge), "surcharge at {duration}s ({tier:?})",);
           assert_eq!(costs.total_cost.kinovi_credits, base + surcharge, "total at {duration}s ({tier:?})");
         }
       }
@@ -509,10 +468,7 @@ mod tests {
       #[test]
       fn multiple_video_references_charge_once() {
         let mut request = r720(5);
-        request.reference_video_urls = Some(vec![
-          "https://example.com/a.mp4".to_string(),
-          "https://example.com/b.mp4".to_string(),
-        ]);
+        request.reference_video_urls = Some(vec!["https://example.com/a.mp4".to_string(), "https://example.com/b.mp4".to_string()]);
         assert_eq!(consumer_credits(&request), 170.0);
         assert_eq!(enterprise_credits(&request), 127.5);
       }
@@ -558,32 +514,16 @@ mod tests {
       #[test]
       fn fixed_five_second_batch_prices_without_video_reference() {
         let cases = [
-          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [
-            (70.0, 37), (140.0, 73), (210.0, 109), (280.0, 146),
-            (350.0, 182), (420.0, 218), (490.0, 254), (560.0, 291),
-          ]),
-          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [
-            (140.0, 73), (280.0, 146), (420.0, 218), (560.0, 291),
-            (700.0, 363), (840.0, 436), (980.0, 508), (1120.0, 581),
-          ]),
-          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [
-            (52.5, 22), (105.0, 44), (157.5, 65), (210.0, 87),
-            (262.5, 108), (315.0, 130), (367.5, 152), (420.0, 173),
-          ]),
-          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [
-            (105.0, 44), (210.0, 87), (315.0, 130), (420.0, 173),
-            (525.0, 216), (630.0, 260), (735.0, 303), (840.0, 346),
-          ]),
+          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [(70.0, 37), (140.0, 73), (210.0, 109), (280.0, 146), (350.0, 182), (420.0, 218), (490.0, 254), (560.0, 291)]),
+          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [(140.0, 73), (280.0, 146), (420.0, 218), (560.0, 291), (700.0, 363), (840.0, 436), (980.0, 508), (1120.0, 581)]),
+          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [(52.5, 22), (105.0, 44), (157.5, 65), (210.0, 87), (262.5, 108), (315.0, 130), (367.5, 152), (420.0, 173)]),
+          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [(105.0, 44), (210.0, 87), (315.0, 130), (420.0, 173), (525.0, 216), (630.0, 260), (735.0, 303), (840.0, 346)]),
         ];
         for (resolution, tier, prices) in cases {
           for (batch, (credits, usd_cents)) in BATCHES.into_iter().zip(prices) {
             let request = build_request(5, Some(resolution), Some(batch));
             let cost = request.calculate_costs(tier).total_cost;
-            assert_eq!(
-              (cost.kinovi_credits, cost.usd_cents_rounded_up),
-              (credits, usd_cents),
-              "{resolution:?} {tier:?} {batch:?}",
-            );
+            assert_eq!((cost.kinovi_credits, cost.usd_cents_rounded_up), (credits, usd_cents), "{resolution:?} {tier:?} {batch:?}",);
           }
         }
       }
@@ -591,33 +531,17 @@ mod tests {
       #[test]
       fn fixed_five_second_batch_prices_with_video_reference() {
         let cases = [
-          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [
-            (90.0, 47), (180.0, 94), (270.0, 140), (360.0, 187),
-            (450.0, 234), (540.0, 280), (630.0, 327), (720.0, 374),
-          ]),
-          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [
-            (170.0, 89), (340.0, 177), (510.0, 265), (680.0, 353),
-            (850.0, 441), (1020.0, 529), (1190.0, 617), (1360.0, 705),
-          ]),
-          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [
-            (67.5, 28), (135.0, 56), (202.5, 84), (270.0, 112),
-            (337.5, 139), (405.0, 167), (472.5, 195), (540.0, 223),
-          ]),
-          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [
-            (127.5, 53), (255.0, 105), (382.5, 158), (510.0, 210),
-            (637.5, 263), (765.0, 315), (892.5, 368), (1020.0, 420),
-          ]),
+          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Consumer, [(90.0, 47), (180.0, 94), (270.0, 140), (360.0, 187), (450.0, 234), (540.0, 280), (630.0, 327), (720.0, 374)]),
+          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Consumer, [(170.0, 89), (340.0, 177), (510.0, 265), (680.0, 353), (850.0, 441), (1020.0, 529), (1190.0, 617), (1360.0, 705)]),
+          (KinoviSeedance2p0FastOutputResolution::FourEightyP, KinoviPricingTier::Enterprise, [(67.5, 28), (135.0, 56), (202.5, 84), (270.0, 112), (337.5, 139), (405.0, 167), (472.5, 195), (540.0, 223)]),
+          (KinoviSeedance2p0FastOutputResolution::SevenTwentyP, KinoviPricingTier::Enterprise, [(127.5, 53), (255.0, 105), (382.5, 158), (510.0, 210), (637.5, 263), (765.0, 315), (892.5, 368), (1020.0, 420)]),
         ];
         for (resolution, tier, prices) in cases {
           for (batch, (credits, usd_cents)) in BATCHES.into_iter().zip(prices) {
             let request = build_request(5, Some(resolution), Some(batch));
             let request = with_video_ref(request);
             let cost = request.calculate_costs(tier).total_cost;
-            assert_eq!(
-              (cost.kinovi_credits, cost.usd_cents_rounded_up),
-              (credits, usd_cents),
-              "{resolution:?} {tier:?} {batch:?}",
-            );
+            assert_eq!((cost.kinovi_credits, cost.usd_cents_rounded_up), (credits, usd_cents), "{resolution:?} {tier:?} {batch:?}",);
           }
         }
       }
@@ -636,18 +560,9 @@ mod tests {
           (Some(KinoviSeedance2p0FastBatchCount::Eight), 8),
         ];
         for tier in [KinoviPricingTier::Enterprise, KinoviPricingTier::Consumer] {
-          for resolution in [
-            None,
-            Some(KinoviSeedance2p0FastOutputResolution::FourEightyP),
-            Some(KinoviSeedance2p0FastOutputResolution::SevenTwentyP),
-          ] {
+          for resolution in [None, Some(KinoviSeedance2p0FastOutputResolution::FourEightyP), Some(KinoviSeedance2p0FastOutputResolution::SevenTwentyP)] {
             for duration in [4, 5, 15] {
-              for references in [
-                None,
-                Some(vec![]),
-                Some(vec!["https://example.com/ref.mp4".to_string()]),
-                Some(vec!["https://example.com/ref1.mp4".to_string(), "https://example.com/ref2.mp4".to_string()]),
-              ] {
+              for references in [None, Some(vec![]), Some(vec!["https://example.com/ref.mp4".to_string()]), Some(vec!["https://example.com/ref1.mp4".to_string(), "https://example.com/ref2.mp4".to_string()])] {
                 let mut request = build_request(duration, resolution, None);
                 request.reference_video_urls = references;
                 let single = request.calculate_costs(tier);
@@ -734,10 +649,7 @@ mod tests {
       for ar in &ratios {
         let mut request = r720(5);
         request.aspect_ratio = Some(*ar);
-        assert_eq!(
-          consumer_credits(&request), baseline,
-          "Aspect ratio {:?} should not change credits from baseline {}", ar, baseline,
-        );
+        assert_eq!(consumer_credits(&request), baseline, "Aspect ratio {:?} should not change credits from baseline {}", ar, baseline,);
       }
     }
 
@@ -750,19 +662,12 @@ mod tests {
       let mut high = r720(5);
       high.bitrate = Some(KinoviSeedance2p0FastBitrate::High);
 
-      assert_eq!(
-        consumer_credits(&high), baseline,
-        "High bitrate should not change credits from baseline {}", baseline,
-      );
+      assert_eq!(consumer_credits(&high), baseline, "High bitrate should not change credits from baseline {}", baseline,);
     }
 
     // ── Helpers ──
 
-    fn build_request(
-      duration_seconds: u8,
-      output_resolution: Option<KinoviSeedance2p0FastOutputResolution>,
-      batch_count: Option<KinoviSeedance2p0FastBatchCount>,
-    ) -> GenerateSeedance2p0FastRequest {
+    fn build_request(duration_seconds: u8, output_resolution: Option<KinoviSeedance2p0FastOutputResolution>, batch_count: Option<KinoviSeedance2p0FastBatchCount>) -> GenerateSeedance2p0FastRequest {
       GenerateSeedance2p0FastRequest {
         prompt: String::new(),
         aspect_ratio: None,
@@ -844,7 +749,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("t2v fast default — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert!(!result.order_id.is_empty());
@@ -876,7 +782,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("t2v fast 480p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -911,7 +818,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast t2v 21:9 480p — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -944,7 +852,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast keyframe 21:9 — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -981,7 +890,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast keyframe — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -1019,7 +929,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast image ref — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -1048,16 +959,15 @@ mod tests {
           start_frame_url: None,
           end_frame_url: None,
           reference_image_urls: None,
-          reference_video_urls: Some(vec![
-            "https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string(),
-          ]),
+          reference_video_urls: Some(vec!["https://static.seedance2-pro.com/materials/20260315/1773594284659-3a46d231.mp4".to_string()]),
           reference_audio_urls: None,
           character_ids: None,
           use_face_blur_hack: None,
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast video ref — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -1093,7 +1003,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast character — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -1125,7 +1036,8 @@ mod tests {
           bitrate: None,
           maybe_generate_audio: None,
         },
-      }).await?;
+      })
+      .await?;
       println!("fast two characters — task_id={}, order_id={}", result.task_id, result.order_id);
       assert!(!result.task_id.is_empty());
       assert_eq!(1, 2);
@@ -1139,21 +1051,11 @@ mod tests {
   }
 
   async fn upload_test_image(session: &KinoviWebSession, image_url: &str) -> AnyhowResult<String> {
-    let image_bytes = crate::test_utils::http_download::http_download_to_bytes(
-      image_url,
-    ).await?;
+    let image_bytes = crate::test_utils::http_download::http_download_to_bytes(image_url).await?;
 
-    let prepare_result = prepare_file_upload(PrepareFileUploadArgs {
-      session,
-      extension: "jpg".to_string(),
-      host_override: None,
-    }).await?;
+    let prepare_result = prepare_file_upload(PrepareFileUploadArgs { session, extension: "jpg".to_string(), host_override: None }).await?;
 
-    let upload_result = upload_file(UploadFileArgs {
-      upload_url: prepare_result.upload_url,
-      file_bytes: image_bytes,
-      host_override: None,
-    }).await?;
+    let upload_result = upload_file(UploadFileArgs { upload_url: prepare_result.upload_url, file_bytes: image_bytes, host_override: None }).await?;
 
     Ok(upload_result.public_url)
   }

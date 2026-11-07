@@ -24,12 +24,8 @@ use filesys::path_to_string::path_to_string;
 use hashing::sha256::sha256_hash_bytes::sha256_hash_bytes;
 use mimetypes::mimetype_for_bytes::get_mimetype_for_bytes;
 use mimetypes::mimetype_to_extension::mimetype_to_extension;
-use mysql_queries::queries::generic_inference::first_party::minimax_h3::get_first_party_minimax_h3_job_by_token::{
-  get_first_party_minimax_h3_job_by_token, FirstPartyMinimaxH3JobDetails, GetFirstPartyMinimaxH3JobByTokenArgs,
-};
-use mysql_queries::queries::generic_inference::first_party::minimax_h3::mark_first_party_minimax_h3_job_succeeded::{
-  mark_first_party_minimax_h3_job_succeeded, MarkFirstPartyMinimaxH3JobSucceededArgs,
-};
+use mysql_queries::queries::generic_inference::first_party::minimax_h3::get_first_party_minimax_h3_job_by_token::{get_first_party_minimax_h3_job_by_token, FirstPartyMinimaxH3JobDetails, GetFirstPartyMinimaxH3JobByTokenArgs};
+use mysql_queries::queries::generic_inference::first_party::minimax_h3::mark_first_party_minimax_h3_job_succeeded::{mark_first_party_minimax_h3_job_succeeded, MarkFirstPartyMinimaxH3JobSucceededArgs};
 use mysql_queries::queries::media_files::create::insert_builder::media_file_insert_builder::MediaFileInsertBuilder;
 use thumbnail_generator::task_client::thumbnail_task::{ThumbnailTaskBuilder, ThumbnailTaskInputMimeType};
 use tokens::tokens::generic_inference_jobs::InferenceJobToken;
@@ -110,7 +106,6 @@ pub async fn mark_minimax_job_success_handler(
   MultipartForm(mut form): MultipartForm<MarkMinimaxJobSuccessForm>,
   server_state: web::Data<Arc<ServerState>>,
 ) -> Result<Json<MarkMinimaxJobSuccessResponse>, CommonWebError> {
-
   require_internal_api_key(&http_request, &server_state)?;
 
   let job_token = &path.job_token;
@@ -122,11 +117,7 @@ pub async fn mark_minimax_job_success_handler(
   let maybe_job = {
     let mut mysql_connection = server_state.mysql_pool.acquire().await?;
 
-    get_first_party_minimax_h3_job_by_token(GetFirstPartyMinimaxH3JobByTokenArgs {
-      job_token,
-      mysql_executor: &mut *mysql_connection,
-      phantom: Default::default(),
-    }).await.map_err(|err| {
+    get_first_party_minimax_h3_job_by_token(GetFirstPartyMinimaxH3JobByTokenArgs { job_token, mysql_executor: &mut *mysql_connection, phantom: Default::default() }).await.map_err(|err| {
       error!("Error looking up minimax job {}: {:?}", job_token, err);
       CommonWebError::from_error(err)
     })?
@@ -145,26 +136,18 @@ pub async fn mark_minimax_job_success_handler(
       // second media file — return the already-recorded result.
       let Some(existing_media_token) = job.maybe_result_media_file_token else {
         error!("Minimax job {} is complete_success but has no result media file token", job.job_token);
-        return Err(CommonWebError::server_error_with_message(
-          "job already complete but result media file is missing"));
+        return Err(CommonWebError::server_error_with_message("job already complete but result media file is missing"));
       };
 
       info!("Minimax job {} is already complete_success; ignoring duplicate success report", job.job_token);
 
-      return Ok(Json(MarkMinimaxJobSuccessResponse {
-        success: true,
-        media_file_token: existing_media_token,
-        maybe_duration_millis: None,
-        maybe_width: None,
-        maybe_height: None,
-      }));
-    }
+      return Ok(Json(MarkMinimaxJobSuccessResponse { success: true, media_file_token: existing_media_token, maybe_duration_millis: None, maybe_width: None, maybe_height: None }));
+    },
     JobStatusPlus::CompleteFailure => {
       warn!("Minimax job {} is already complete_failure; rejecting success report", job.job_token);
-      return Err(CommonWebError::BadInputWithSimpleMessage(
-        "job is already in a terminal state (complete_failure)".to_string()));
-    }
-    _ => {} // Not terminal; proceed.
+      return Err(CommonWebError::BadInputWithSimpleMessage("job is already in a terminal state (complete_failure)".to_string()));
+    },
+    _ => {}, // Not terminal; proceed.
   }
 
   // ==================== READ + VALIDATE FILE ==================== //
@@ -174,42 +157,35 @@ pub async fn mark_minimax_job_success_handler(
   // holding a pool slot across them is what causes PoolTimedOut incidents.
 
   let mut file_bytes = Vec::new();
-  form.file.file.read_to_end(&mut file_bytes)
-    .map_err(|err| {
-      error!("Problem reading uploaded video file: {:?}", err);
-      CommonWebError::server_error_with_message("problem reading uploaded video file")
-    })?;
+  form.file.file.read_to_end(&mut file_bytes).map_err(|err| {
+    error!("Problem reading uploaded video file: {:?}", err);
+    CommonWebError::server_error_with_message("problem reading uploaded video file")
+  })?;
 
   if file_bytes.is_empty() {
     return Err(CommonWebError::BadInputWithSimpleMessage("empty video file".to_string()));
   }
 
-  let mime_type = get_mimetype_for_bytes(&file_bytes)
-    .map(|mime_type| mime_type.to_string())
-    .ok_or_else(|| {
-      warn!("Could not determine mimetype for uploaded video ({} bytes)", file_bytes.len());
-      CommonWebError::BadInputWithSimpleMessage("could not determine video mimetype".to_string())
-    })?;
+  let mime_type = get_mimetype_for_bytes(&file_bytes).map(|mime_type| mime_type.to_string()).ok_or_else(|| {
+    warn!("Could not determine mimetype for uploaded video ({} bytes)", file_bytes.len());
+    CommonWebError::BadInputWithSimpleMessage("could not determine video mimetype".to_string())
+  })?;
 
-  let media_file_type = MediaFileType::try_from_mime_type(&mime_type)
-    .ok_or_else(|| {
-      warn!("Unsupported media file type: {}", mime_type);
-      CommonWebError::BadInputWithSimpleMessage("unsupported media file type".to_string())
-    })?;
+  let media_file_type = MediaFileType::try_from_mime_type(&mime_type).ok_or_else(|| {
+    warn!("Unsupported media file type: {}", mime_type);
+    CommonWebError::BadInputWithSimpleMessage("unsupported media file type".to_string())
+  })?;
 
-  let extension_with_period = mimetype_to_extension(&mime_type)
-    .map(|extension| format!(".{extension}"))
-    .ok_or_else(|| {
-      warn!("Could not determine file extension for mimetype: {}", mime_type);
-      CommonWebError::server_error_with_message("could not determine file extension")
-    })?;
+  let extension_with_period = mimetype_to_extension(&mime_type).map(|extension| format!(".{extension}")).ok_or_else(|| {
+    warn!("Could not determine file extension for mimetype: {}", mime_type);
+    CommonWebError::server_error_with_message("could not determine file extension")
+  })?;
 
   let file_size_bytes = file_bytes.len();
-  let file_hash = sha256_hash_bytes(&file_bytes)
-    .map_err(|err| {
-      error!("Failed to hash video bytes: {:?}", err);
-      CommonWebError::from_anyhow_error(err)
-    })?;
+  let file_hash = sha256_hash_bytes(&file_bytes).map_err(|err| {
+    error!("Failed to hash video bytes: {:?}", err);
+    CommonWebError::from_anyhow_error(err)
+  })?;
 
   // ==================== VIDEO METADATA ==================== //
 
@@ -218,26 +194,18 @@ pub async fn mark_minimax_job_success_handler(
   let mut maybe_frame_width = form.width.map(|text| text.0);
   let mut maybe_frame_height = form.height.map(|text| text.0);
 
-  let needs_probe = maybe_duration_millis.is_none()
-    || maybe_frame_width.is_none()
-    || maybe_frame_height.is_none();
+  let needs_probe = maybe_duration_millis.is_none() || maybe_frame_width.is_none() || maybe_frame_height.is_none();
 
   if needs_probe {
     if let Ok(video_info) = ffprobe_get_info(&form.file.file.path()) {
       if maybe_duration_millis.is_none() {
-        maybe_duration_millis = video_info.duration
-          .as_ref()
-          .map(|duration| duration.millis as u64);
+        maybe_duration_millis = video_info.duration.as_ref().map(|duration| duration.millis as u64);
       }
       if maybe_frame_width.is_none() {
-        maybe_frame_width = video_info.dimensions
-          .as_ref()
-          .map(|dims| dims.width as u32);
+        maybe_frame_width = video_info.dimensions.as_ref().map(|dims| dims.width as u32);
       }
       if maybe_frame_height.is_none() {
-        maybe_frame_height = video_info.dimensions
-          .as_ref()
-          .map(|dims| dims.height as u32);
+        maybe_frame_height = video_info.dimensions.as_ref().map(|dims| dims.height as u32);
       }
     }
   }
@@ -248,15 +216,10 @@ pub async fn mark_minimax_job_success_handler(
 
   info!("Uploading media to bucket path: {}", public_upload_path.get_full_object_path_str());
 
-  server_state.public_bucket_client.upload_file_with_content_type_process(
-    public_upload_path.get_full_object_path_str(),
-    file_bytes.as_ref(),
-    &mime_type)
-      .await
-      .map_err(|err| {
-        warn!("Failed to upload video to bucket: {:?}", err);
-        CommonWebError::from_anyhow_error(err)
-      })?;
+  server_state.public_bucket_client.upload_file_with_content_type_process(public_upload_path.get_full_object_path_str(), file_bytes.as_ref(), &mime_type).await.map_err(|err| {
+    warn!("Failed to upload video to bucket: {:?}", err);
+    CommonWebError::from_anyhow_error(err)
+  })?;
 
   // ==================== MEDIA FILE RECORD + MARK JOB DONE ==================== //
 
@@ -265,18 +228,7 @@ pub async fn mark_minimax_job_success_handler(
   let media_token = {
     let mut mysql_connection = server_state.mysql_pool.acquire().await?;
 
-    let media_token = insert_media_file_record(
-      &mut mysql_connection,
-      &job,
-      &file_hash,
-      file_size_bytes,
-      maybe_duration_millis,
-      maybe_frame_width,
-      maybe_frame_height,
-      media_file_type,
-      &mime_type,
-      &public_upload_path,
-    ).await?;
+    let media_token = insert_media_file_record(&mut mysql_connection, &job, &file_hash, file_size_bytes, maybe_duration_millis, maybe_frame_width, maybe_frame_height, media_file_type, &mime_type, &public_upload_path).await?;
 
     info!("Minimax video media file uploaded with token: {}", media_token);
 
@@ -287,7 +239,9 @@ pub async fn mark_minimax_job_success_handler(
       maybe_inference_duration_millis: form.inference_duration_millis.map(|text| text.0),
       mysql_executor: &mut *mysql_connection,
       phantom: Default::default(),
-    }).await.map_err(|err| {
+    })
+    .await
+    .map_err(|err| {
       error!("Error marking minimax job {} succeeded: {:?}", job_token, err);
       CommonWebError::from_error(err)
     })?;
@@ -297,14 +251,13 @@ pub async fn mark_minimax_job_success_handler(
 
   // ==================== THUMBNAILS ==================== //
 
-  let thumbnail_task_result =
-      ThumbnailTaskBuilder::new_for_source_mimetype(ThumbnailTaskInputMimeType::MP4)
-          .with_bucket(server_state.public_bucket_client.bucket_name().as_str())
-          .with_path(&*path_to_string(public_upload_path.to_full_object_pathbuf()))
-          .with_output_suffix("thumb")
-          .with_event_id(&media_token.to_string())
-          .send_all()
-          .await;
+  let thumbnail_task_result = ThumbnailTaskBuilder::new_for_source_mimetype(ThumbnailTaskInputMimeType::MP4)
+    .with_bucket(server_state.public_bucket_client.bucket_name().as_str())
+    .with_path(&*path_to_string(public_upload_path.to_full_object_pathbuf()))
+    .with_output_suffix("thumb")
+    .with_event_id(&media_token.to_string())
+    .send_all()
+    .await;
 
   if let Err(err) = thumbnail_task_result {
     // Fail open
@@ -313,13 +266,7 @@ pub async fn mark_minimax_job_success_handler(
 
   info!("Minimax job {} marked as complete_success with media file {}", job.job_token, media_token);
 
-  Ok(Json(MarkMinimaxJobSuccessResponse {
-    success: true,
-    media_file_token: media_token,
-    maybe_duration_millis,
-    maybe_width: maybe_frame_width,
-    maybe_height: maybe_frame_height,
-  }))
+  Ok(Json(MarkMinimaxJobSuccessResponse { success: true, media_file_token: media_token, maybe_duration_millis, maybe_width: maybe_frame_width, maybe_height: maybe_frame_height }))
 }
 
 async fn insert_media_file_record(
@@ -335,27 +282,27 @@ async fn insert_media_file_record(
   public_upload_path: &MediaFileBucketPath,
 ) -> Result<MediaFileToken, CommonWebError> {
   MediaFileInsertBuilder::new()
-      .checksum_sha2(file_hash)
-      .creator_ip_address(&job.creator_ip_address)
-      .file_size_bytes(file_size_bytes as u64)
-      .maybe_creator_anonymous_visitor(job.maybe_creator_anonymous_visitor_token.as_ref())
-      .maybe_creator_user(job.maybe_creator_user_token.as_ref())
-      .maybe_duration_millis(maybe_duration_millis)
-      .maybe_frame_height(maybe_frame_height)
-      .maybe_frame_width(maybe_frame_width)
-      .maybe_generation_provider(Some(GenerationProvider::Artcraft))
-      .maybe_prompt_token(job.maybe_prompt_token.as_ref())
-      .maybe_source_job_token(Some(&job.job_token))
-      .maybe_platform_type(job.maybe_platform_type)
-      .media_file_class(MediaFileClass::Video)
-      .media_file_origin_category(MediaFileOriginCategory::Inference)
-      .media_file_type(media_file_type)
-      .mime_type(mime_type)
-      .public_bucket_directory_hash(public_upload_path)
-      .insert_connection(mysql_connection)
-      .await
-      .map_err(|err| {
-        warn!("Failed to insert video media file record: {:?}", err);
-        CommonWebError::from_error(err)
-      })
+    .checksum_sha2(file_hash)
+    .creator_ip_address(&job.creator_ip_address)
+    .file_size_bytes(file_size_bytes as u64)
+    .maybe_creator_anonymous_visitor(job.maybe_creator_anonymous_visitor_token.as_ref())
+    .maybe_creator_user(job.maybe_creator_user_token.as_ref())
+    .maybe_duration_millis(maybe_duration_millis)
+    .maybe_frame_height(maybe_frame_height)
+    .maybe_frame_width(maybe_frame_width)
+    .maybe_generation_provider(Some(GenerationProvider::Artcraft))
+    .maybe_prompt_token(job.maybe_prompt_token.as_ref())
+    .maybe_source_job_token(Some(&job.job_token))
+    .maybe_platform_type(job.maybe_platform_type)
+    .media_file_class(MediaFileClass::Video)
+    .media_file_origin_category(MediaFileOriginCategory::Inference)
+    .media_file_type(media_file_type)
+    .mime_type(mime_type)
+    .public_bucket_directory_hash(public_upload_path)
+    .insert_connection(mysql_connection)
+    .await
+    .map_err(|err| {
+      warn!("Failed to insert video media file record: {:?}", err);
+      CommonWebError::from_error(err)
+    })
 }

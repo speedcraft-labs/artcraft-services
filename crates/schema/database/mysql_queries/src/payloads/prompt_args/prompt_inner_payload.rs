@@ -126,19 +126,19 @@ impl PromptInnerPayloadBuilder {
 
   pub fn build(self) -> Option<PromptInnerPayload> {
     if self.style_name.is_none()
-        && self.used_face_detailer.is_none()
-        && self.used_upscaler.is_none()
-        && self.lipsync_enabled.is_none()
-        && self.disable_lcm.is_none()
-        && self.use_cinematic.is_none()
-        && self.strength.is_none()
-        && self.inference_duration.is_none()
-        && self.main_ipa_workflow.is_none()
-        && self.face_detailer_workflow.is_none()
-        && self.upscaler_workflow.is_none()
-        && self.global_ipa_token.is_none()
-        && self.travel_prompt.is_none()
-        && self.frame_skip.is_none()
+      && self.used_face_detailer.is_none()
+      && self.used_upscaler.is_none()
+      && self.lipsync_enabled.is_none()
+      && self.disable_lcm.is_none()
+      && self.use_cinematic.is_none()
+      && self.strength.is_none()
+      && self.inference_duration.is_none()
+      && self.main_ipa_workflow.is_none()
+      && self.face_detailer_workflow.is_none()
+      && self.upscaler_workflow.is_none()
+      && self.global_ipa_token.is_none()
+      && self.travel_prompt.is_none()
+      && self.frame_skip.is_none()
     {
       return None;
     }
@@ -151,10 +151,7 @@ impl PromptInnerPayloadBuilder {
       disable_lcm: self.disable_lcm,
       use_cinematic: self.use_cinematic,
       strength: self.strength,
-      inference_duration_millis: self.inference_duration
-          .map(|duration| duration.num_milliseconds()
-              .max(0)
-              .unsigned_abs()), // NB: Why does chrono return i64 ? That's crazy!
+      inference_duration_millis: self.inference_duration.map(|duration| duration.num_milliseconds().max(0).unsigned_abs()), // NB: Why does chrono return i64 ? That's crazy!
       main_ipa_workflow: self.main_ipa_workflow,
       face_detailer_workflow: self.face_detailer_workflow,
       upscaler_workflow: self.upscaler_workflow,
@@ -209,7 +206,7 @@ impl PromptInnerPayloadBuilder {
   }
 
   pub fn set_strength(&mut self, strength: Option<f32>) {
-      self.strength = strength;
+    self.strength = strength;
   }
 
   pub fn set_inference_duration(&mut self, duration: Option<Duration>) {
@@ -241,7 +238,7 @@ impl PromptInnerPayloadBuilder {
   }
 }
 
-impl PromptInnerPayload{
+impl PromptInnerPayload {
   pub fn from_json(json: &str) -> AnyhowResult<Self> {
     Ok(serde_json::from_str(json)?)
   }

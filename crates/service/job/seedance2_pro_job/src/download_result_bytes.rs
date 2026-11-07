@@ -7,7 +7,8 @@ use errors::AnyhowResult;
 /// Non-2xx responses are errors: otherwise an expired link's error page would be
 /// stored as the user's result and the job marked successful.
 pub async fn download_result_bytes(client: &reqwest::Client, url: &str) -> AnyhowResult<Vec<u8>> {
-  let bytes = client.get(url)
+  let bytes = client
+    .get(url)
     .send()
     .await
     .map_err(|err| anyhow!("reqwest error downloading {}: {:?}", url, err))?

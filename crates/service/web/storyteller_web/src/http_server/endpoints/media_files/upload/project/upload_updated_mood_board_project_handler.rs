@@ -42,16 +42,7 @@ pub async fn upload_updated_mood_board_project_handler(
   path: Path<UploadUpdatedMoodBoardProjectPathInfo>,
   MultipartForm(form): MultipartForm<UpdateProjectMultipartForm>,
 ) -> Result<Json<UploadUpdatedMoodBoardProjectSuccessResponse>, CommonWebError> {
-  update_project(UpdateProjectArgs {
-    http_request: &http_request,
-    server_state: &server_state,
-    config: &MOOD_BOARD_PROJECT_CONFIG,
-    media_file_token: &path.token,
-    form,
-  }).await?;
+  update_project(UpdateProjectArgs { http_request: &http_request, server_state: &server_state, config: &MOOD_BOARD_PROJECT_CONFIG, media_file_token: &path.token, form }).await?;
 
-  Ok(Json(UploadUpdatedMoodBoardProjectSuccessResponse {
-    success: true,
-    media_file_token: path.into_inner().token,
-  }))
+  Ok(Json(UploadUpdatedMoodBoardProjectSuccessResponse { success: true, media_file_token: path.into_inner().token }))
 }

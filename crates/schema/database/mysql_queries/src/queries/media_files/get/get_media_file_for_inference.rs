@@ -46,11 +46,7 @@ pub struct MediaFileRaw {
   pub maybe_public_bucket_extension: Option<String>,
 }
 
-pub async fn get_media_file_for_inference(
-  media_file_token: &MediaFileToken,
-  mysql_pool: &MySqlPool
-) -> AnyhowResult<Option<MediaFileForInference>> {
-
+pub async fn get_media_file_for_inference(media_file_token: &MediaFileToken, mysql_pool: &MySqlPool) -> AnyhowResult<Option<MediaFileForInference>> {
   let record = select_record(media_file_token, mysql_pool).await;
 
   let record = match record {
@@ -60,7 +56,7 @@ pub async fn get_media_file_for_inference(
         sqlx::Error::RowNotFound => Ok(None),
         _ => Err(anyhow!("database error: {:?}", err)),
       }
-    }
+    },
   };
 
   Ok(Some(MediaFileForInference {
@@ -76,13 +72,10 @@ pub async fn get_media_file_for_inference(
   }))
 }
 
-async fn select_record(
-  media_file_token: &MediaFileToken,
-  mysql_pool: &MySqlPool
-) -> Result<MediaFileRaw, sqlx::Error> {
+async fn select_record(media_file_token: &MediaFileToken, mysql_pool: &MySqlPool) -> Result<MediaFileRaw, sqlx::Error> {
   sqlx::query_as!(
-      MediaFileRaw,
-        r#"
+    MediaFileRaw,
+    r#"
 SELECT
     m.token as `token: tokens::tokens::media_files::MediaFileToken`,
 
@@ -102,8 +95,8 @@ FROM media_files AS m
 WHERE
     m.token = ?
         "#,
-      media_file_token
-    )
-    .fetch_one(mysql_pool)
-    .await
+    media_file_token
+  )
+  .fetch_one(mysql_pool)
+  .await
 }

@@ -25,9 +25,7 @@ where
 /// Returns `Ok(None)` when no row matches, when the session is terminated or expired, or when
 /// the owning user is missing or deleted. The private credential is never echoed back — the
 /// record carries only the session's non-private management `token`.
-pub async fn get_api_or_web_session_user_by_mcp_private_session_token<'e, 'c: 'e, E>(
-  args: GetApiOrWebSessionUserByMcpPrivateSessionTokenArgs<'e, 'c, E>,
-) -> Result<Option<ApiOrWebSessionUserRecord>, sqlx::Error>
+pub async fn get_api_or_web_session_user_by_mcp_private_session_token<'e, 'c: 'e, E>(args: GetApiOrWebSessionUserByMcpPrivateSessionTokenArgs<'e, 'c, E>) -> Result<Option<ApiOrWebSessionUserRecord>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -57,8 +55,8 @@ LIMIT 1
     "#,
     args.private_session_token.as_str(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| ApiOrWebSessionUserRecord {
     user_token: r.user_token,

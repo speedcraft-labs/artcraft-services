@@ -14,9 +14,7 @@ use enums::by_table::prompts::prompt_type::PromptType;
 use enums::common::generation::common_generation_mode::CommonGenerationMode;
 use enums::common::generation::common_model_type::CommonModelType;
 use enums::common::generation_provider::GenerationProvider;
-use mysql_queries::queries::prompt_context_items::insert_batch_prompt_context_items::{
-  insert_batch_prompt_context_items, InsertBatchArgs, PromptContextItem,
-};
+use mysql_queries::queries::prompt_context_items::insert_batch_prompt_context_items::{insert_batch_prompt_context_items, InsertBatchArgs, PromptContextItem};
 use mysql_queries::queries::prompts::insert_prompt::{insert_prompt, InsertPromptArgs};
 use tokens::tokens::prompts::PromptToken;
 use tokens::tokens::users::UserToken;
@@ -30,13 +28,7 @@ pub struct WritePromptRecordsArgs<'a, 'tx> {
 }
 
 pub async fn write_prompt_records(args: WritePromptRecordsArgs<'_, '_>) -> Option<PromptToken> {
-  let WritePromptRecordsArgs {
-    request,
-    user_token,
-    maybe_prompt_model_type,
-    ip_address,
-    transaction,
-  } = args;
+  let WritePromptRecordsArgs { request, user_token, maybe_prompt_model_type, ip_address, transaction } = args;
 
   let prompt_token = match insert_prompt(InsertPromptArgs {
     maybe_apriori_prompt_token: None,
@@ -57,60 +49,43 @@ pub async fn write_prompt_records(args: WritePromptRecordsArgs<'_, '_>) -> Optio
     creator_ip_address: ip_address,
     mysql_executor: &mut **transaction,
     phantom: Default::default(),
-  }).await {
+  })
+  .await
+  {
     Ok(token) => Some(token),
     Err(err) => {
       warn!("Error inserting prompt: {:?}", err);
       None
-    }
+    },
   };
 
   if let Some(token) = prompt_token.as_ref() {
     let mut context_items = Vec::new();
 
     if let Some(media_token) = &request.start_frame_image_media_token {
-      context_items.push(PromptContextItem {
-        media_token: media_token.clone(),
-        context_semantic_type: PromptContextSemanticType::VidStartFrame,
-      });
+      context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::VidStartFrame });
     }
     if let Some(media_token) = &request.end_frame_image_media_token {
-      context_items.push(PromptContextItem {
-        media_token: media_token.clone(),
-        context_semantic_type: PromptContextSemanticType::VidEndFrame,
-      });
+      context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::VidEndFrame });
     }
     if let Some(ref_tokens) = &request.reference_image_media_tokens {
       for media_token in ref_tokens {
-        context_items.push(PromptContextItem {
-          media_token: media_token.clone(),
-          context_semantic_type: PromptContextSemanticType::Imgref,
-        });
+        context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::Imgref });
       }
     }
     if let Some(ref_tokens) = &request.reference_video_media_tokens {
       for media_token in ref_tokens {
-        context_items.push(PromptContextItem {
-          media_token: media_token.clone(),
-          context_semantic_type: PromptContextSemanticType::VidRef,
-        });
+        context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::VidRef });
       }
     }
     if let Some(ref_tokens) = &request.reference_audio_media_tokens {
       for media_token in ref_tokens {
-        context_items.push(PromptContextItem {
-          media_token: media_token.clone(),
-          context_semantic_type: PromptContextSemanticType::Audioref,
-        });
+        context_items.push(PromptContextItem { media_token: media_token.clone(), context_semantic_type: PromptContextSemanticType::Audioref });
       }
     }
 
     if !context_items.is_empty() {
-      if let Err(err) = insert_batch_prompt_context_items(InsertBatchArgs {
-        prompt_token: token.clone(),
-        items: context_items,
-        transaction,
-      }).await {
+      if let Err(err) = insert_batch_prompt_context_items(InsertBatchArgs { prompt_token: token.clone(), items: context_items, transaction }).await {
         warn!("Error inserting batch prompt context items: {:?}", err);
       }
     }
@@ -120,8 +95,7 @@ pub async fn write_prompt_records(args: WritePromptRecordsArgs<'_, '_>) -> Optio
 }
 
 fn determine_generation_mode(request: &OmniGenVideoCostAndGenerateRequest) -> CommonGenerationMode {
-  let has_keyframe = request.start_frame_image_media_token.is_some()
-    || request.end_frame_image_media_token.is_some();
+  let has_keyframe = request.start_frame_image_media_token.is_some() || request.end_frame_image_media_token.is_some();
 
   if has_keyframe {
     return CommonGenerationMode::Keyframe;

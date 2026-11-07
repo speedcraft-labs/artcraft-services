@@ -37,22 +37,14 @@ pub async fn connect_to_database() -> AnyhowResult<MySqlPool> {
   info!(
     "Building MySQL pool: max_connections={}, min_connections={}, acquire_timeout_seconds={}, \
       statement_cache_capacity={}, max_lifetime_seconds={}",
-    max_connections, min_connections, acquire_timeout_seconds,
-    statement_cache_capacity, max_lifetime_seconds,
+    max_connections, min_connections, acquire_timeout_seconds, statement_cache_capacity, max_lifetime_seconds,
   );
 
-  let connect_options = MySqlConnectOptions::from_str(&db_connection_string)?
-      .statement_cache_capacity(statement_cache_capacity);
+  let connect_options = MySqlConnectOptions::from_str(&db_connection_string)?.statement_cache_capacity(statement_cache_capacity);
 
-  let pool_options = MySqlPoolOptions::new()
-      .max_connections(max_connections)
-      .min_connections(min_connections)
-      .acquire_timeout(Duration::from_secs(acquire_timeout_seconds))
-      .max_lifetime(Some(Duration::from_secs(max_lifetime_seconds)));
+  let pool_options = MySqlPoolOptions::new().max_connections(max_connections).min_connections(min_connections).acquire_timeout(Duration::from_secs(acquire_timeout_seconds)).max_lifetime(Some(Duration::from_secs(max_lifetime_seconds)));
 
-  let pool = pool_options
-      .connect_with(connect_options)
-      .await?;
+  let pool = pool_options.connect_with(connect_options).await?;
 
   Ok(pool)
 }

@@ -69,8 +69,8 @@ LIMIT 25000
     "#,
     InferenceJobExternalThirdParty::GrokApi.to_str(),
   )
-    .fetch_all(pool)
-    .await?;
+  .fetch_all(pool)
+  .await?;
 
   let jobs = records
     .into_iter()
@@ -80,7 +80,7 @@ LIMIT 25000
         None => {
           warn!("PendingGrokApiJob has no request_id, skipping");
           return None;
-        }
+        },
       };
 
       Some(PendingGrokApiJob {

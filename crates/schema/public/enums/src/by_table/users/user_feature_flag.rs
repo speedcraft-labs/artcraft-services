@@ -19,7 +19,6 @@ pub enum UserFeatureFlag {
   /// (For now, it's hidden until we get an NSFW filter.)
   ExploreMedia,
 
-
   /// Access to studio features
   Studio,
 
@@ -256,7 +255,7 @@ mod tests {
 
     #[test]
     fn serialized_length_ok_for_database() {
-      const MAX_LENGTH : usize = 32;
+      const MAX_LENGTH: usize = 32;
       for variant in UserFeatureFlag::all_variants() {
         let serialized = variant.to_str();
         assert!(serialized.len() > 0, "variant {:?} is too short", variant);

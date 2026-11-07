@@ -58,22 +58,13 @@ mod tauri_mac_origin {
 /// back with credentials allowed, which is what the webview requires.
 async fn assert_credentialed_requests_allowed(origin: &str) {
   for environment in ENVIRONMENTS {
-    let service = build_cors_config(environment)
-        .new_transform(test::ok_service())
-        .await
-        .unwrap();
+    let service = build_cors_config(environment).new_transform(test::ok_service()).await.unwrap();
 
     for method in [Method::GET, Method::POST, Method::PUT, Method::DELETE] {
-      let request = TestRequest::default()
-          .method(method.clone())
-          .uri("/v1/session")
-          .insert_header((header::ORIGIN, origin))
-          .to_srv_request();
+      let request = TestRequest::default().method(method.clone()).uri("/v1/session").insert_header((header::ORIGIN, origin)).to_srv_request();
       let response = test::call_service(&service, request).await;
 
-      let context = format!(
-        "Shipped ArtCraft desktop builds send Origin {} ({:?}, {}). DO NOT REMOVE this origin from the CORS config.",
-        origin, environment, method);
+      let context = format!("Shipped ArtCraft desktop builds send Origin {} ({:?}, {}). DO NOT REMOVE this origin from the CORS config.", origin, environment, method);
       assert_eq!(response.status(), StatusCode::OK, "{}", context);
       assert_eq!(response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).map(|v| v.to_str().unwrap()), Some(origin), "{}", context);
       assert_eq!(response.headers().get(header::ACCESS_CONTROL_ALLOW_CREDENTIALS).map(|v| v.to_str().unwrap()), Some("true"), "{}", context);
@@ -84,24 +75,19 @@ async fn assert_credentialed_requests_allowed(origin: &str) {
 /// Preflights for the methods and headers the desktop app uses are accepted.
 async fn assert_preflights_allowed(origin: &str) {
   for environment in ENVIRONMENTS {
-    let service = build_cors_config(environment)
-        .new_transform(test::ok_service())
-        .await
-        .unwrap();
+    let service = build_cors_config(environment).new_transform(test::ok_service()).await.unwrap();
 
     for requested_method in ["GET", "POST", "PUT", "DELETE"] {
       let request = TestRequest::default()
-          .method(Method::OPTIONS)
-          .uri("/v1/session")
-          .insert_header((header::ORIGIN, origin))
-          .insert_header((header::ACCESS_CONTROL_REQUEST_METHOD, requested_method))
-          .insert_header((header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type,session"))
-          .to_srv_request();
+        .method(Method::OPTIONS)
+        .uri("/v1/session")
+        .insert_header((header::ORIGIN, origin))
+        .insert_header((header::ACCESS_CONTROL_REQUEST_METHOD, requested_method))
+        .insert_header((header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type,session"))
+        .to_srv_request();
       let response = test::call_service(&service, request).await;
 
-      let context = format!(
-        "Shipped ArtCraft desktop builds send Origin {} ({:?}, preflight {}). DO NOT REMOVE this origin from the CORS config.",
-        origin, environment, requested_method);
+      let context = format!("Shipped ArtCraft desktop builds send Origin {} ({:?}, preflight {}). DO NOT REMOVE this origin from the CORS config.", origin, environment, requested_method);
       assert_eq!(response.status(), StatusCode::OK, "{}", context);
       assert_eq!(response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN).map(|v| v.to_str().unwrap()), Some(origin), "{}", context);
       assert_eq!(response.headers().get(header::ACCESS_CONTROL_ALLOW_CREDENTIALS).map(|v| v.to_str().unwrap()), Some("true"), "{}", context);

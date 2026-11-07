@@ -55,14 +55,12 @@ pub struct SubscriptionSummary {
 pub fn subscription_summary_extractor(subscription: &Subscription) -> AnyhowResult<SubscriptionSummary> {
   let subscription_id = subscription.id.to_string();
   // NB: Our internal user token.
-  let maybe_user_token = subscription.metadata.get(METADATA_USER_TOKEN)
-      .map(|t| t.to_string());
+  let maybe_user_token = subscription.metadata.get(METADATA_USER_TOKEN).map(|t| t.to_string());
 
   error!("SUBSCRIPTION EVENT USER TOKEN: {:?}", maybe_user_token);
 
   if subscription.items.data.len() != 1 {
-    return Err(anyhow!("Too many items in subscription {} : {}",
-      subscription_id, subscription.items.data.len()));
+    return Err(anyhow!("Too many items in subscription {} : {}", subscription_id, subscription.items.data.len()));
   }
 
   let item = match subscription.items.data.first() {
@@ -144,7 +142,7 @@ mod tests {
 
     let subscription = serde_json::from_str::<Subscription>(json).unwrap();
 
-    let summary= subscription_summary_extractor(&subscription).unwrap();
+    let summary = subscription_summary_extractor(&subscription).unwrap();
 
     assert_eq!(summary.user_token, Some("U:TOKEN".to_string()));
     assert_eq!(summary.stripe_subscription_id, "sub_1LhA3MEU5se17MekeWvmTNyk".to_string());
@@ -189,7 +187,7 @@ mod tests {
 
     let subscription = serde_json::from_str::<Subscription>(json).unwrap();
 
-    let summary= subscription_summary_extractor(&subscription).unwrap();
+    let summary = subscription_summary_extractor(&subscription).unwrap();
 
     assert_eq!(summary.user_token, Some("U:token".to_string()));
     assert_eq!(summary.stripe_subscription_id, "sub_1Lh1wvEU5se17Mekx72OzAzs".to_string());
@@ -234,7 +232,7 @@ mod tests {
 
     let subscription = serde_json::from_str::<Subscription>(json).unwrap();
 
-    let summary= subscription_summary_extractor(&subscription).unwrap();
+    let summary = subscription_summary_extractor(&subscription).unwrap();
 
     assert_eq!(summary.user_token, Some("U:TOKEN".to_string()));
     assert_eq!(summary.stripe_subscription_id, "sub_1LhA3MEU5se17MekeWvmTNyk".to_string());
@@ -406,7 +404,7 @@ mod tests {
 
     let subscription = serde_json::from_str::<Subscription>(json).unwrap();
 
-    let summary= subscription_summary_extractor(&subscription).unwrap();
+    let summary = subscription_summary_extractor(&subscription).unwrap();
 
     // NB: It was scheduled to cancel at the end of the billing period and remains active for now
     //  These are the fields we don't expect to be impacted as the subscription remains active.

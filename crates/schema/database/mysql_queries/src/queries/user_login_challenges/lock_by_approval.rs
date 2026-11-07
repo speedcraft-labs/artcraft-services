@@ -24,6 +24,6 @@ FROM user_login_challenges WHERE approval_token_sha256 = ? FOR UPDATE
 "#,
     args.approval_hash
   )
-    .fetch_optional(args.mysql_executor)
-    .await
+  .fetch_optional(args.mysql_executor)
+  .await
 }

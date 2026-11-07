@@ -4,9 +4,7 @@ use std::sync::Arc;
 use actix_web::web::Json;
 use actix_web::{web, HttpRequest};
 use actix_web_lab::extract::Query;
-use artcraft_api_defs::prompts::batch_get_prompts::{
-  BatchGetPromptsQuery, BatchGetPromptsResponse, BatchPromptInfo,
-};
+use artcraft_api_defs::prompts::batch_get_prompts::{BatchGetPromptsQuery, BatchGetPromptsResponse, BatchPromptInfo};
 use artcraft_api_defs::prompts::get_prompt::GetPromptImageContextItem;
 use bucket_paths::legacy::typified_paths::public::media_files::bucket_file_path::MediaFileBucketPath;
 use enums::by_table::prompt_context_items::prompt_context_semantic_type::PromptContextSemanticType;
@@ -39,67 +37,41 @@ const MAX_BATCH_SIZE: usize = 100;
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn batch_get_prompts_handler(
-  http_request: HttpRequest,
-  query: Query<BatchGetPromptsQuery>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<BatchGetPromptsResponse>, CommonWebError> {
+pub async fn batch_get_prompts_handler(http_request: HttpRequest, query: Query<BatchGetPromptsQuery>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<BatchGetPromptsResponse>, CommonWebError> {
   if query.tokens.len() > MAX_BATCH_SIZE {
-    return Err(CommonWebError::BadInputWithSimpleMessage(
-      format!("tokens must contain at most {} items", MAX_BATCH_SIZE),
-    ));
+    return Err(CommonWebError::BadInputWithSimpleMessage(format!("tokens must contain at most {} items", MAX_BATCH_SIZE)));
   }
 
   // Deduplicate and trim whitespace
-  let unique_tokens: Vec<PromptToken> = query.tokens
-    .iter()
-    .map(|t| PromptToken::new_from_str(t.trim()))
-    .filter(|t| !t.as_str().is_empty())
-    .collect::<HashSet<_>>()
-    .into_iter()
-    .collect();
+  let unique_tokens: Vec<PromptToken> = query.tokens.iter().map(|t| PromptToken::new_from_str(t.trim())).filter(|t| !t.as_str().is_empty()).collect::<HashSet<_>>().into_iter().collect();
 
   if unique_tokens.is_empty() {
-    return Ok(Json(BatchGetPromptsResponse {
-      success: true,
-      prompts: Vec::new(),
-    }));
+    return Ok(Json(BatchGetPromptsResponse { success: true, prompts: Vec::new() }));
   }
 
   let mut mysql_connection = server_state.mysql_pool.acquire().await?;
 
-  let maybe_user_session = server_state
-    .session_checker
-    .maybe_get_user_session_from_connection(&http_request, &mut mysql_connection)
-    .await
-    .map_err(|e| {
-      warn!("Session checker error: {:?}", e);
-      CommonWebError::from(e)
-    })?;
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session_from_connection(&http_request, &mut mysql_connection).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from(e)
+  })?;
 
   // NB: Same moderator convention as `get_prompt_handler`.
-  let is_moderator = maybe_user_session
-    .as_ref()
-    .map(|session| session.can_ban_users)
-    .unwrap_or(false);
+  let is_moderator = maybe_user_session.as_ref().map(|session| session.can_ban_users).unwrap_or(false);
 
   let maybe_viewer_user_token = maybe_user_session.as_ref().map(|session| &session.user_token);
 
   // Batch query: fetch all prompts in one query
-  let results = batch_get_prompts(&unique_tokens, &mut mysql_connection)
-    .await
-    .map_err(|err| {
-      warn!("Batch get prompts query error: {:?}", err);
-      CommonWebError::from_error(err)
-    })?;
+  let results = batch_get_prompts(&unique_tokens, &mut mysql_connection).await.map_err(|err| {
+    warn!("Batch get prompts query error: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   // Batch query: fetch all context items for all prompts in one query
-  let all_context_items = batch_list_prompt_context_items(&unique_tokens, &mut mysql_connection)
-    .await
-    .map_err(|err| {
-      warn!("Batch list prompt context items query error: {:?}", err);
-      CommonWebError::from_error(err)
-    })?;
+  let all_context_items = batch_list_prompt_context_items(&unique_tokens, &mut mysql_connection).await.map_err(|err| {
+    warn!("Batch list prompt context items query error: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   let media_domain = get_media_domain(&http_request);
 
@@ -115,51 +87,32 @@ pub async fn batch_get_prompts_handler(
       | PromptContextSemanticType::ImgrefCharacter
       | PromptContextSemanticType::ImgrefStyle
       | PromptContextSemanticType::ImgrefBg
-      | PromptContextSemanticType::VidRef => {} // Include
+      | PromptContextSemanticType::VidRef => {}, // Include
       _ => continue, // Ignore
     }
 
     // NB: A prompt records the media it was built from, but that media keeps its own visibility:
     // a private reference image must not be reachable through a prompt that used it.
-    if !may_read_context_media(
-      item.creator_set_visibility,
-      item.maybe_creator_user_token.as_ref(),
-      maybe_viewer_user_token,
-      is_moderator,
-    ) {
+    if !may_read_context_media(item.creator_set_visibility, item.maybe_creator_user_token.as_ref(), maybe_viewer_user_token, is_moderator) {
       continue;
     }
 
-    let bucket_path = MediaFileBucketPath::from_object_hash(
-      &item.public_bucket_directory_hash,
-      item.maybe_public_bucket_prefix.as_deref(),
-      item.maybe_public_bucket_extension.as_deref(),
-    );
+    let bucket_path = MediaFileBucketPath::from_object_hash(&item.public_bucket_directory_hash, item.maybe_public_bucket_prefix.as_deref(), item.maybe_public_bucket_extension.as_deref());
 
     let context_item = GetPromptImageContextItem {
       media_token: item.media_token,
       semantic: item.context_semantic_type,
-      media_links: MediaLinksBuilder::from_media_path_and_env(
-        media_domain,
-        server_state.server_environment,
-        &bucket_path,
-        VideoThumbnailInfo::new(item.maybe_thumbnail_version, item.created_at),
-      ),
+      media_links: MediaLinksBuilder::from_media_path_and_env(media_domain, server_state.server_environment, &bucket_path, VideoThumbnailInfo::new(item.maybe_thumbnail_version, item.created_at)),
     };
 
-    context_items_map
-      .entry(item.prompt_token.as_str().to_string())
-      .or_default()
-      .push(context_item);
+    context_items_map.entry(item.prompt_token.as_str().to_string()).or_default().push(context_item);
   }
 
   // Assemble final response
   let prompts: Vec<BatchPromptInfo> = results
     .into_iter()
     .map(|result| {
-      let maybe_context_images = context_items_map
-        .remove(result.token.as_str())
-        .filter(|items| !items.is_empty());
+      let maybe_context_images = context_items_map.remove(result.token.as_str()).filter(|items| !items.is_empty());
 
       BatchPromptInfo {
         token: result.token,
@@ -181,19 +134,11 @@ pub async fn batch_get_prompts_handler(
     })
     .collect();
 
-  Ok(Json(BatchGetPromptsResponse {
-    success: true,
-    prompts,
-  }))
+  Ok(Json(BatchGetPromptsResponse { success: true, prompts }))
 }
 
 /// Private context media is readable only by its creator and by moderators.
-fn may_read_context_media(
-  visibility: Visibility,
-  maybe_creator_user_token: Option<&UserToken>,
-  maybe_viewer_user_token: Option<&UserToken>,
-  is_moderator: bool,
-) -> bool {
+fn may_read_context_media(visibility: Visibility, maybe_creator_user_token: Option<&UserToken>, maybe_viewer_user_token: Option<&UserToken>, is_moderator: bool) -> bool {
   if visibility != Visibility::Private || is_moderator {
     return true;
   }

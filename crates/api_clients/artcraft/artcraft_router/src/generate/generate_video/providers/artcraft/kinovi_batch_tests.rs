@@ -35,11 +35,7 @@ mod batch_planning {
   #[test]
   fn batches_one_through_four_survive_http_serialization() {
     for model in MODELS {
-      for strategy in [
-        RequestMismatchMitigationStrategy::ErrorOut,
-        RequestMismatchMitigationStrategy::PayMoreUpgrade,
-        RequestMismatchMitigationStrategy::PayLessDowngrade,
-      ] {
+      for strategy in [RequestMismatchMitigationStrategy::ErrorOut, RequestMismatchMitigationStrategy::PayMoreUpgrade, RequestMismatchMitigationStrategy::PayLessDowngrade] {
         for batch in [None, Some(1), Some(2), Some(3), Some(4)] {
           let mut builder = builder(model, RouterResolution::SevenTwentyP, batch);
           builder.request_mismatch_mitigation_strategy = strategy;
@@ -56,16 +52,10 @@ mod batch_planning {
   #[test]
   fn zero_is_rejected_under_every_strategy() {
     for model in MODELS {
-      for strategy in [
-        RequestMismatchMitigationStrategy::ErrorOut,
-        RequestMismatchMitigationStrategy::PayMoreUpgrade,
-        RequestMismatchMitigationStrategy::PayLessDowngrade,
-      ] {
+      for strategy in [RequestMismatchMitigationStrategy::ErrorOut, RequestMismatchMitigationStrategy::PayMoreUpgrade, RequestMismatchMitigationStrategy::PayLessDowngrade] {
         let mut builder = builder(model, RouterResolution::SevenTwentyP, Some(0));
         builder.request_mismatch_mitigation_strategy = strategy;
-        assert!(matches!(builder.build2(), Err(ArtcraftRouterError::Client(
-          ClientError::UserRequestedZeroGenerations
-        ))), "{model:?}");
+        assert!(matches!(builder.build2(), Err(ArtcraftRouterError::Client(ClientError::UserRequestedZeroGenerations))), "{model:?}");
       }
     }
   }
@@ -75,13 +65,8 @@ mod batch_planning {
     for model in MODELS {
       for batch in [5, 6, 7, 8, u16::MAX] {
         let builder = builder(model, RouterResolution::SevenTwentyP, Some(batch));
-        assert!(matches!(builder.clone().build2(), Err(ArtcraftRouterError::Client(
-          ClientError::ModelDoesNotSupportOption { field: "video_batch_count", .. }
-        ))), "{model:?}, batch {batch}");
-        for strategy in [
-          RequestMismatchMitigationStrategy::PayMoreUpgrade,
-          RequestMismatchMitigationStrategy::PayLessDowngrade,
-        ] {
+        assert!(matches!(builder.clone().build2(), Err(ArtcraftRouterError::Client(ClientError::ModelDoesNotSupportOption { field: "video_batch_count", .. }))), "{model:?}, batch {batch}");
+        for strategy in [RequestMismatchMitigationStrategy::PayMoreUpgrade, RequestMismatchMitigationStrategy::PayLessDowngrade] {
           let mut builder = builder.clone();
           builder.request_mismatch_mitigation_strategy = strategy;
           let request = http_request(builder.build2().unwrap());
@@ -95,8 +80,8 @@ mod batch_planning {
 mod retail_prices {
   use super::*;
   use RouterResolution::{FourEightyP, FourK, SevenTwentyP, TenEightyP};
-  use RouterVideoModel::{HappyHorse1p0, Seedance2p0, Seedance2p0Fast, Seedance2p0Mini, Seedance2p5,
-    Seedance2p5Ultra, Seedance2p0BytePlus, Seedance2p0BytePlusFast, Seedance2p0BytePlusMini, Seedance2p0BytePlusUltra, Seedance2p0BytePlusUltraFast, Seedance2p0BytePlusUltraMini,
+  use RouterVideoModel::{
+    HappyHorse1p0, Seedance2p0, Seedance2p0Fast, Seedance2p0Mini, Seedance2p5, Seedance2p5Ultra, Seedance2p0BytePlus, Seedance2p0BytePlusFast, Seedance2p0BytePlusMini, Seedance2p0BytePlusUltra, Seedance2p0BytePlusUltraFast, Seedance2p0BytePlusUltraMini,
   };
 
   #[test]
@@ -178,9 +163,7 @@ mod retail_prices {
       (Seedance2p0BytePlusUltraMini, SevenTwentyP, [55, 110, 165, 219]),
     ] {
       let mut builder = builder(model, resolution, None);
-      builder.reference_videos = Some(VideoListRef::MediaFileTokens(vec![
-        MediaFileToken::new("mf_reference".to_string()),
-      ]));
+      builder.reference_videos = Some(VideoListRef::MediaFileTokens(vec![MediaFileToken::new("mf_reference".to_string())]));
       builder.total_reference_video_input_seconds = Some(10);
       assert_batch_prices(builder, expected);
     }
@@ -196,14 +179,9 @@ mod retail_prices {
       (Seedance2p5Ultra, SevenTwentyP, [169, 338, 506, 675], [656, 1311, 1967, 2622]),
       (Seedance2p5Ultra, TenEightyP, [377, 754, 1130, 1507], [1465, 2930, 4394, 5859]),
     ] {
-      for (input_seconds, expected) in [
-        (Some(1), minimum), (Some(4), minimum),
-        (None, maximum), (Some(0), maximum), (Some(30), maximum), (Some(99), maximum),
-      ] {
+      for (input_seconds, expected) in [(Some(1), minimum), (Some(4), minimum), (None, maximum), (Some(0), maximum), (Some(30), maximum), (Some(99), maximum)] {
         let mut builder = builder(model, resolution, None);
-        builder.reference_videos = Some(VideoListRef::MediaFileTokens(vec![
-          MediaFileToken::new("mf_reference".to_string()),
-        ]));
+        builder.reference_videos = Some(VideoListRef::MediaFileTokens(vec![MediaFileToken::new("mf_reference".to_string())]));
         builder.total_reference_video_input_seconds = input_seconds;
         assert_batch_prices(builder, expected);
       }

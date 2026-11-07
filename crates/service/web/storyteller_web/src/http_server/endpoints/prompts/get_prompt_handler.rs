@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use actix_web::web::{Json, Path};
 use actix_web::{web, HttpMessage, HttpRequest};
-use artcraft_api_defs::prompts::get_prompt::{
-  GetPromptImageContextItem, GetPromptPathInfo, GetPromptSuccessResponse,
-  PromptInfo, PromptInfoModeratorFields,
-};
+use artcraft_api_defs::prompts::get_prompt::{GetPromptImageContextItem, GetPromptPathInfo, GetPromptSuccessResponse, PromptInfo, PromptInfoModeratorFields};
 use bucket_paths::legacy::typified_paths::public::media_files::bucket_file_path::MediaFileBucketPath;
 use enums::by_table::prompt_context_items::prompt_context_semantic_type::PromptContextSemanticType;
 use log::{error, warn};
@@ -32,25 +29,15 @@ use crate::state::server_state::ServerState;
     ("path" = GetPromptPathInfo, description = "Path for Request")
   )
 )]
-pub async fn get_prompt_handler(
-  http_request: HttpRequest,
-  path: Path<GetPromptPathInfo>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<GetPromptSuccessResponse>, CommonWebError> {
+pub async fn get_prompt_handler(http_request: HttpRequest, path: Path<GetPromptPathInfo>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<GetPromptSuccessResponse>, CommonWebError> {
   let mut mysql_connection = server_state.mysql_pool.acquire().await?;
 
-  let maybe_user_session = server_state
-    .session_checker
-    .maybe_get_user_session_from_connection(&http_request, &mut mysql_connection)
-    .await
-    .map_err(|e| {
-      warn!("Session checker error: {:?}", e);
-      CommonWebError::from(e)
-    })?;
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session_from_connection(&http_request, &mut mysql_connection).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from(e)
+  })?;
 
-  let is_moderator = maybe_user_session
-    .map(|session| session.can_ban_users)
-    .unwrap_or(false);
+  let is_moderator = maybe_user_session.map(|session| session.can_ban_users).unwrap_or(false);
 
   let prompt_token = path.into_inner().token;
 
@@ -103,50 +90,32 @@ pub async fn get_prompt_handler(
   let mut maybe_moderator_fields = None;
 
   if is_moderator {
-    maybe_moderator_fields = Some(PromptInfoModeratorFields {
-      maybe_inference_duration_millis,
-      main_ipa_workflow,
-      face_detailer_workflow,
-      upscaler_workflow,
-    });
+    maybe_moderator_fields = Some(PromptInfoModeratorFields { maybe_inference_duration_millis, main_ipa_workflow, face_detailer_workflow, upscaler_workflow });
   }
 
   let media_domain = get_media_domain(&http_request);
 
-  let items_result = list_prompt_context_items(
-    &result.token,
-    &mut mysql_connection,
-  ).await;
+  let items_result = list_prompt_context_items(&result.token, &mut mysql_connection).await;
 
   let items = items_result.unwrap_or_else(|e| {
     warn!("Error listing prompt context items: {:?}", e);
     Vec::new()
   });
 
-  let items = items.iter().filter_map(|item| {
-    let bucket_path = MediaFileBucketPath::from_object_hash(
-      &item.public_bucket_directory_hash,
-      item.maybe_public_bucket_prefix.as_deref(),
-      item.maybe_public_bucket_extension.as_deref(),
-    );
+  let items = items
+    .iter()
+    .filter_map(|item| {
+      let bucket_path = MediaFileBucketPath::from_object_hash(&item.public_bucket_directory_hash, item.maybe_public_bucket_prefix.as_deref(), item.maybe_public_bucket_extension.as_deref());
 
-    Some(GetPromptImageContextItem {
-      media_token: item.media_token.clone(),
-      semantic: item.context_semantic_type,
-      media_links: MediaLinksBuilder::from_media_path_and_env(
-        media_domain,
-        server_state.server_environment,
-        &bucket_path,
-        VideoThumbnailInfo::new(item.maybe_thumbnail_version, item.created_at),
-      ),
+      Some(GetPromptImageContextItem {
+        media_token: item.media_token.clone(),
+        semantic: item.context_semantic_type,
+        media_links: MediaLinksBuilder::from_media_path_and_env(media_domain, server_state.server_environment, &bucket_path, VideoThumbnailInfo::new(item.maybe_thumbnail_version, item.created_at)),
+      })
     })
-  }).collect::<Vec<GetPromptImageContextItem>>();
+    .collect::<Vec<GetPromptImageContextItem>>();
 
-  let maybe_context_images = if items.is_empty() {
-    None
-  } else {
-    Some(items)
-  };
+  let maybe_context_images = if items.is_empty() { None } else { Some(items) };
 
   Ok(Json(GetPromptSuccessResponse {
     success: true,

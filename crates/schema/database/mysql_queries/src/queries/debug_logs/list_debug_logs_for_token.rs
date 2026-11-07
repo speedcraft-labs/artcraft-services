@@ -54,9 +54,7 @@ struct RawDebugLogRow {
   maybe_user_gravatar_hash: Option<String>,
 }
 
-pub async fn list_debug_logs_for_token<'e, 'c: 'e, E>(
-  args: ListDebugLogsForTokenArgs<'e, 'c, E>,
-) -> Result<Vec<DebugLogRow>, sqlx::Error>
+pub async fn list_debug_logs_for_token<'e, 'c: 'e, E>(args: ListDebugLogsForTokenArgs<'e, 'c, E>) -> Result<Vec<DebugLogRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -88,11 +86,12 @@ LIMIT ?
     args.event_token.as_str(),
     limit,
   )
-    .fetch_all(args.mysql_executor)
-    .await?;
+  .fetch_all(args.mysql_executor)
+  .await?;
 
-  let results = rows.into_iter().map(|row| {
-    DebugLogRow {
+  let results = rows
+    .into_iter()
+    .map(|row| DebugLogRow {
       id: row.id,
       event_token: row.event_token,
       debug_log_type: row.debug_log_type,
@@ -105,8 +104,8 @@ LIMIT ?
       maybe_user_display_name: row.maybe_user_display_name,
       maybe_user_username: row.maybe_user_username,
       maybe_user_gravatar_hash: row.maybe_user_gravatar_hash,
-    }
-  }).collect();
+    })
+    .collect();
 
   Ok(results)
 }

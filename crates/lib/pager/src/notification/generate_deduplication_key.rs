@@ -43,13 +43,7 @@ mod tests {
   use super::*;
   use chrono::TimeZone;
 
-  fn make_details(
-    title: &str,
-    is_from_error: bool,
-    http_method: Option<&str>,
-    http_path: Option<&str>,
-    event_time: DateTime<Utc>,
-  ) -> NotificationDetails {
+  fn make_details(title: &str, is_from_error: bool, http_method: Option<&str>, http_path: Option<&str>, event_time: DateTime<Utc>) -> NotificationDetails {
     NotificationDetails {
       title: title.to_string(),
       description: None,
@@ -213,14 +207,7 @@ mod tests {
   mod http_status_code_tests {
     use super::*;
 
-    fn make_details_with_status(
-      title: &str,
-      is_from_error: bool,
-      http_method: Option<&str>,
-      http_path: Option<&str>,
-      http_status_code: Option<u16>,
-      event_time: DateTime<Utc>,
-    ) -> NotificationDetails {
+    fn make_details_with_status(title: &str, is_from_error: bool, http_method: Option<&str>, http_path: Option<&str>, http_status_code: Option<u16>, event_time: DateTime<Utc>) -> NotificationDetails {
       NotificationDetails {
         title: title.to_string(),
         description: None,

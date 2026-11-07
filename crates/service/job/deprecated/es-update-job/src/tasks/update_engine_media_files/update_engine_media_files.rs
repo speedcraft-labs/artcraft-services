@@ -18,7 +18,7 @@ use mysql_queries::queries::media_files::list::list_media_files_for_elastic_sear
 
 use crate::job_state::JobState;
 
-const PAGE_SIZE : usize = 1000;
+const PAGE_SIZE: usize = 1000;
 
 pub async fn update_engine_media_files(job_state: Arc<JobState>) {
   // TODO(bt,2024-02-05): Write this cursor to Redis so job can resume without reindexing everything.
@@ -75,11 +75,9 @@ pub async fn with_database_main_loop(cursor: &mut usize, job_state: &JobState) -
         MediaFileType::Jpg,
         MediaFileType::Png,
       ])),
-      maybe_filter_media_classes: Some(&HashSet::from_iter(vec![
-        MediaFileClass::Image,
-        MediaFileClass::Dimensional,
-      ])),
-    }).await?;
+      maybe_filter_media_classes: Some(&HashSet::from_iter(vec![MediaFileClass::Image, MediaFileClass::Dimensional])),
+    })
+    .await?;
 
     if results.is_empty() {
       info!("No records after cursor: {:?}. Resetting to 0.", &cursor);
@@ -93,9 +91,7 @@ pub async fn with_database_main_loop(cursor: &mut usize, job_state: &JobState) -
 
     while !results.is_empty() {
       let last = 50.min(results.len());
-      let drained_results= results.drain(0..last)
-          .into_iter()
-          .collect::<Vec<_>>();
+      let drained_results = results.drain(0..last).into_iter().collect::<Vec<_>>();
 
       for record in drained_results {
         let id = record.id;
@@ -163,27 +159,16 @@ async fn create_document_from_record(elasticsearch: &Elasticsearch, record: Medi
     is_deleted,
   };
 
-  let op : BulkOperation<_> = BulkOperation::index(&document)
-      .id(document.get_document_id())
-      .into();
+  let op: BulkOperation<_> = BulkOperation::index(&document).id(document.get_document_id()).into();
 
-  let response = elasticsearch
-      .bulk(BulkParts::Index(MEDIA_FILE_INDEX))
-      .body(vec![op])
-      .send()
-      .await?;
+  let response = elasticsearch.bulk(BulkParts::Index(MEDIA_FILE_INDEX)).body(vec![op]).send().await?;
 
   let json: Value = response.json().await?;
 
   let had_errors = json["errors"].as_bool().unwrap_or(false);
 
   if had_errors {
-    let failed: Vec<&Value> = json["items"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|v| !v["error"].is_null())
-        .collect();
+    let failed: Vec<&Value> = json["items"].as_array().unwrap().iter().filter(|v| !v["error"].is_null()).collect();
 
     error!("Errors during indexing. Failures: {}", failed.len());
 

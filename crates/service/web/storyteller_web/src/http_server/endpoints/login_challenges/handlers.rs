@@ -26,9 +26,16 @@ use super::security::{new_confirmation_code, new_secret, rate_limit, request_ip,
 
 const VERIFICATION_PAGE: &str = "https://app.getartcraft.com/login/desktop";
 
-
 pub fn configure(cfg: &mut web::ServiceConfig) {
-  cfg.service(web::scope("/v1/login_challenges").wrap(DefaultHeaders::new().add(("Cache-Control", "no-store")).add(("Referrer-Policy", "no-referrer"))).app_data(web::JsonConfig::default().limit(1024)).route("/create", web::post().to(create)).route("/review", web::post().to(review)).route("/decide", web::post().to(decide)).route("/poll", web::post().to(poll)));
+  cfg.service(
+    web::scope("/v1/login_challenges")
+      .wrap(DefaultHeaders::new().add(("Cache-Control", "no-store")).add(("Referrer-Policy", "no-referrer")))
+      .app_data(web::JsonConfig::default().limit(1024))
+      .route("/create", web::post().to(create))
+      .route("/review", web::post().to(review))
+      .route("/decide", web::post().to(decide))
+      .route("/poll", web::post().to(poll)),
+  );
 }
 
 #[utoipa::path(post, path = "/v1/login_challenges/create", tag = "Users", request_body = CreateLoginChallengeRequest,
@@ -43,19 +50,8 @@ pub async fn create(request: HttpRequest, _body: web::Json<CreateLoginChallengeR
   let code = new_confirmation_code()?;
   let token = UserLoginChallengeToken::generate();
   let mut conn = pool.acquire().await?;
-  create_challenge(CreateChallengeArgs {
-    token: &token,
-    approval_hash: &approval_hash,
-    device_hash: &device_hash,
-    confirmation_code: &code,
-    status: UserLoginChallengeStatus::Pending,
-    ip_address: &ip,
-    mysql_executor: &mut *conn,
-  }).await?;
-  let challenge = lock_by_device(LockByDeviceArgs {
-    device_hash: &device_hash,
-    mysql_executor: &mut *conn,
-  }).await?.ok_or(CommonWebError::NotFound)?;
+  create_challenge(CreateChallengeArgs { token: &token, approval_hash: &approval_hash, device_hash: &device_hash, confirmation_code: &code, status: UserLoginChallengeStatus::Pending, ip_address: &ip, mysql_executor: &mut *conn }).await?;
+  let challenge = lock_by_device(LockByDeviceArgs { device_hash: &device_hash, mysql_executor: &mut *conn }).await?.ok_or(CommonWebError::NotFound)?;
   Ok(web::Json(CreateLoginChallengeResponse {
     success: true,
     device_token,
@@ -75,14 +71,19 @@ pub async fn review(request: HttpRequest, body: web::Json<ReviewLoginChallengeRe
   let hash = secret_hash(&body.approval_token)?;
   let mut tx = pool.begin().await?;
   let approver = approving_session(&request, &signer, &mut *tx).await?;
-  let mut challenge = lock_by_approval(LockByApprovalArgs {
-    approval_hash: &hash,
-    mysql_executor: &mut *tx,
-  }).await?.ok_or(CommonWebError::NotAuthorized)?;
+  let mut challenge = lock_by_approval(LockByApprovalArgs { approval_hash: &hash, mysql_executor: &mut *tx }).await?.ok_or(CommonWebError::NotAuthorized)?;
   let expired = expire_locked_challenge(&mut challenge, &mut tx).await?;
   let result = outcome(&challenge, expired);
   tx.commit().await?;
-  Ok(web::Json(ReviewLoginChallengeResponse { success: true, status: result.status, maybe_failure_type: result.maybe_failure_type, confirmation_code: challenge.confirmation_code, requesting_ip: challenge.ip_address_creation, expires_at: challenge.expires_at, username: approver.username }))
+  Ok(web::Json(ReviewLoginChallengeResponse {
+    success: true,
+    status: result.status,
+    maybe_failure_type: result.maybe_failure_type,
+    confirmation_code: challenge.confirmation_code,
+    requesting_ip: challenge.ip_address_creation,
+    expires_at: challenge.expires_at,
+    username: approver.username,
+  }))
 }
 
 #[utoipa::path(post, path = "/v1/login_challenges/decide", tag = "Users", request_body = DecideLoginChallengeRequest,
@@ -94,19 +95,10 @@ pub async fn decide(request: HttpRequest, body: web::Json<DecideLoginChallengeRe
   let hash = secret_hash(&body.approval_token)?;
   let mut tx = pool.begin().await?;
   let approver = approving_session(&request, &signer, &mut *tx).await?;
-  let mut challenge = lock_by_approval(LockByApprovalArgs {
-    approval_hash: &hash,
-    mysql_executor: &mut *tx,
-  }).await?.ok_or(CommonWebError::NotAuthorized)?;
+  let mut challenge = lock_by_approval(LockByApprovalArgs { approval_hash: &hash, mysql_executor: &mut *tx }).await?.ok_or(CommonWebError::NotAuthorized)?;
   let mut expired = expire_locked_challenge(&mut challenge, &mut tx).await?;
   if !expired && challenge.status == UserLoginChallengeStatus::Pending {
-    if decide_challenge(DecideChallengeArgs {
-      challenge_id: challenge.id,
-      user_token: &approver.user_token,
-      ip_address: &ip,
-      approve: body.approve,
-      mysql_executor: &mut *tx,
-    }).await? {
+    if decide_challenge(DecideChallengeArgs { challenge_id: challenge.id, user_token: &approver.user_token, ip_address: &ip, approve: body.approve, mysql_executor: &mut *tx }).await? {
       challenge.status = if body.approve { UserLoginChallengeStatus::Approved } else { UserLoginChallengeStatus::Failed };
       challenge.maybe_failure_type = if body.approve { None } else { Some(UserLoginChallengeFailureType::UserDeclined) };
     } else {
@@ -126,10 +118,7 @@ pub async fn poll(request: HttpRequest, body: web::Json<PollLoginChallengeReques
   rate_limit(&ip, false)?;
   let hash = secret_hash(&body.device_token)?;
   let mut tx = pool.begin().await?;
-  let mut challenge = lock_by_device(LockByDeviceArgs {
-    device_hash: &hash,
-    mysql_executor: &mut *tx,
-  }).await?.ok_or(CommonWebError::NotAuthorized)?;
+  let mut challenge = lock_by_device(LockByDeviceArgs { device_hash: &hash, mysql_executor: &mut *tx }).await?.ok_or(CommonWebError::NotAuthorized)?;
   let expired = expire_locked_challenge(&mut challenge, &mut tx).await?;
   let mut result = outcome(&challenge, expired);
   if expired || challenge.status == UserLoginChallengeStatus::Pending || challenge.status == UserLoginChallengeStatus::Failed {
@@ -138,22 +127,9 @@ pub async fn poll(request: HttpRequest, body: web::Json<PollLoginChallengeReques
   }
   let user = challenge.maybe_deciding_user_token.as_deref().ok_or(CommonWebError::NotAuthorized)?;
   let session = if challenge.status == UserLoginChallengeStatus::Approved {
-    let session_id = create_bridge_session(CreateBridgeSessionArgs {
-      user_token: user,
-      ip_address: &ip,
-      mysql_executor: &mut *tx,
-    }).await?.ok_or(CommonWebError::NotAuthorized)?;
-    let session = find_redeemed_session(FindRedeemedSessionArgs {
-      session_id,
-      user_token: user,
-      mysql_executor: &mut *tx,
-    }).await?.ok_or(CommonWebError::NotAuthorized)?;
-    if !mark_redeemed(MarkRedeemedArgs {
-      challenge_id: challenge.id,
-      session_id: session.id,
-      ip_address: &ip,
-      mysql_executor: &mut *tx,
-    }).await? {
+    let session_id = create_bridge_session(CreateBridgeSessionArgs { user_token: user, ip_address: &ip, mysql_executor: &mut *tx }).await?.ok_or(CommonWebError::NotAuthorized)?;
+    let session = find_redeemed_session(FindRedeemedSessionArgs { session_id, user_token: user, mysql_executor: &mut *tx }).await?.ok_or(CommonWebError::NotAuthorized)?;
+    if !mark_redeemed(MarkRedeemedArgs { challenge_id: challenge.id, session_id: session.id, ip_address: &ip, mysql_executor: &mut *tx }).await? {
       // Includes expiry during redemption. Roll back the INSERT as well.
       tx.rollback().await?;
       return Ok(HttpResponse::Ok().json(outcome(&challenge, true)));
@@ -161,11 +137,7 @@ pub async fn poll(request: HttpRequest, body: web::Json<PollLoginChallengeReques
     session
   } else if challenge.status == UserLoginChallengeStatus::Redeemed {
     let id = challenge.maybe_redeemed_user_session_id.ok_or(CommonWebError::NotAuthorized)?;
-    find_redeemed_session(FindRedeemedSessionArgs {
-      session_id: id,
-      user_token: user,
-      mysql_executor: &mut *tx,
-    }).await?.ok_or(CommonWebError::NotAuthorized)?
+    find_redeemed_session(FindRedeemedSessionArgs { session_id: id, user_token: user, mysql_executor: &mut *tx }).await?.ok_or(CommonWebError::NotAuthorized)?
   } else {
     return Err(CommonWebError::NotAuthorized);
   };
@@ -179,15 +151,9 @@ pub async fn poll(request: HttpRequest, body: web::Json<PollLoginChallengeReques
 
 /// Both queries must run in the transaction that already holds the challenge lock.
 async fn expire_locked_challenge(challenge: &mut LoginChallenge, tx: &mut Transaction<'_, MySql>) -> Result<bool, sqlx::Error> {
-  let expired = is_challenge_expired(IsChallengeExpiredArgs {
-    challenge_id: challenge.id,
-    mysql_executor: &mut **tx,
-  }).await?;
+  let expired = is_challenge_expired(IsChallengeExpiredArgs { challenge_id: challenge.id, mysql_executor: &mut **tx }).await?;
   if expired && (challenge.status == UserLoginChallengeStatus::Pending || challenge.status == UserLoginChallengeStatus::Approved) {
-    expire_challenge(ExpireChallengeArgs {
-      challenge_id: challenge.id,
-      mysql_executor: &mut **tx,
-    }).await?;
+    expire_challenge(ExpireChallengeArgs { challenge_id: challenge.id, mysql_executor: &mut **tx }).await?;
     challenge.status = UserLoginChallengeStatus::Failed;
     challenge.maybe_failure_type = Some(UserLoginChallengeFailureType::Expired);
   }
@@ -199,10 +165,7 @@ where
   T: Executor<'c, Database = MySql>,
 {
   let payload = signer.decode_session_payload_from_request(request).map_err(|_| CommonWebError::NotAuthorized)?.ok_or(CommonWebError::NotAuthorized)?;
-  find_approving_session(FindApprovingSessionArgs {
-    session_token: &payload.session_token,
-    mysql_executor,
-  }).await?.ok_or(CommonWebError::NotAuthorized)
+  find_approving_session(FindApprovingSessionArgs { session_token: &payload.session_token, mysql_executor }).await?.ok_or(CommonWebError::NotAuthorized)
 }
 
 fn verification_page(request: &HttpRequest) -> &'static str {

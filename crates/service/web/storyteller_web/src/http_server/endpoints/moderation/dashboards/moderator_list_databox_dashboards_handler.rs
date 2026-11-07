@@ -38,30 +38,12 @@ pub struct DataboxDashboardEntry {
     (status = 500, description = "Server error", body = CommonWebError),
   ),
 )]
-pub async fn moderator_list_databox_dashboards_handler(
-  http_request: HttpRequest,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<ListDataboxDashboardsResponse>, CommonWebError> {
-
+pub async fn moderator_list_databox_dashboards_handler(http_request: HttpRequest, server_state: web::Data<Arc<ServerState>>) -> Result<Json<ListDataboxDashboardsResponse>, CommonWebError> {
   require_moderator(&http_request, &server_state.session_checker, &server_state.mysql_pool).await?;
 
   let databox = &server_state.dashboards.databox;
 
-  let databoards = [
-    ("DAUs", databox.daus_id.as_ref()),
-    ("Daily Generations", databox.daily_generations_id.as_ref()),
-  ]
-    .into_iter()
-    .filter_map(|(name, maybe_id)| {
-      maybe_id.map(|id| DataboxDashboardEntry {
-        name: name.to_string(),
-        id: id.clone(),
-      })
-    })
-    .collect();
+  let databoards = [("DAUs", databox.daus_id.as_ref()), ("Daily Generations", databox.daily_generations_id.as_ref())].into_iter().filter_map(|(name, maybe_id)| maybe_id.map(|id| DataboxDashboardEntry { name: name.to_string(), id: id.clone() })).collect();
 
-  Ok(Json(ListDataboxDashboardsResponse {
-    success: true,
-    databoards,
-  }))
+  Ok(Json(ListDataboxDashboardsResponse { success: true, databoards }))
 }

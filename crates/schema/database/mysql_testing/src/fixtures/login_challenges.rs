@@ -29,38 +29,49 @@ pub async fn create_passwordless_user(pool: &MySqlPool, flags: &[UserFeatureFlag
   let user = create_test_user(pool).await.expect("create passwordless fixture");
   set_passwordless(pool, &user.user_token).await;
   let flags = flags.iter().map(UserFeatureFlag::to_str).collect::<Vec<_>>().join(",");
-  sqlx::query("UPDATE users SET maybe_feature_flags = ? WHERE token = ?")
-    .bind(flags).bind(user.user_token.as_str()).execute(pool).await.expect("set fixture feature flags");
+  sqlx::query("UPDATE users SET maybe_feature_flags = ? WHERE token = ?").bind(flags).bind(user.user_token.as_str()).execute(pool).await.expect("set fixture feature flags");
   user
 }
 
 pub async fn audit(pool: &MySqlPool, device_hash: &[u8]) -> ChallengeAudit {
   let row = sqlx::query("SELECT status, maybe_failure_type, ip_address_creation, maybe_ip_address_failure, maybe_redeemed_user_session_id, TIMESTAMPDIFF(SECOND, created_at, expires_at) AS lifetime, maybe_deciding_user_token, maybe_ip_address_decision, maybe_ip_address_redemption, maybe_decided_at, maybe_redeemed_at, maybe_failed_at FROM user_login_challenges WHERE device_token_sha256 = ?").bind(device_hash).fetch_one(pool).await.expect("challenge audit");
   ChallengeAudit {
-    status: row.get("status"), failure: row.get("maybe_failure_type"), creation_ip: row.get("ip_address_creation"),
-    failure_ip: row.get("maybe_ip_address_failure"), session_id: row.get("maybe_redeemed_user_session_id"), lifetime_seconds: row.get("lifetime"),
-    deciding_user: row.get("maybe_deciding_user_token"), decision_ip: row.get("maybe_ip_address_decision"),
-    redemption_ip: row.get("maybe_ip_address_redemption"), decided_at: row.get("maybe_decided_at"),
-    redeemed_at: row.get("maybe_redeemed_at"), failed_at: row.get("maybe_failed_at"),
+    status: row.get("status"),
+    failure: row.get("maybe_failure_type"),
+    creation_ip: row.get("ip_address_creation"),
+    failure_ip: row.get("maybe_ip_address_failure"),
+    session_id: row.get("maybe_redeemed_user_session_id"),
+    lifetime_seconds: row.get("lifetime"),
+    deciding_user: row.get("maybe_deciding_user_token"),
+    decision_ip: row.get("maybe_ip_address_decision"),
+    redemption_ip: row.get("maybe_ip_address_redemption"),
+    decided_at: row.get("maybe_decided_at"),
+    redeemed_at: row.get("maybe_redeemed_at"),
+    failed_at: row.get("maybe_failed_at"),
   }
 }
 
 pub async fn bridge_session_count(pool: &MySqlPool) -> i64 {
-  sqlx::query_scalar("SELECT COUNT(*) FROM user_sessions WHERE maybe_creation_type = ?")
-    .bind(UserWebSessionCreationType::DeviceApproval.to_str()).fetch_one(pool).await.expect("bridge session count")
+  sqlx::query_scalar("SELECT COUNT(*) FROM user_sessions WHERE maybe_creation_type = ?").bind(UserWebSessionCreationType::DeviceApproval.to_str()).fetch_one(pool).await.expect("bridge session count")
 }
 
 pub async fn assert_challenge_status_is_explicit(pool: &MySqlPool) {
-  let column = sqlx::query("SELECT COLUMN_DEFAULT, IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_login_challenges' AND COLUMN_NAME = 'status'")
-    .fetch_one(pool).await.expect("inspect migrated status column");
+  let column =
+    sqlx::query("SELECT COLUMN_DEFAULT, IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_login_challenges' AND COLUMN_NAME = 'status'").fetch_one(pool).await.expect("inspect migrated status column");
   assert!(column.get::<Option<String>, _>("COLUMN_DEFAULT").is_none());
   assert_eq!(column.get::<String, _>("IS_NULLABLE"), "NO");
 
   // Every other required field is supplied; MySQL must reject the omitted status.
   let token = UserLoginChallengeToken::generate();
   let error = sqlx::query("INSERT INTO user_login_challenges (token, approval_token_sha256, device_token_sha256, confirmation_code, ip_address_creation, expires_at) VALUES (?, ?, ?, ?, ?, NOW() + INTERVAL 20 MINUTE)")
-    .bind(token.as_str()).bind(&[0u8; 32][..]).bind(&[1u8; 32][..])
-    .bind("BCDFGHJK").bind("192.0.2.1").execute(pool).await.expect_err("status must be explicit");
+    .bind(token.as_str())
+    .bind(&[0u8; 32][..])
+    .bind(&[1u8; 32][..])
+    .bind("BCDFGHJK")
+    .bind("192.0.2.1")
+    .execute(pool)
+    .await
+    .expect_err("status must be explicit");
   let error = error.as_database_error().expect("MySQL missing-column error");
   assert_eq!(error.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>().unwrap().number(), 1364);
 }

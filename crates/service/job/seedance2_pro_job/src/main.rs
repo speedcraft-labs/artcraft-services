@@ -2,12 +2,12 @@
 #![forbid(private_bounds)]
 #![forbid(private_interfaces)]
 #![forbid(unused_must_use)]
-
 // Always allow
 #![allow(dead_code)]
 #![allow(non_snake_case)]
 
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -74,13 +74,8 @@ const LOOP_SHUTDOWN_GRACE: Duration = Duration::from_secs(30);
 
 #[tokio::main]
 async fn main() -> AnyhowResult<()> {
-
-  let container_environment = bootstrap(BootstrapArgs {
-    app_name: "seedance2-pro-job",
-    default_logging_override: Some(DEFAULT_RUST_LOG),
-    config_search_directories: &[".", "./config", "crates/service/job/seedance2_pro_job/config"],
-    ignore_legacy_dot_env_file: true,
-  })?;
+  let container_environment =
+    bootstrap(BootstrapArgs { app_name: "seedance2-pro-job", default_logging_override: Some(DEFAULT_RUST_LOG), config_search_directories: &[".", "./config", "crates/service/job/seedance2_pro_job/config"], ignore_legacy_dot_env_file: true })?;
 
   info!("Hostname: {}", &container_environment.hostname);
 
@@ -91,19 +86,11 @@ async fn main() -> AnyhowResult<()> {
 
   info!("Connecting to database...");
 
-  let mysql_pool = MySqlPoolOptions::new()
-    .max_connections(2)
-    .acquire_timeout(MYSQL_ACQUIRE_TIMEOUT)
-    .idle_timeout(Some(MYSQL_IDLE_TIMEOUT))
-    .connect(&db_connection_string)
-    .await?;
+  let mysql_pool = MySqlPoolOptions::new().max_connections(2).acquire_timeout(MYSQL_ACQUIRE_TIMEOUT).idle_timeout(Some(MYSQL_IDLE_TIMEOUT)).connect(&db_connection_string).await?;
 
   info!("Connected to MySQL.");
 
-  let server_environment = ServerEnvironment::from_str(
-    &easyenv::get_env_string_required("SERVER_ENVIRONMENT")?,
-  )
-    .ok_or(anyhow!("invalid server environment"))?;
+  let server_environment = ServerEnvironment::from_str(&easyenv::get_env_string_required("SERVER_ENVIRONMENT")?).ok_or(anyhow!("invalid server environment"))?;
 
   // Bucket setup
   let access_key = easyenv::get_env_string_required(ENV_ACCESS_KEY)?;
@@ -112,57 +99,31 @@ async fn main() -> AnyhowResult<()> {
   let public_bucket_name = easyenv::get_env_string_required(ENV_PUBLIC_BUCKET_NAME)?;
   let s3_compatible_endpoint_url = easyenv::get_env_string_required(ENV_S3_ENDPOINT)?;
 
-  let bucket_timeout = easyenv::get_env_duration_seconds_or_default(
-    "BUCKET_TIMEOUT_SECONDS",
-    Duration::from_secs(60 * 5),
-  );
+  let bucket_timeout = easyenv::get_env_duration_seconds_or_default("BUCKET_TIMEOUT_SECONDS", Duration::from_secs(60 * 5));
 
-  let public_bucket_client = LegacyBucketClient::create(
-    &access_key,
-    &secret_key,
-    &region_name,
-    &public_bucket_name,
-    &s3_compatible_endpoint_url,
-    None,
-    Some(bucket_timeout),
-  )?;
+  let public_bucket_client = LegacyBucketClient::create(&access_key, &secret_key, &region_name, &public_bucket_name, &s3_compatible_endpoint_url, None, Some(bucket_timeout))?;
 
-  let download_client = reqwest::Client::builder()
-    .timeout(DOWNLOAD_TIMEOUT)
-    .build()?;
+  let download_client = reqwest::Client::builder().timeout(DOWNLOAD_TIMEOUT).build()?;
 
   let kinovi_version = get_kinovi_version()?;
   let kinovi_session = get_kinovi_session(kinovi_version)?;
 
   // How often to poll for results (default: 15 seconds)
-  let poll_interval_millis: u64 = easyenv::get_env_num(
-    "SEEDANCE_POLL_INTERVAL_MILLIS",
-    5_000,
-  )?;
+  let poll_interval_millis: u64 = easyenv::get_env_num("SEEDANCE_POLL_INTERVAL_MILLIS", 5_000)?;
 
-  let maybe_max_job_age = easyenv::try_get_env_num_optional::<i64>(ENV_MAX_JOB_AGE_THRESHOLD_HOURS)?
-      .and_then(chrono::Duration::try_hours);
+  let maybe_max_job_age = easyenv::try_get_env_num_optional::<i64>(ENV_MAX_JOB_AGE_THRESHOLD_HOURS)?.and_then(chrono::Duration::try_hours);
 
   if let Some(ref duration) = maybe_max_job_age {
     info!("Max job age threshold: {} hours", duration.num_hours());
   }
 
-  let poll_max_retries: u32 = easyenv::get_env_num(
-    "POLL_MAX_RETRIES",
-    3,
-  )?;
+  let poll_max_retries: u32 = easyenv::get_env_num("POLL_MAX_RETRIES", 3)?;
 
-  let poll_retry_max_delay_millis: u64 = easyenv::get_env_num(
-    "POLL_RETRY_MAX_DELAY_MILLIS",
-    10_000,
-  )?;
+  let poll_retry_max_delay_millis: u64 = easyenv::get_env_num("POLL_RETRY_MAX_DELAY_MILLIS", 10_000)?;
 
   info!("Poll max retries: {}, max retry delay: {}ms", poll_max_retries, poll_retry_max_delay_millis);
 
-  let credits_alert_threshold: u64 = easyenv::get_env_num(
-    "CREDITS_ALERT_THRESHOLD",
-    10_000,
-  )?;
+  let credits_alert_threshold: u64 = easyenv::get_env_num("CREDITS_ALERT_THRESHOLD", 10_000)?;
 
   info!("Credits alert threshold: {}", credits_alert_threshold);
 
@@ -190,12 +151,7 @@ async fn main() -> AnyhowResult<()> {
 
   let pager_for_shutdown = pager.clone();
 
-  let create_server_args = CreateServerArgs {
-    container_environment: container_environment.clone(),
-    job_stats: job_stats.clone(),
-    heartbeats: heartbeats.clone(),
-    pager: pager.clone(),
-  };
+  let create_server_args = CreateServerArgs { container_environment: container_environment.clone(), job_stats: job_stats.clone(), heartbeats: heartbeats.clone(), pager: pager.clone() };
 
   let job_dependencies = JobDependencies {
     mysql_pool,
@@ -222,8 +178,7 @@ async fn main() -> AnyhowResult<()> {
     let actix_runtime = actix_web::rt::System::new();
     let http_server_handle = launch_http_server(create_server_args);
 
-    actix_runtime.block_on(http_server_handle)
-      .expect("HTTP server should not exit.");
+    actix_runtime.block_on(http_server_handle).expect("HTTP server should not exit.");
 
     warn!("HTTP server thread is shut down.");
   });
@@ -238,10 +193,10 @@ async fn main() -> AnyhowResult<()> {
         info!("Received shutdown signal. Shutting down...");
         application_shutdown_for_signal.set(true);
         shutdown_notify_for_signal.notify_waiters();
-      }
+      },
       Err(err) => {
         warn!("Error listening for shutdown signal: {:?}", err);
-      }
+      },
     }
   });
 
@@ -333,4 +288,3 @@ async fn main() -> AnyhowResult<()> {
 
   Ok(())
 }
-

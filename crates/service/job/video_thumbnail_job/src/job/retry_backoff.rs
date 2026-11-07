@@ -42,17 +42,12 @@ impl RetryBackoff {
     if !self.failures.contains_key(&id) && self.failures.len() == self.capacity.get() {
       // Evict the least recently failed entry. Skipping a cached failure must not
       // refresh its position or allocate an unbounded auxiliary eviction queue.
-      if let Some(oldest_id) = self.failures.iter()
-        .min_by_key(|(_, failure)| failure.last_failed_at)
-        .map(|(id, _)| *id)
-      {
+      if let Some(oldest_id) = self.failures.iter().min_by_key(|(_, failure)| failure.last_failed_at).map(|(id, _)| *id) {
         self.failures.remove(&oldest_id);
       }
     }
 
-    let attempts = self.failures.get(&id)
-      .map(|failure| failure.attempts.saturating_add(1))
-      .unwrap_or(1);
+    let attempts = self.failures.get(&id).map(|failure| failure.attempts.saturating_add(1)).unwrap_or(1);
     let multiplier = 1u32 << attempts.saturating_sub(1).min(31);
     let delay = self.initial_delay.saturating_mul(multiplier).min(self.max_delay);
     self.failures.insert(id, Failure { attempts, last_failed_at: now, retry_at: now + delay });

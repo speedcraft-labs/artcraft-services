@@ -20,10 +20,7 @@ pub fn setup_internal_api_keys() -> HashSet<InternalApiKey> {
   };
 
   if keys.is_empty() {
-    warn!(
-      "{} is unset or empty; internal worker endpoints will reject all requests.",
-      INTERNAL_API_KEYS_ENV_VAR,
-    );
+    warn!("{} is unset or empty; internal worker endpoints will reject all requests.", INTERNAL_API_KEYS_ENV_VAR,);
   } else {
     info!("Loaded {} accepted internal API key(s).", keys.len());
   }

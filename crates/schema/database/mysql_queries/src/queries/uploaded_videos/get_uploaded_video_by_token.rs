@@ -18,9 +18,7 @@ where
 }
 
 /// Look up an `uploaded_videos` record by its `token`. `Ok(None)` if no row matches.
-pub async fn get_uploaded_video_by_token<'e, 'c: 'e, E>(
-  args: GetUploadedVideoByTokenArgs<'e, 'c, E>,
-) -> Result<Option<UploadedVideoRow>, sqlx::Error>
+pub async fn get_uploaded_video_by_token<'e, 'c: 'e, E>(args: GetUploadedVideoByTokenArgs<'e, 'c, E>) -> Result<Option<UploadedVideoRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -46,8 +44,8 @@ LIMIT 1
     "#,
     args.token.as_str(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| UploadedVideoRow {
     token: r.token,

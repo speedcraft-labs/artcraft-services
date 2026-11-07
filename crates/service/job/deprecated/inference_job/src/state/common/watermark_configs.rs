@@ -18,16 +18,8 @@ pub struct WatermarkFfmpegDetails {
 impl WatermarkConfigs {
   pub fn from_env() -> AnyhowResult<Self> {
     Ok(Self {
-      fakeyou: WatermarkFfmpegDetails {
-        path: get_env_pathbuf_required("FAKEYOU_WATERMARK_PATH")?,
-        alpha: get_env_num("FAKEYOU_WATERMARK_ALPHA", 0.6)?,
-        scale: get_env_num("FAKEYOU_WATERMARK_SCALE", 0.1)?,
-      },
-      storyteller: WatermarkFfmpegDetails {
-        path: get_env_pathbuf_required("STORYTELLER_WATERMARK_PATH")?,
-        alpha: get_env_num("STORYTELLER_WATERMARK_ALPHA", 0.6)?,
-        scale: get_env_num("STORYTELLER_WATERMARK_SCALE", 0.1)?,
-      },
+      fakeyou: WatermarkFfmpegDetails { path: get_env_pathbuf_required("FAKEYOU_WATERMARK_PATH")?, alpha: get_env_num("FAKEYOU_WATERMARK_ALPHA", 0.6)?, scale: get_env_num("FAKEYOU_WATERMARK_SCALE", 0.1)? },
+      storyteller: WatermarkFfmpegDetails { path: get_env_pathbuf_required("STORYTELLER_WATERMARK_PATH")?, alpha: get_env_num("STORYTELLER_WATERMARK_ALPHA", 0.6)?, scale: get_env_num("STORYTELLER_WATERMARK_SCALE", 0.1)? },
     })
   }
 }

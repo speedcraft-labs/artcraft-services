@@ -25,9 +25,7 @@ where
 /// List a user's MCP sessions, newest first, **including terminated** sessions (each row carries
 /// `maybe_deleted_at` and `expires_at` so callers can filter). Never returns the secret
 /// `private_session_token`.
-pub async fn list_mcp_sessions_for_user<'e, 'c: 'e, E>(
-  args: ListMcpSessionsForUserArgs<'e, 'c, E>,
-) -> Result<Vec<McpSessionRow>, sqlx::Error>
+pub async fn list_mcp_sessions_for_user<'e, 'c: 'e, E>(args: ListMcpSessionsForUserArgs<'e, 'c, E>) -> Result<Vec<McpSessionRow>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -57,23 +55,23 @@ LIMIT ? OFFSET ?
     limit,
     offset,
   )
-    .fetch_all(args.mysql_executor)
-    .await?
-    .into_iter()
-    .map(|r| McpSessionRow {
-      token: r.token,
-      user_token: r.user_token,
-      maybe_mcp_client_name: r.maybe_mcp_client_name,
-      maybe_mcp_client_version: r.maybe_mcp_client_version,
-      maybe_mcp_client_vendor: r.maybe_mcp_client_vendor,
-      ip_address_creation: r.ip_address_creation,
-      ip_address_update: r.ip_address_update,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      expires_at: r.expires_at,
-      maybe_deleted_at: r.maybe_deleted_at,
-    })
-    .collect::<Vec<_>>();
+  .fetch_all(args.mysql_executor)
+  .await?
+  .into_iter()
+  .map(|r| McpSessionRow {
+    token: r.token,
+    user_token: r.user_token,
+    maybe_mcp_client_name: r.maybe_mcp_client_name,
+    maybe_mcp_client_version: r.maybe_mcp_client_version,
+    maybe_mcp_client_vendor: r.maybe_mcp_client_vendor,
+    ip_address_creation: r.ip_address_creation,
+    ip_address_update: r.ip_address_update,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    expires_at: r.expires_at,
+    maybe_deleted_at: r.maybe_deleted_at,
+  })
+  .collect::<Vec<_>>();
 
   Ok(rows)
 }

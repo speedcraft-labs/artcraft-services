@@ -27,8 +27,8 @@ WHERE token = ? AND is_banned = FALSE AND user_deleted_at IS NULL AND mod_delete
     UserWebSessionCreationType::DeviceApproval.to_str(),
     args.user_token
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
   if inserted.rows_affected() != 1 {
     return Ok(None);
   }

@@ -15,9 +15,7 @@ use crate::http_server::endpoints::generate::common::payments_error_test::paymen
 use crate::http_server::endpoints::omni_api::generate::video::check_request::check_request;
 use crate::http_server::endpoints::omni_api::generate::video::ingest_url_inputs::ingest_url_inputs;
 use crate::http_server::endpoints::omni_api::shared_utils::video::validate_video_request::validate_video_request;
-use crate::http_server::endpoints::omni_gen::generate::video::shared_video_generation::{
-  run_authenticated_video_generation, VideoGenerationAuth,
-};
+use crate::http_server::endpoints::omni_gen::generate::video::shared_video_generation::{run_authenticated_video_generation, VideoGenerationAuth};
 use crate::http_server::user_lookup::api_keys::require_api_key_user::require_api_key_user;
 use crate::state::server_state::ServerState;
 
@@ -41,12 +39,7 @@ use crate::state::server_state::ServerState;
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn omni_api_video_generate_handler(
-  http_request: HttpRequest,
-  mut request: Json<OmniApiVideoGenerateRequest>,
-  server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<OmniGenVideoGenerateResponse>, CommonWebError> {
-
+pub async fn omni_api_video_generate_handler(http_request: HttpRequest, mut request: Json<OmniApiVideoGenerateRequest>, server_state: web::Data<Arc<ServerState>>) -> Result<Json<OmniGenVideoGenerateResponse>, CommonWebError> {
   info!("request: {:?}", request);
 
   // Validate URL/media-token preconditions before any billable or DB-mutating work.
@@ -77,11 +70,7 @@ pub async fn omni_api_video_generate_handler(
   // don't hold a pool slot during the (network) downloads. This happens
   // BEFORE the shared core consumes the idempotency token, so a failed
   // ingest never burns the caller's token.
-  let has_url_inputs = request.start_frame_image_url.is_some()
-    || request.end_frame_image_url.is_some()
-    || request.reference_image_urls.is_some()
-    || request.reference_video_urls.is_some()
-    || request.reference_audio_urls.is_some();
+  let has_url_inputs = request.start_frame_image_url.is_some() || request.end_frame_image_url.is_some() || request.reference_image_urls.is_some() || request.reference_video_urls.is_some() || request.reference_audio_urls.is_some();
 
   if has_url_inputs {
     drop(mysql_connection);
@@ -101,13 +90,7 @@ pub async fn omni_api_video_generate_handler(
     maybe_platform_type: Some(PlatformType::ApiKey),
   };
 
-  run_authenticated_video_generation(
-    &http_request,
-    &omni_gen_request,
-    &server_state,
-    auth,
-    mysql_connection,
-  ).await
+  run_authenticated_video_generation(&http_request, &omni_gen_request, &server_state, auth, mysql_connection).await
 }
 
 /// The omni-api request is the omni-gen request plus URL-based media inputs.

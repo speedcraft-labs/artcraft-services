@@ -113,10 +113,7 @@ mod tests {
       },
     };
 
-    let result = request.send_webhook_request(
-      &api_key,
-      "https://example.com/webhook",
-    ).await?;
+    let result = request.send_webhook_request(&api_key, "https://example.com/webhook").await?;
     println!("Request ID: {:?}", result.request_id);
     assert!(result.request_id.is_some());
     Ok(())

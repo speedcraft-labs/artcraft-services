@@ -26,19 +26,12 @@ use crate::state::server_state::ServerState;
     (status = 500, description = "Server error"),
   ),
 )]
-pub async fn omni_gen_image_cost_handler(
-  _http_request: HttpRequest,
-  request: Json<OmniGenImageCostAndGenerateRequest>,
-  _server_state: web::Data<Arc<ServerState>>,
-) -> Result<Json<OmniGenImageCostResponse>, CommonWebError> {
+pub async fn omni_gen_image_cost_handler(_http_request: HttpRequest, request: Json<OmniGenImageCostAndGenerateRequest>, _server_state: web::Data<Arc<ServerState>>) -> Result<Json<OmniGenImageCostResponse>, CommonWebError> {
   let mut builder = hydrate_to_router_request(&request)?;
 
   builder.provider = RouterProvider::Artcraft; // NB: User is paying for ArtCraft credits / generation
 
-  let estimate = builder.build2()
-      .map_err(map_router_cost_error)?
-      .estimate_cost()
-      .map_err(map_router_cost_error)?;
+  let estimate = builder.build2().map_err(map_router_cost_error)?.estimate_cost().map_err(map_router_cost_error)?;
 
   Ok(Json(OmniGenImageCostResponse {
     success: true,

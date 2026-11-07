@@ -46,15 +46,13 @@ impl FromRow<'_, MySqlRow> for BatchPromptContextItem {
 
 /// Batch fetch all context items for multiple prompts in a single query.
 /// Returns items grouped by their prompt_token (via the prompt_token field).
-pub async fn batch_list_prompt_context_items(
-  prompt_tokens: &[PromptToken],
-  mysql_connection: &mut PoolConnection<MySql>,
-) -> Result<Vec<BatchPromptContextItem>, sqlx::Error> {
+pub async fn batch_list_prompt_context_items(prompt_tokens: &[PromptToken], mysql_connection: &mut PoolConnection<MySql>) -> Result<Vec<BatchPromptContextItem>, sqlx::Error> {
   if prompt_tokens.is_empty() {
     return Ok(Vec::new());
   }
 
-  let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(r#"
+  let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
+    r#"
 SELECT
     pci.prompt_token,
     pci.media_token,
@@ -71,7 +69,8 @@ SELECT
 FROM prompt_context_items pci
 JOIN media_files m ON pci.media_token = m.token
 WHERE pci.prompt_token IN (
-"#);
+"#,
+  );
 
   let mut separated = query_builder.separated(", ");
   for token in prompt_tokens {

@@ -29,18 +29,8 @@ pub struct DownloadedFile {
 /// Writes thumbnail version 2 (see `video_thumbnail_suffixes`): a first-frame
 /// jpg, an animated webp, and an animated gif. The gif is a dual write kept for
 /// ArtCraft desktop on macOS Catalina, which can't render animated webp.
-pub async fn process_single_media_file(
-  deps: &JobDependencies,
-  media_file: &VideoMediaFileWithoutThumbnail,
-  timing: &ThumbnailTiming<'_>,
-) -> anyhow::Result<()> {
-
-  info!(
-    "Processing media file {:?} (id: {}, created at: {})",
-    media_file.token,
-    media_file.id,
-    media_file.created_at,
-  );
+pub async fn process_single_media_file(deps: &JobDependencies, media_file: &VideoMediaFileWithoutThumbnail, timing: &ThumbnailTiming<'_>) -> anyhow::Result<()> {
+  info!("Processing media file {:?} (id: {}, created at: {})", media_file.token, media_file.id, media_file.created_at,);
 
   let stage_started_at = Instant::now();
   let result = download_video(deps, media_file).await;
@@ -50,14 +40,10 @@ pub async fn process_single_media_file(
     Err(err) => {
       error!("Failed to download video for {}: {:?}", media_file.token.as_str(), err);
       return alert_pager_and_return_err(&deps.pager, "Video download failed", err);
-    }
+    },
   };
 
-  info!(
-    "Downloaded video to {:?}. Generating thumbnails for {:?}.",
-    downloaded.file_path,
-    media_file.token,
-  );
+  info!("Downloaded video to {:?}. Generating thumbnails for {:?}.", downloaded.file_path, media_file.token,);
 
   // Upload thumbnails to bucket beside the original video
   let video_object_path = get_video_object_path(media_file);
@@ -70,12 +56,10 @@ pub async fn process_single_media_file(
   // async caller is cancelled. Await the task before releasing this job's slot.
   let source = Arc::clone(&downloaded);
   let destination = jpg_path.clone();
-  let result = tokio::task::spawn_blocking(move || {
-    ffmpeg_video_first_frame_to_jpg_thumbnail(FfmpegVideoFirstFrameToJpgThumbnailArgs {
-      input_video_path: &source.file_path,
-      output_jpg_path: &destination,
-    })
-  }).await.map_err(anyhow::Error::from).and_then(|result| result);
+  let result = tokio::task::spawn_blocking(move || ffmpeg_video_first_frame_to_jpg_thumbnail(FfmpegVideoFirstFrameToJpgThumbnailArgs { input_video_path: &source.file_path, output_jpg_path: &destination }))
+    .await
+    .map_err(anyhow::Error::from)
+    .and_then(|result| result);
   timing.log_stage("jpg_generation", stage_started_at, result.is_ok());
   if let Err(err) = result {
     error!("Failed to generate JPG thumbnail for {}: {:?}", media_file.token.as_str(), err);
@@ -102,12 +86,7 @@ pub async fn process_single_media_file(
   let stage_started_at = Instant::now();
   let source = Arc::clone(&downloaded);
   let destination = gif_path.clone();
-  let result = tokio::task::spawn_blocking(move || {
-    ffmpeg_video_gif_preview(FfmpegVideoGifPreviewArgs {
-      input_video_path: &source.file_path,
-      output_gif_path: &destination,
-    })
-  }).await.map_err(anyhow::Error::from).and_then(|result| result);
+  let result = tokio::task::spawn_blocking(move || ffmpeg_video_gif_preview(FfmpegVideoGifPreviewArgs { input_video_path: &source.file_path, output_gif_path: &destination })).await.map_err(anyhow::Error::from).and_then(|result| result);
   timing.log_stage("gif_generation", stage_started_at, result.is_ok());
   if let Err(err) = result {
     error!("Failed to generate GIF preview for {}: {:?}", media_file.token.as_str(), err);
@@ -134,12 +113,7 @@ pub async fn process_single_media_file(
   let stage_started_at = Instant::now();
   let source = Arc::clone(&downloaded);
   let destination = webp_path.clone();
-  let result = tokio::task::spawn_blocking(move || {
-    ffmpeg_video_webp_preview(FfmpegVideoWebpPreviewArgs {
-      input_video_path: &source.file_path,
-      output_webp_path: &destination,
-    })
-  }).await.map_err(anyhow::Error::from).and_then(|result| result);
+  let result = tokio::task::spawn_blocking(move || ffmpeg_video_webp_preview(FfmpegVideoWebpPreviewArgs { input_video_path: &source.file_path, output_webp_path: &destination })).await.map_err(anyhow::Error::from).and_then(|result| result);
   timing.log_stage("webp_generation", stage_started_at, result.is_ok());
   if let Err(err) = result {
     error!("Failed to generate WebP preview for {}: {:?}", media_file.token.as_str(), err);
@@ -165,23 +139,14 @@ pub async fn process_single_media_file(
 
   // Mark the media file as having a thumbnail in the database.
   let stage_started_at = Instant::now();
-  let result = update_video_media_file_with_thumbnail(
-    &media_file.token,
-    CURRENT_VIDEO_THUMBNAIL_VERSION,
-    &deps.mysql_pool,
-  ).await;
+  let result = update_video_media_file_with_thumbnail(&media_file.token, CURRENT_VIDEO_THUMBNAIL_VERSION, &deps.mysql_pool).await;
   timing.log_stage("database_update", stage_started_at, result.is_ok());
   if let Err(err) = result {
     error!("Failed to update thumbnail version for {}: {:?}", media_file.token.as_str(), err);
     return alert_pager_and_return_err(&deps.pager, "Thumbnail DB update failed", err.into());
   }
 
-  info!(
-    "Updated thumbnail version for media file {:?} (id: {}, created at: {})",
-    media_file.token,
-    media_file.id,
-    media_file.created_at,
-  );
+  info!("Updated thumbnail version for media file {:?} (id: {}, created at: {})", media_file.token, media_file.id, media_file.created_at,);
 
   // `downloaded.temp_dir` is dropped here, cleaning up the temp directory and all contents.
   Ok(())
@@ -189,42 +154,25 @@ pub async fn process_single_media_file(
 
 /// Build the full bucket object path for the video file.
 fn get_video_object_path(media_file: &VideoMediaFileWithoutThumbnail) -> String {
-  let bucket_path = MediaFileBucketPath::from_object_hash(
-    &media_file.public_bucket_directory_hash,
-    media_file.maybe_public_bucket_prefix.as_deref(),
-    media_file.maybe_public_bucket_extension.as_deref(),
-  );
+  let bucket_path = MediaFileBucketPath::from_object_hash(&media_file.public_bucket_directory_hash, media_file.maybe_public_bucket_prefix.as_deref(), media_file.maybe_public_bucket_extension.as_deref());
 
   bucket_path.get_full_object_path_str().to_string()
 }
 
 /// Download the source video from the public bucket into a new temp directory.
-async fn download_video(
-  deps: &JobDependencies,
-  media_file: &VideoMediaFileWithoutThumbnail,
-) -> anyhow::Result<DownloadedFile> {
+async fn download_video(deps: &JobDependencies, media_file: &VideoMediaFileWithoutThumbnail) -> anyhow::Result<DownloadedFile> {
   let object_path = get_video_object_path(media_file);
 
-  info!(
-    "Downloading video for media file {} from bucket path: {}",
-    media_file.token.as_str(),
-    object_path,
-  );
+  info!("Downloading video for media file {} from bucket path: {}", media_file.token.as_str(), object_path,);
 
   let temp_dir = TempDir::new_in(&deps.temp_dir, "video_thumbnail")?;
 
-  let video_extension = media_file
-    .maybe_public_bucket_extension
-    .as_deref()
-    .unwrap_or(".mp4");
+  let video_extension = media_file.maybe_public_bucket_extension.as_deref().unwrap_or(".mp4");
 
   let filename = format!("{}{}", media_file.token.as_str(), video_extension);
   let file_path = temp_dir.path().join(&filename);
 
-  deps
-    .public_bucket_client
-    .download_file_to_disk(&object_path, &file_path)
-    .await?;
+  deps.public_bucket_client.download_file_to_disk(&object_path, &file_path).await?;
 
   Ok(DownloadedFile { temp_dir, file_path })
 }

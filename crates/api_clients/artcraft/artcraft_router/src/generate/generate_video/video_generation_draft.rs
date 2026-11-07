@@ -34,7 +34,6 @@ pub enum VideoGenerationDraftRequest {
 }
 
 impl VideoGenerationDraftRequest {
-
   pub fn get_provider(&self) -> RouterProvider {
     match self {
       Self::KinoviWan3p0(_) => RouterProvider::KinoviWeb,
@@ -66,12 +65,8 @@ impl VideoGenerationDraftRequest {
   /// This may involve uploading media to the provider.
   pub async fn finalize(self, draft_context: VideoGenerationDraftContext<'_>) -> Result<VideoGenerationRequest, ArtcraftRouterError> {
     match self {
-      VideoGenerationDraftRequest::KinoviWan3p0(draft) => {
-        Ok(VideoGenerationRequest::KinoviWan3p0(draft.to_request(&draft_context).await?))
-      },
-      VideoGenerationDraftRequest::KinoviWan3p0Prime(draft) => {
-        Ok(VideoGenerationRequest::KinoviWan3p0Prime(draft.to_request(&draft_context).await?))
-      },
+      VideoGenerationDraftRequest::KinoviWan3p0(draft) => Ok(VideoGenerationRequest::KinoviWan3p0(draft.to_request(&draft_context).await?)),
+      VideoGenerationDraftRequest::KinoviWan3p0Prime(draft) => Ok(VideoGenerationRequest::KinoviWan3p0Prime(draft.to_request(&draft_context).await?)),
       VideoGenerationDraftRequest::KinoviHappyHorse1p0(mut draft) => {
         let result = draft.to_request(&draft_context).await?;
         Ok(VideoGenerationRequest::KinoviHappyHorse1p0(result))

@@ -50,28 +50,23 @@ pub async fn get_world(args: GetWorldArgs<'_>) -> Result<GetWorldResponse, World
 
   debug!("Requesting URL: {}", url);
 
-  let mut request_builder = client.get(&url)
-    .header("WLT-Api-Key", args.creds.api_key());
+  let mut request_builder = client.get(&url).header("WLT-Api-Key", args.creds.api_key());
 
   if let Some(timeout) = args.request_timeout {
     request_builder = request_builder.timeout(timeout);
   }
 
-  let response = request_builder.send()
-    .await
-    .map_err(|err| {
-      error!("Error during get_world request: {:?}", err);
-      WorldLabsGenericApiError::WreqError(err)
-    })?;
+  let response = request_builder.send().await.map_err(|err| {
+    error!("Error during get_world request: {:?}", err);
+    WorldLabsGenericApiError::WreqError(err)
+  })?;
 
   let status = response.status();
 
-  let response_body = response.text()
-    .await
-    .map_err(|err| {
-      error!("Error reading response body: {:?}", err);
-      WorldLabsGenericApiError::WreqError(err)
-    })?;
+  let response_body = response.text().await.map_err(|err| {
+    error!("Error reading response body: {:?}", err);
+    WorldLabsGenericApiError::WreqError(err)
+  })?;
 
   if !status.is_success() {
     error!("get_world returned error (code {}): {:?}", status.as_u16(), response_body);
@@ -81,8 +76,7 @@ pub async fn get_world(args: GetWorldArgs<'_>) -> Result<GetWorldResponse, World
 
   debug!("Response body (200): {}", response_body);
 
-  let raw: RawResponse = serde_json::from_str(&response_body)
-    .map_err(|err| WorldLabsGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.to_string()))?;
+  let raw: RawResponse = serde_json::from_str(&response_body).map_err(|err| WorldLabsGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.to_string()))?;
 
   let assets = raw.assets.map(|a| {
     let spz_urls = a.splats.and_then(|s| s.spz_urls);
@@ -129,11 +123,7 @@ mod tests {
     let world_id = WorldId::from_str("0048d009-1c7a-4e13-9881-07e9b6ff32e1");
     //let world_id = WorldId::from_str("c8a89fb1-f8b4-44c6-ae50-525f7205c65f");
 
-    let response = get_world(GetWorldArgs {
-      creds: &creds,
-      world_id: &world_id,
-      request_timeout: None,
-    }).await.unwrap();
+    let response = get_world(GetWorldArgs { creds: &creds, world_id: &world_id, request_timeout: None }).await.unwrap();
 
     println!("World ID: {}", response.world_id.as_str());
     println!("Display name: {:?}", response.display_name);
@@ -155,7 +145,7 @@ mod tests {
         println!("  SPZ 100k: {:?}", assets.spz_url_100k);
         println!("  SPZ 500k: {:?}", assets.spz_url_500k);
         println!("  SPZ full res: {:?}", assets.spz_url_full_res);
-      }
+      },
     }
 
     assert_eq!(1, 2);

@@ -36,25 +36,19 @@ impl std::fmt::Display for VoiceConversionModelForInferenceError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       VoiceConversionModelForInferenceError::ModelDeleted => write!(f, "ModelDeleted"),
-      VoiceConversionModelForInferenceError::DatabaseError { reason} =>
-        write!(f, "Database error: {:?}", reason),
+      VoiceConversionModelForInferenceError::DatabaseError { reason } => write!(f, "Database error: {:?}", reason),
     }
   }
 }
 
 impl std::error::Error for VoiceConversionModelForInferenceError {}
 
-
-pub async fn get_voice_conversion_model_for_inference(
-  pool: &MySqlPool,
-  model_token: &str
-) -> Result<Option<VoiceConversionModelForInference>, VoiceConversionModelForInferenceError>
-{
+pub async fn get_voice_conversion_model_for_inference(pool: &MySqlPool, model_token: &str) -> Result<Option<VoiceConversionModelForInference>, VoiceConversionModelForInferenceError> {
   // NB: Lookup failure is Err(RowNotFound).
   // NB: Since this is publicly exposed, we don't query sensitive data.
   let maybe_model = sqlx::query_as!(
-      InternalVoiceConversionModelForInferenceRaw,
-        r#"
+    InternalVoiceConversionModelForInferenceRaw,
+    r#"
 SELECT
     vc.token as `token: tokens::tokens::voice_conversion_models::VoiceConversionModelToken`,
     vc.model_type as `model_type: enums::by_table::voice_conversion_models::voice_conversion_model_type::VoiceConversionModelType`,
@@ -72,26 +66,22 @@ FROM voice_conversion_models as vc
 
 WHERE vc.token = ?
         "#,
-      model_token
-    )
-      .fetch_one(pool)
-      .await; // TODO: This will return error if it doesn't exist
+    model_token
+  )
+  .fetch_one(pool)
+  .await; // TODO: This will return error if it doesn't exist
 
-  let model : InternalVoiceConversionModelForInferenceRaw = match maybe_model {
+  let model: InternalVoiceConversionModelForInferenceRaw = match maybe_model {
     Ok(model) => model,
-    Err(err) => {
-      match err {
-        sqlx::Error::RowNotFound => {
-          return Ok(None);
-        },
-        _ => {
-          warn!("voice conversion model query error: {:?}", err);
-          return Err(VoiceConversionModelForInferenceError::DatabaseError {
-            reason: format!("Mysql error: {:?}", err)
-          });
-        }
-      }
-    }
+    Err(err) => match err {
+      sqlx::Error::RowNotFound => {
+        return Ok(None);
+      },
+      _ => {
+        warn!("voice conversion model query error: {:?}", err);
+        return Err(VoiceConversionModelForInferenceError::DatabaseError { reason: format!("Mysql error: {:?}", err) });
+      },
+    },
   };
 
   if model.mod_deleted_at.is_some() || model.user_deleted_at.is_some() {
@@ -120,7 +110,6 @@ struct InternalVoiceConversionModelForInferenceRaw {
   //creator_user_token: UserToken,
   //creator_username: String,
   //creator_display_name: String,
-
   has_index_file: i8,
 
   private_bucket_hash: String,

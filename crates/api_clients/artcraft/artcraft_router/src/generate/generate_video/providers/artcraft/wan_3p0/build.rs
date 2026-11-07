@@ -53,9 +53,5 @@ pub fn build_artcraft_wan_3p0(builder: GenerateVideoRequestBuilder) -> Result<Vi
     estimate_only: None,
   };
   let state = ArtcraftWan3p0RequestState { request };
-  Ok(VideoGenerationDraftOrRequest::Request(if prime {
-    VideoGenerationRequest::ArtcraftWan3p0Prime(state)
-  } else {
-    VideoGenerationRequest::ArtcraftWan3p0(state)
-  }))
+  Ok(VideoGenerationDraftOrRequest::Request(if prime { VideoGenerationRequest::ArtcraftWan3p0Prime(state) } else { VideoGenerationRequest::ArtcraftWan3p0(state) }))
 }

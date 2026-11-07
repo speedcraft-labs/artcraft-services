@@ -64,7 +64,8 @@ mod tests {
   use crate::test_helpers::assert_serialization;
   use strum::{EnumCount, IntoEnumIterator};
 
-  const STORED_VALUES: &[(UserLoginChallengeStatus, &str)] = &[(UserLoginChallengeStatus::Pending, "pending"), (UserLoginChallengeStatus::Approved, "approved"), (UserLoginChallengeStatus::Redeemed, "redeemed"), (UserLoginChallengeStatus::Failed, "failed")];
+  const STORED_VALUES: &[(UserLoginChallengeStatus, &str)] =
+    &[(UserLoginChallengeStatus::Pending, "pending"), (UserLoginChallengeStatus::Approved, "approved"), (UserLoginChallengeStatus::Redeemed, "redeemed"), (UserLoginChallengeStatus::Failed, "failed")];
   const MAX_STORED_LENGTH: usize = 16;
 
   #[test]

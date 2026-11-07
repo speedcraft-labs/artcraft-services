@@ -10,9 +10,5 @@ pub fn build_kinovi_wan_3p0(builder: GenerateVideoRequestBuilder) -> Result<Vide
   let builder = normalize_wan_3p0_builder(builder)?;
   let prime = matches!(builder.model, RouterVideoModel::Wan3p0Prime);
   let draft = KinoviWan3p0DraftState { builder };
-  Ok(VideoGenerationDraftOrRequest::Draft(if prime {
-    VideoGenerationDraftRequest::KinoviWan3p0Prime(draft)
-  } else {
-    VideoGenerationDraftRequest::KinoviWan3p0(draft)
-  }))
+  Ok(VideoGenerationDraftOrRequest::Draft(if prime { VideoGenerationDraftRequest::KinoviWan3p0Prime(draft) } else { VideoGenerationDraftRequest::KinoviWan3p0(draft) }))
 }

@@ -65,7 +65,6 @@ pub struct UploadNewVideoMediaFileForm {
   // #[multipart(limit = "2 KiB")]
   // #[schema(value_type = Option<StyleTransferName>, format = Binary)]
   // maybe_style_name: Option<Text<StyleTransferName>>,
-
   /// Optional: Visibility of the scene
   #[multipart(limit = "2 KiB")]
   #[schema(value_type = Option<Visibility>, format = Binary)]
@@ -117,7 +116,7 @@ pub struct UploadNewVideoMediaFileSuccessResponse {
   pub media_file_token: MediaFileToken,
 }
 
-static ALLOWED_MIME_TYPES : Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static ALLOWED_MIME_TYPES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
   HashSet::from([
     // Video
     "video/mp4",
@@ -149,18 +148,14 @@ pub async fn upload_new_video_media_file_handler(
   server_state: web::Data<Arc<ServerState>>,
   MultipartForm(mut form): MultipartForm<UploadNewVideoMediaFileForm>,
 ) -> Result<Json<UploadNewVideoMediaFileSuccessResponse>, MediaFileUploadError> {
-
   fast_form_validations(&form)?;
 
   // ==================== READ SESSION ==================== //
 
-  let mut mysql_connection = server_state.mysql_pool
-      .acquire()
-      .await
-      .map_err(|err| {
-        error!("MySql pool error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  let mut mysql_connection = server_state.mysql_pool.acquire().await.map_err(|err| {
+    error!("MySql pool error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   // API-key / MCP-session (Authorization header) or optional web-session (cookie) callers;
   // banned users are rejected inside.
@@ -168,17 +163,11 @@ pub async fn upload_new_video_media_file_handler(
 
   let maybe_user_token = session_auth.maybe_user_token();
 
-  let maybe_avt_token = server_state
-      .avt_cookie_manager
-      .get_avt_token_from_request(&http_request);
+  let maybe_avt_token = server_state.avt_cookie_manager.get_avt_token_from_request(&http_request);
 
   // ==================== RATE LIMIT ==================== //
 
-  let rate_limiter = if session_auth.is_logged_in() {
-    &server_state.redis_rate_limiters.file_upload_logged_in
-  } else {
-    &server_state.redis_rate_limiters.file_upload_logged_out
-  };
+  let rate_limiter = if session_auth.is_logged_in() { &server_state.redis_rate_limiters.file_upload_logged_in } else { &server_state.redis_rate_limiters.file_upload_logged_out };
 
   if let Err(_err) = rate_limiter.rate_limit_request(&http_request).await {
     return Err(MediaFileUploadError::RateLimited);
@@ -193,23 +182,16 @@ pub async fn upload_new_video_media_file_handler(
     return Err(MediaFileUploadError::BadInput(reason));
   }
 
-  insert_idempotency_token(uuid_idempotency_token, &mut *mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Error inserting idempotency token: {:?}", err);
-        MediaFileUploadError::BadInput("invalid idempotency token".to_string())
-      })?;
+  insert_idempotency_token(uuid_idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    MediaFileUploadError::BadInput("invalid idempotency token".to_string())
+  })?;
 
   // ==================== UPLOAD METADATA ==================== //
 
-  let maybe_title = form.maybe_title
-      .map(|title| title.trim().to_string())
-      .filter(|title| !title.is_empty());
+  let maybe_title = form.maybe_title.map(|title| title.trim().to_string()).filter(|title| !title.is_empty());
 
-  let creator_set_visibility = form.maybe_visibility
-      .map(|visibility| visibility.0)
-      .or_else(|| session_auth.maybe_preferred_visibility())
-      .unwrap_or(Visibility::default());
+  let creator_set_visibility = form.maybe_visibility.map(|visibility| visibility.0).or_else(|| session_auth.maybe_preferred_visibility()).unwrap_or(Visibility::default());
 
   // ==================== USER DATA ==================== //
 
@@ -218,40 +200,30 @@ pub async fn upload_new_video_media_file_handler(
   // ==================== FILE VALIDATION ==================== //
 
   let mut file_bytes = Vec::new();
-  form.file.file.read_to_end(&mut file_bytes)
-      .map_err(|e| {
-        error!("Problem reading file: {:?}", e);
-        MediaFileUploadError::ServerError
-      })?;
+  form.file.file.read_to_end(&mut file_bytes).map_err(|e| {
+    error!("Problem reading file: {:?}", e);
+    MediaFileUploadError::ServerError
+  })?;
 
-  let mut mimetype = get_mimetype_for_bytes(file_bytes.as_ref())
-      .map(|mimetype| mimetype.to_string())
-      .ok_or_else(|| {
-        warn!("Could not determine mimetype for file");
-        MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
-      })?;
+  let mut mimetype = get_mimetype_for_bytes(file_bytes.as_ref()).map(|mimetype| mimetype.to_string()).ok_or_else(|| {
+    warn!("Could not determine mimetype for file");
+    MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
+  })?;
 
   if !ALLOWED_MIME_TYPES.contains(mimetype.as_str()) {
     // NB: Don't let our error message inject malicious strings
-    let filtered_mimetype = mimetype
-        .chars()
-        .filter(|c| c.is_ascii())
-        .filter(|c| c.is_alphanumeric() || *c == '/')
-        .collect::<String>();
+    let filtered_mimetype = mimetype.chars().filter(|c| c.is_ascii()).filter(|c| c.is_alphanumeric() || *c == '/').collect::<String>();
     return Err(MediaFileUploadError::BadInput(format!("unpermitted mime type: {}", &filtered_mimetype)));
   }
 
   if mimetype == "video/quicktime" {
     let maybe_feature_flags = match session_auth.maybe_header_session.as_ref() {
       Some(session) => session.maybe_feature_flags.as_deref(),
-      None => session_auth.maybe_cookie_session.as_ref()
-          .and_then(|session| session.maybe_feature_flags.as_deref()),
+      None => session_auth.maybe_cookie_session.as_ref().and_then(|session| session.maybe_feature_flags.as_deref()),
     };
     let user_feature_flags = UserSessionFeatureFlags::new(maybe_feature_flags);
     if !user_feature_flags.can_use_quicktime() {
-      return Err(MediaFileUploadError::NotAuthorizedVerbose(
-        "QuickTime uploads are not enabled for this account".to_string(),
-      ));
+      return Err(MediaFileUploadError::NotAuthorizedVerbose("QuickTime uploads are not enabled for this account".to_string()));
     }
   }
 
@@ -262,17 +234,11 @@ pub async fn upload_new_video_media_file_handler(
 
   let original_file_path: PathBuf = form.file.file.path().to_path_buf();
   let original_mimetype: String = mimetype.clone();
-  let original_filename_extension: Option<String> = form.file.file_name.as_deref()
-      .and_then(|filename| std::path::Path::new(filename).extension())
-      .and_then(|ext| ext.to_str())
-      .map(|ext| ext.to_string());
-  let original_extension: String = mimetype_to_extension(&original_mimetype)
-      .map(|ext| ext.to_string())
-      .or(original_filename_extension)
-      .ok_or_else(|| {
-        warn!("Could not determine file extension for original mimetype: {}", &original_mimetype);
-        MediaFileUploadError::ServerError
-      })?;
+  let original_filename_extension: Option<String> = form.file.file_name.as_deref().and_then(|filename| std::path::Path::new(filename).extension()).and_then(|ext| ext.to_str()).map(|ext| ext.to_string());
+  let original_extension: String = mimetype_to_extension(&original_mimetype).map(|ext| ext.to_string()).or(original_filename_extension).ok_or_else(|| {
+    warn!("Could not determine file extension for original mimetype: {}", &original_mimetype);
+    MediaFileUploadError::ServerError
+  })?;
 
   // Preserve the source container and audio unless the caller requests an edit.
   let mut final_upload_file_path = form.file.file.path().to_path_buf();
@@ -280,17 +246,14 @@ pub async fn upload_new_video_media_file_handler(
 
   // ==================== OPTIONAL VIDEO RESAMPLE ==================== //
 
-  let should_resample = form.maybe_resample_fps.is_some()
-      || form.maybe_trim_start_millis.is_some()
-      || form.maybe_trim_end_millis.is_some();
+  let should_resample = form.maybe_resample_fps.is_some() || form.maybe_trim_start_millis.is_some() || form.maybe_trim_end_millis.is_some();
 
   if should_resample {
     // TODO(bt,2024-09-11): Should include entropy so concurrent requests don't overwrite
-    let frame_temp_dir = server_state.temp_dir_creator.new_tempdir("ffmpeg")
-        .map_err(|err| {
-          error!("Problem creating temp dir: {:?}", err);
-          MediaFileUploadError::ServerError
-        })?;
+    let frame_temp_dir = server_state.temp_dir_creator.new_tempdir("ffmpeg").map_err(|err| {
+      error!("Problem creating temp dir: {:?}", err);
+      MediaFileUploadError::ServerError
+    })?;
 
     let video_output_path = frame_temp_dir.path().join("output.mp4");
 
@@ -299,29 +262,20 @@ pub async fn upload_new_video_media_file_handler(
     let maybe_end_offset = form.maybe_trim_end_millis.map(|millis| Duration::from_millis(millis.0));
 
     // Explicit trimming/resampling produces MP4; the original is retained below.
-    ffmpeg_trim_and_resample(Args {
-      video_input_path: &final_upload_file_path,
-      video_output_path: &video_output_path,
-      maybe_new_frame_rate,
-      maybe_start_offset,
-      maybe_end_offset,
-    }).map_err(|err| {
+    ffmpeg_trim_and_resample(Args { video_input_path: &final_upload_file_path, video_output_path: &video_output_path, maybe_new_frame_rate, maybe_start_offset, maybe_end_offset }).map_err(|err| {
       error!("Problem resampling video: {:?}", err);
       MediaFileUploadError::ServerError
     })?;
 
-    file_bytes = file_read_bytes(&video_output_path)
-        .map_err(|e| {
-          error!("Problem reading file: {:?}", e);
-          MediaFileUploadError::ServerError
-        })?;
+    file_bytes = file_read_bytes(&video_output_path).map_err(|e| {
+      error!("Problem reading file: {:?}", e);
+      MediaFileUploadError::ServerError
+    })?;
 
-    mimetype = get_mimetype_for_bytes(file_bytes.as_ref())
-        .map(|mimetype| mimetype.to_string())
-        .ok_or_else(|| {
-          warn!("Could not determine mimetype for file");
-          MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
-        })?;
+    mimetype = get_mimetype_for_bytes(file_bytes.as_ref()).map(|mimetype| mimetype.to_string()).ok_or_else(|| {
+      warn!("Could not determine mimetype for file");
+      MediaFileUploadError::BadInput("Could not determine mimetype for file".to_string())
+    })?;
 
     final_upload_file_path = video_output_path;
     _resample_tempdir_ref = Some(frame_temp_dir); // NB: Keep from going out of scope
@@ -340,49 +294,41 @@ pub async fn upload_new_video_media_file_handler(
   let maybe_frame_width = video_info.dimensions.as_ref().and_then(|d| u32::try_from(d.width).ok());
   let maybe_frame_height = video_info.dimensions.as_ref().and_then(|d| u32::try_from(d.height).ok());
 
-  let maybe_filename = form.file.file_name.as_deref()
-      .as_deref()
-      .map(|filename| PathBuf::from(filename));
+  let maybe_filename = form.file.file_name.as_deref().as_deref().map(|filename| PathBuf::from(filename));
 
   let extension = mimetype_to_extension(&mimetype)
-      .or_else(|| {
-        maybe_filename
+    .or_else(|| {
+      maybe_filename
             .as_ref()
             .and_then(|filename| filename.extension()) // TODO needs dot prefix
             .and_then(|ext| ext.to_str())
-      })
-      .ok_or_else(|| {
-        warn!("Could not determine file extension for mimetype: {}", &mimetype);
-        MediaFileUploadError::ServerError
-      })?;
+    })
+    .ok_or_else(|| {
+      warn!("Could not determine file extension for mimetype: {}", &mimetype);
+      MediaFileUploadError::ServerError
+    })?;
 
   let extension = format!(".{extension}"); // NB: needs dot prefix
 
   let file_size_bytes = file_bytes.len();
 
-  let hash = sha256_hash_bytes(&file_bytes)
-      .map_err(|io_error| {
-        error!("Problem hashing bytes: {:?}", io_error);
-        MediaFileUploadError::ServerError
-      })?;
+  let hash = sha256_hash_bytes(&file_bytes).map_err(|io_error| {
+    error!("Problem hashing bytes: {:?}", io_error);
+    MediaFileUploadError::ServerError
+  })?;
 
   // ==================== UPLOAD AND SAVE ==================== //
 
-  const PREFIX : Option<&str> = Some("video_");
+  const PREFIX: Option<&str> = Some("video_");
 
   let public_upload_path = MediaFileBucketPath::generate_new(PREFIX, Some(&extension));
 
   info!("Uploading media to bucket path: {}", public_upload_path.get_full_object_path_str());
 
-  server_state.public_bucket_client.upload_file_with_content_type(
-    public_upload_path.get_full_object_path_str(),
-    file_bytes.as_ref(),
-    &mimetype)
-      .await
-      .map_err(|e| {
-        warn!("Upload media bytes to bucket error: {:?}", e);
-        MediaFileUploadError::ServerError
-      })?;
+  server_state.public_bucket_client.upload_file_with_content_type(public_upload_path.get_full_object_path_str(), file_bytes.as_ref(), &mimetype).await.map_err(|e| {
+    warn!("Upload media bytes to bucket error: {:?}", e);
+    MediaFileUploadError::ServerError
+  })?;
 
   // ==================== UPLOAD ORIGINAL SIBLING ==================== //
   // If we trimmed or resampled the user's upload, also upload the
@@ -394,69 +340,45 @@ pub async fn upload_new_video_media_file_handler(
     // Build a sibling path that lives in the same directory as the canonical
     // file (same hash) but with `_original.{ext}` baked into the suffix.
     let original_suffix = format!("_original.{}", original_extension);
-    let original_bucket_path = MediaFileBucketPath::from_object_hash(
-      public_upload_path.get_object_hash(),
-      PREFIX,
-      Some(&original_suffix),
-    );
+    let original_bucket_path = MediaFileBucketPath::from_object_hash(public_upload_path.get_object_hash(), PREFIX, Some(&original_suffix));
 
-    info!(
-      "Uploading original sibling to bucket path: {}",
-      original_bucket_path.get_full_object_path_str(),
-    );
+    info!("Uploading original sibling to bucket path: {}", original_bucket_path.get_full_object_path_str(),);
 
-    let original_bytes = file_read_bytes(&original_file_path)
-        .map_err(|e| {
-          error!("Problem reading original file for sibling upload: {:?}", e);
-          MediaFileUploadError::ServerError
-        })?;
+    let original_bytes = file_read_bytes(&original_file_path).map_err(|e| {
+      error!("Problem reading original file for sibling upload: {:?}", e);
+      MediaFileUploadError::ServerError
+    })?;
 
-    server_state.public_bucket_client.upload_file_with_content_type(
-      original_bucket_path.get_full_object_path_str(),
-      original_bytes.as_ref(),
-      &original_mimetype,
-    )
-        .await
-        .map_err(|e| {
-          // NB: Sibling failure is non-fatal — the canonical upload already
-          // succeeded and the user can still use the media. Log loudly.
-          warn!("Upload original sibling to bucket error: {:?}", e);
-        })
-        .ok();
+    server_state
+      .public_bucket_client
+      .upload_file_with_content_type(original_bucket_path.get_full_object_path_str(), original_bytes.as_ref(), &original_mimetype)
+      .await
+      .map_err(|e| {
+        // NB: Sibling failure is non-fatal — the canonical upload already
+        // succeeded and the user can still use the media. Log loudly.
+        warn!("Upload original sibling to bucket error: {:?}", e);
+      })
+      .ok();
   }
 
-  let maybe_scene_source_media_file_token = form.maybe_scene_source_media_file_token
-      .as_ref()
-      .map(|token| &token.0);
+  let maybe_scene_source_media_file_token = form.maybe_scene_source_media_file_token.as_ref().map(|token| &token.0);
 
-  let maybe_prompt_token = form.maybe_prompt_token
-      .as_ref()
-      .map(|token| token.0.clone());
+  let maybe_prompt_token = form.maybe_prompt_token.as_ref().map(|token| token.0.clone());
 
   // NB: If we're uploading a video file that references an engine scene, then this is an engine
   // render video, and we should mark it as a system (hidden) file.
-  let is_intermediate_system_file =
-      maybe_scene_source_media_file_token.is_some() ||
-      form.is_intermediate_system_file.map(|b| b.0).unwrap_or(false);
+  let is_intermediate_system_file = maybe_scene_source_media_file_token.is_some() || form.is_intermediate_system_file.map(|b| b.0).unwrap_or(false);
 
-  let maybe_generation_provider = form.maybe_generation_provider
-      .as_ref()
-      .and_then(|text| try_parse_generation_provider(text.as_ref()));
+  let maybe_generation_provider = form.maybe_generation_provider.as_ref().and_then(|text| try_parse_generation_provider(text.as_ref()));
 
-  let upload_type = if maybe_generation_provider.is_some() {
-    UploadType::ThirdPartyInference
-  } else {
-    UploadType::Filesystem
-  };
+  let upload_type = if maybe_generation_provider.is_some() { UploadType::ThirdPartyInference } else { UploadType::Filesystem };
 
   let maybe_upload_filename = form.file.file_name.as_deref();
 
   let (token, record_id) = insert_media_file_from_file_upload(InsertMediaFileFromUploadArgs {
     maybe_media_class: Some(MediaFileClass::Video),
     maybe_project_type: None,
-    media_file_type: MediaFileType::try_from_mime_type(&mimetype)
-        .or_else(|| maybe_upload_filename.and_then(MediaFileType::try_from_filename_or_extension))
-        .unwrap_or(MediaFileType::Video), // Coarse fallback for unrecognized files
+    media_file_type: MediaFileType::try_from_mime_type(&mimetype).or_else(|| maybe_upload_filename.and_then(MediaFileType::try_from_filename_or_extension)).unwrap_or(MediaFileType::Video), // Coarse fallback for unrecognized files
     maybe_creator_user_token: maybe_user_token,
     maybe_creator_anonymous_visitor_token: maybe_avt_token.as_ref(),
     creator_ip_address: &ip_address,
@@ -481,19 +403,15 @@ pub async fn upload_new_video_media_file_handler(
     maybe_public_bucket_extension: Some(&extension),
     pool: &server_state.mysql_pool,
   })
-      .await
-      .map_err(|err| {
-        warn!("New file creation DB error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  .await
+  .map_err(|err| {
+    warn!("New file creation DB error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   info!("new media file id: {} token: {:?}", record_id, &token);
 
-  let thumbnail_mimetype = if mimetype == "video/quicktime" {
-    ThumbnailTaskInputMimeType::MOV
-  } else {
-    ThumbnailTaskInputMimeType::MP4
-  };
+  let thumbnail_mimetype = if mimetype == "video/quicktime" { ThumbnailTaskInputMimeType::MOV } else { ThumbnailTaskInputMimeType::MP4 };
   let thumbnail_task_result = ThumbnailTaskBuilder::new_for_source_mimetype(thumbnail_mimetype)
     .with_bucket(server_state.public_bucket_client.bucket_name().as_str())
     .with_path(&*path_to_string(public_upload_path.to_full_object_pathbuf()))
@@ -508,13 +426,10 @@ pub async fn upload_new_video_media_file_handler(
     },
     Err(e) => {
       error!("Failed to create some/all thumbnail tasks: {:?}", e);
-    }
+    },
   }
 
-  Ok(Json(UploadNewVideoMediaFileSuccessResponse {
-    success: true,
-    media_file_token: token,
-  }))
+  Ok(Json(UploadNewVideoMediaFileSuccessResponse { success: true, media_file_token: token }))
 }
 
 fn fast_form_validations(form: &UploadNewVideoMediaFileForm) -> Result<(), MediaFileUploadError> {
@@ -526,24 +441,22 @@ fn fast_form_validations(form: &UploadNewVideoMediaFileForm) -> Result<(), Media
     }
   }
 
-  form.maybe_trim_start_millis.as_ref().zip(form.maybe_trim_end_millis.as_ref())
-      .map(|(start, end)| {
-        if **start >= **end {
-          return Err(MediaFileUploadError::BadInput("Trim start must be less than trim end".to_string()));
-        }
-        Ok(())
-      })
-      .transpose()?;
+  form
+    .maybe_trim_start_millis
+    .as_ref()
+    .zip(form.maybe_trim_end_millis.as_ref())
+    .map(|(start, end)| {
+      if **start >= **end {
+        return Err(MediaFileUploadError::BadInput("Trim start must be less than trim end".to_string()));
+      }
+      Ok(())
+    })
+    .transpose()?;
 
-  let is_intermediate_system_file = form.is_intermediate_system_file
-      .as_ref()
-      .map(|b| b.0)
-      .unwrap_or(false);
+  let is_intermediate_system_file = form.is_intermediate_system_file.as_ref().map(|b| b.0).unwrap_or(false);
 
   if is_intermediate_system_file && form.maybe_prompt_token.is_some() {
-    return Err(MediaFileUploadError::BadInput(
-      "Cannot set `is_intermediate_system_file` to true if `maybe_prompt_token` is provided."
-          .to_string()));
+    return Err(MediaFileUploadError::BadInput("Cannot set `is_intermediate_system_file` to true if `maybe_prompt_token` is provided.".to_string()));
   }
 
   Ok(())

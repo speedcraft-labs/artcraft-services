@@ -24,9 +24,7 @@ where
 ///
 /// Returns `Ok(None)` when no row matches, when the matching API key is soft-deleted, or when the
 /// owning user is missing or deleted. The full secret is never echoed back.
-pub async fn get_api_or_web_session_user_by_api_key<'e, 'c: 'e, E>(
-  args: GetApiOrWebSessionUserByApiKeyArgs<'e, 'c, E>,
-) -> Result<Option<ApiOrWebSessionUserRecord>, sqlx::Error>
+pub async fn get_api_or_web_session_user_by_api_key<'e, 'c: 'e, E>(args: GetApiOrWebSessionUserByApiKeyArgs<'e, 'c, E>) -> Result<Option<ApiOrWebSessionUserRecord>, sqlx::Error>
 where
   E: 'e + Executor<'c, Database = MySql>,
 {
@@ -55,8 +53,8 @@ LIMIT 1
     "#,
     args.api_key.as_str_be_careful(),
   )
-    .fetch_optional(args.mysql_executor)
-    .await?;
+  .fetch_optional(args.mysql_executor)
+  .await?;
 
   Ok(result.map(|r| ApiOrWebSessionUserRecord {
     user_token: r.user_token,

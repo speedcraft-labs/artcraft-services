@@ -59,9 +59,7 @@ pub struct AllDebugLogRow {
 ///
 /// NB: Uses `QueryBuilder` (not the compile-time macros) because of the
 /// dynamic `WHERE maybe_log_level IN (...)` clause.
-pub async fn list_all_debug_logs<'c, E>(
-  args: ListAllDebugLogsArgs<'c, E>,
-) -> Result<ListAllDebugLogsResult, sqlx::Error>
+pub async fn list_all_debug_logs<'c, E>(args: ListAllDebugLogsArgs<'c, E>) -> Result<ListAllDebugLogsResult, sqlx::Error>
 where
   E: Executor<'c, Database = MySql>,
 {
@@ -105,15 +103,9 @@ WHERE d.id < "#,
   query_builder.push(" ORDER BY d.id DESC LIMIT ");
   query_builder.push_bind(fetch_limit);
 
-  let raw_rows: Vec<MySqlRow> = query_builder
-    .build()
-    .fetch_all(args.mysql_executor)
-    .await?;
+  let raw_rows: Vec<MySqlRow> = query_builder.build().fetch_all(args.mysql_executor).await?;
 
-  let mut debug_logs = raw_rows
-    .into_iter()
-    .map(row_from_mysql_row)
-    .collect::<Result<Vec<AllDebugLogRow>, sqlx::Error>>()?;
+  let mut debug_logs = raw_rows.into_iter().map(row_from_mysql_row).collect::<Result<Vec<AllDebugLogRow>, sqlx::Error>>()?;
 
   let next_cursor = if debug_logs.len() > limit as usize {
     debug_logs.truncate(limit as usize);
@@ -122,10 +114,7 @@ WHERE d.id < "#,
     None
   };
 
-  Ok(ListAllDebugLogsResult {
-    debug_logs,
-    next_cursor,
-  })
+  Ok(ListAllDebugLogsResult { debug_logs, next_cursor })
 }
 
 fn row_from_mysql_row(row: MySqlRow) -> Result<AllDebugLogRow, sqlx::Error> {

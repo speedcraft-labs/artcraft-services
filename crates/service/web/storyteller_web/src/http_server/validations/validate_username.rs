@@ -35,9 +35,7 @@ const RESERVED_USERNAME_PREFIXES: &[(&str, &str)] = &[
 ];
 
 pub fn validate_username(username: &str) -> Result<(), String> {
-  static USERNAME_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[A-Za-z0-9_\-]{3,16}$").expect("should be valid regex")
-  });
+  static USERNAME_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[A-Za-z0-9_\-]{3,16}$").expect("should be valid regex"));
 
   if username.len() < 3 {
     return Err("username is too short".to_string());
@@ -104,11 +102,7 @@ mod tests {
       ("character_a", "Username can't start with 'character_'."),
     ];
     for (username, expected) in cases {
-      assert_eq!(
-        validate_username(username),
-        Err(expected.to_string()),
-        "username {username:?} should be rejected with {expected:?}",
-      );
+      assert_eq!(validate_username(username), Err(expected.to_string()), "username {username:?} should be rejected with {expected:?}",);
     }
   }
 
@@ -130,11 +124,7 @@ mod tests {
       ("Character_a", "Username can't start with 'character_'."),
     ];
     for (username, expected) in cases {
-      assert_eq!(
-        validate_username(username),
-        Err(expected.to_string()),
-        "username {username:?} should be rejected with {expected:?}",
-      );
+      assert_eq!(validate_username(username), Err(expected.to_string()), "username {username:?} should be rejected with {expected:?}",);
     }
   }
 
@@ -145,9 +135,9 @@ mod tests {
     assert!(validate_username("xuser_").is_ok());
     assert!(validate_username("myuser").is_ok());
     assert!(validate_username("a_user_b").is_ok());
-    assert!(validate_username("muser").is_ok());       // "m" but not "m_"
-    assert!(validate_username("mediafoo").is_ok());    // "media" but not "media_"
-    assert!(validate_username("jobless").is_ok());     // "job" but not "job_"
-    assert!(validate_username("comments").is_ok());    // "comment" but not "comment_"
+    assert!(validate_username("muser").is_ok()); // "m" but not "m_"
+    assert!(validate_username("mediafoo").is_ok()); // "media" but not "media_"
+    assert!(validate_username("jobless").is_ok()); // "job" but not "job_"
+    assert!(validate_username("comments").is_ok()); // "comment" but not "comment_"
   }
 }

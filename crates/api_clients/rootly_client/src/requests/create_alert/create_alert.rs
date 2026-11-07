@@ -82,9 +82,7 @@ pub async fn create_alert(args: CreateAlertArgs) -> Result<CreateAlertSuccess, R
 
   info!("Creating Rootly alert: source={}, summary={}", args.source, args.summary);
 
-  let labels = args.labels.map(|pairs| {
-    pairs.into_iter().map(|(key, value)| CreateAlertLabel { key, value }).collect()
-  });
+  let labels = args.labels.map(|pairs| pairs.into_iter().map(|(key, value)| CreateAlertLabel { key, value }).collect());
 
   let request_body = CreateAlertRequest {
     data: CreateAlertRequestData {
@@ -110,51 +108,31 @@ pub async fn create_alert(args: CreateAlertArgs) -> Result<CreateAlertSuccess, R
     },
   };
 
-  let body_json = serde_json::to_string(&request_body)
-    .map_err(|err| RootlyGenericApiError::SerdeResponseParseErrorWithBody(err, String::new()))?;
+  let body_json = serde_json::to_string(&request_body).map_err(|err| RootlyGenericApiError::SerdeResponseParseErrorWithBody(err, String::new()))?;
 
   info!("Rootly create alert URL: {}", url);
   info!("Rootly create alert body: {}", body_json);
 
-  let client = reqwest::Client::builder()
-    .build()
-    .map_err(|err| RootlyClientError::ReqwestClientError(err))?;
+  let client = reqwest::Client::builder().build().map_err(|err| RootlyClientError::ReqwestClientError(err))?;
 
   let bearer = format!("Bearer {}", args.api_key.api_key);
 
   // NB: Use .body() instead of .json() to preserve the Content-Type header.
   // .json() would override it with "application/json", but Rootly requires "application/vnd.api+json".
-  let response = client.post(&url)
-    .header("Authorization", bearer)
-    .header("Content-Type", "application/vnd.api+json")
-    .body(body_json)
-    .send()
-    .await
-    .map_err(|err| RootlyGenericApiError::ReqwestError(err))?;
+  let response = client.post(&url).header("Authorization", bearer).header("Content-Type", "application/vnd.api+json").body(body_json).send().await.map_err(|err| RootlyGenericApiError::ReqwestError(err))?;
 
   let status = response.status();
-  let response_body = response.text()
-    .await
-    .map_err(|err| RootlyGenericApiError::ReqwestError(err))?;
+  let response_body = response.text().await.map_err(|err| RootlyGenericApiError::ReqwestError(err))?;
 
   info!("Rootly create alert response: status={}, body={}", status, response_body);
 
   if !status.is_success() {
-    return Err(RootlyGenericApiError::UncategorizedBadResponseWithStatusAndBody {
-      status_code: status,
-      body: response_body,
-    }.into());
+    return Err(RootlyGenericApiError::UncategorizedBadResponseWithStatusAndBody { status_code: status, body: response_body }.into());
   }
 
-  let parsed: CreateAlertResponse = serde_json::from_str(&response_body)
-    .map_err(|err| RootlyGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.clone()))?;
+  let parsed: CreateAlertResponse = serde_json::from_str(&response_body).map_err(|err| RootlyGenericApiError::SerdeResponseParseErrorWithBody(err, response_body.clone()))?;
 
-  Ok(CreateAlertSuccess {
-    id: parsed.data.id,
-    short_id: parsed.data.attributes.short_id,
-    status: parsed.data.attributes.status,
-    source: parsed.data.attributes.source,
-  })
+  Ok(CreateAlertSuccess { id: parsed.data.id, short_id: parsed.data.attributes.short_id, status: parsed.data.attributes.status, source: parsed.data.attributes.source })
 }
 
 #[cfg(test)]
@@ -188,7 +166,8 @@ mod tests {
       notification_target_id: None,
       labels: None,
       deduplication_key: None,
-    }).await?;
+    })
+    .await?;
 
     println!("Alert ID: {}", result.id);
     println!("Short ID: {:?}", result.short_id);
@@ -216,12 +195,10 @@ mod tests {
       alert_urgency_id: None,
       notification_target_type: None,
       notification_target_id: None,
-      labels: Some(vec![
-        ("environment".to_string(), "test".to_string()),
-        ("component".to_string(), "seedance2pro_job".to_string()),
-      ]),
+      labels: Some(vec![("environment".to_string(), "test".to_string()), ("component".to_string(), "seedance2pro_job".to_string())]),
       deduplication_key: None,
-    }).await?;
+    })
+    .await?;
 
     println!("Alert ID: {}", result.id);
     println!("Short ID: {:?}", result.short_id);
@@ -251,7 +228,8 @@ mod tests {
       notification_target_id: None,
       labels: None,
       deduplication_key: Some(dedup_key),
-    }).await?;
+    })
+    .await?;
 
     println!("Alert ID: {}", result.id);
     println!("Short ID: {:?}", result.short_id);
@@ -277,7 +255,8 @@ mod tests {
       description: Some(
         "This is a test SEV-1 alert to verify paging works. \
          If you received this page, the Rootly integration is working correctly. \
-         Please acknowledge and resolve.".to_string()
+         Please acknowledge and resolve."
+          .to_string(),
       ),
       status: Some("triggered".to_string()),
       service_ids: None,
@@ -288,13 +267,10 @@ mod tests {
       alert_urgency_id: Some(high_urgency_id.to_string()),
       notification_target_type: Some("EscalationPolicy".to_string()),
       notification_target_id: Some(sre_escalation_policy_id.to_string()),
-      labels: Some(vec![
-        ("severity".to_string(), "sev-1".to_string()),
-        ("environment".to_string(), "production".to_string()),
-        ("test".to_string(), "true".to_string()),
-      ]),
+      labels: Some(vec![("severity".to_string(), "sev-1".to_string()), ("environment".to_string(), "production".to_string()), ("test".to_string(), "true".to_string())]),
       deduplication_key: None,
-    }).await?;
+    })
+    .await?;
 
     println!("Alert ID: {}", result.id);
     println!("Short ID: {:?}", result.short_id);
@@ -322,7 +298,8 @@ mod tests {
       description: Some(
         "This is a test SEV-1 alert sent directly to a user (not via escalation policy). \
          If you received this page, the Rootly direct-user paging works correctly. \
-         Please acknowledge and resolve.".to_string()
+         Please acknowledge and resolve."
+          .to_string(),
       ),
       status: Some("triggered".to_string()),
       service_ids: None,
@@ -333,13 +310,10 @@ mod tests {
       alert_urgency_id: Some(high_urgency_id.to_string()),
       notification_target_type: Some("User".to_string()),
       notification_target_id: Some(brandon_user_id.to_string()),
-      labels: Some(vec![
-        ("severity".to_string(), "sev-1".to_string()),
-        ("environment".to_string(), "production".to_string()),
-        ("test".to_string(), "true".to_string()),
-      ]),
+      labels: Some(vec![("severity".to_string(), "sev-1".to_string()), ("environment".to_string(), "production".to_string()), ("test".to_string(), "true".to_string())]),
       deduplication_key: None,
-    }).await?;
+    })
+    .await?;
 
     println!("Alert ID: {}", result.id);
     println!("Short ID: {:?}", result.short_id);

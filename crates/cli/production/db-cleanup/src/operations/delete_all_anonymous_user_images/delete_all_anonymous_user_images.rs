@@ -34,7 +34,8 @@ pub async fn delete_all_anonymous_user_images(_args: &Args, mysql: &Pool<MySql>)
       mysql_pool: &mysql,
       maybe_filter_engine_categories: None,
       include_user_uploads: true,
-    }).await?;
+    })
+    .await?;
 
     if media_files.records.is_empty() {
       break;
@@ -51,7 +52,7 @@ pub async fn delete_all_anonymous_user_images(_args: &Args, mysql: &Pool<MySql>)
         _ => {
           info!("Skipping file: {:?} , which is not an image", &file.token);
           continue;
-        }
+        },
       }
 
       info!("Deleting image file: {:?}", &file.token);

@@ -42,7 +42,7 @@ fn wait_for_exit(child: &mut Child, timeout: Duration) -> AnyhowResult<ExitStatu
         let _ = child.kill();
         let _ = child.wait();
         return Err(err.into());
-      }
+      },
     }
     if started_at.elapsed() >= timeout {
       let _ = child.kill();

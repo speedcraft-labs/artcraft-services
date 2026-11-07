@@ -1,7 +1,5 @@
 use crate::error::fal_error_plus::FalErrorPlus;
-use crate::requests::api::video::image::flux_3_draft::raw_request::{
-  Flux3DraftImageToVideoInput, Flux3DraftImageToVideoOutput,
-};
+use crate::requests::api::video::image::flux_3_draft::raw_request::{Flux3DraftImageToVideoInput, Flux3DraftImageToVideoOutput};
 use crate::requests::api::video::text::flux_3::api::{Flux3AspectRatio, Flux3Duration};
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
@@ -57,8 +55,7 @@ mod tests {
   use errors::AnyhowResult;
   use std::fs::read_to_string;
 
-  const EXAMPLE_IMAGE_URL: &str =
-    "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-1.jpeg";
+  const EXAMPLE_IMAGE_URL: &str = "https://storage.googleapis.com/falserverless/example_inputs/veo31-flf2v-input-1.jpeg";
 
   // ── Real requests (manually run; require a live key and cost money) ──
 
@@ -127,19 +124,15 @@ mod tests {
 
   #[test]
   fn raw_request_omits_unset_optionals() {
-    let request = Flux3DraftImageToVideoRequest {
-      prompt: "minimal".to_string(),
-      image_url: "https://example.com/frame.png".to_string(),
-      duration: None,
-      aspect_ratio: None,
-      generate_audio: None,
-      safety_tolerance: None,
-    };
+    let request = Flux3DraftImageToVideoRequest { prompt: "minimal".to_string(), image_url: "https://example.com/frame.png".to_string(), duration: None, aspect_ratio: None, generate_audio: None, safety_tolerance: None };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
-    assert_eq!(json, serde_json::json!({
-      "prompt": "minimal",
-      "image_url": "https://example.com/frame.png",
-    }));
+    assert_eq!(
+      json,
+      serde_json::json!({
+        "prompt": "minimal",
+        "image_url": "https://example.com/frame.png",
+      })
+    );
   }
 
   #[test]

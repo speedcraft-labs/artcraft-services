@@ -40,29 +40,21 @@ pub async fn list_user_tts_inference_results_handler(
   http_request: HttpRequest,
   path: Path<ListTtsInferenceResultsForUserPathInfo>,
   query: Query<ListTtsInferenceResultsForUserQuery>,
-  server_state: web::Data<Arc<ServerState>>
-) -> Result<HttpResponse, CommonWebError>
-{
-  return Ok(HttpResponse::Gone()
-      .content_type(ContentType::plaintext())
-      .body("This endpoint has been removed."))
+  server_state: web::Data<Arc<ServerState>>,
+) -> Result<HttpResponse, CommonWebError> {
+  return Ok(HttpResponse::Gone().content_type(ContentType::plaintext()).body("This endpoint has been removed."));
 }
 
-  pub async fn _original_list_user_tts_inference_results_handler(
-    http_request: HttpRequest,
-    path: Path<ListTtsInferenceResultsForUserPathInfo>,
-    query: Query<ListTtsInferenceResultsForUserQuery>,
-    server_state: web::Data<Arc<ServerState>>
-  ) -> Result<HttpResponse, CommonWebError>
-  {
-    let maybe_user_session = server_state
-      .session_checker
-      .maybe_get_user_session(&http_request, &server_state.mysql_pool)
-      .await
-      .map_err(|e| {
-        warn!("Session checker error: {:?}", e);
-        CommonWebError::from_error(e)
-      })?;
+pub async fn _original_list_user_tts_inference_results_handler(
+  http_request: HttpRequest,
+  path: Path<ListTtsInferenceResultsForUserPathInfo>,
+  query: Query<ListTtsInferenceResultsForUserQuery>,
+  server_state: web::Data<Arc<ServerState>>,
+) -> Result<HttpResponse, CommonWebError> {
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session(&http_request, &server_state.mysql_pool).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
 
   // Permissions & ACLs
   let mut viewer_is_user = false;
@@ -93,23 +85,22 @@ pub async fn list_user_tts_inference_results_handler(
   let include_user_hidden = viewer_is_user || is_mod_that_can_see_deleted;
 
   let mut query_builder = ListTtsResultsQueryBuilder::new()
-      .sort_ascending(sort_ascending)
-      .scope_creator_username(Some(path.username.as_ref()))
-      .include_user_hidden(include_user_hidden)
-      .include_mod_disabled_results(is_mod_that_can_see_deleted)
-      .limit(limit)
-      .cursor_is_reversed(cursor_is_reversed)
-      .offset(cursor);
+    .sort_ascending(sort_ascending)
+    .scope_creator_username(Some(path.username.as_ref()))
+    .include_user_hidden(include_user_hidden)
+    .include_mod_disabled_results(is_mod_that_can_see_deleted)
+    .limit(limit)
+    .cursor_is_reversed(cursor_is_reversed)
+    .offset(cursor);
 
-  let query_results = query_builder.perform_query_for_page(&server_state.mysql_pool)
-      .await;
+  let query_results = query_builder.perform_query_for_page(&server_state.mysql_pool).await;
 
   let results_page = match query_results {
     Ok(results) => results,
     Err(e) => {
       warn!("Query error: {:?}", e);
       return Err(CommonWebError::from_anyhow_error(e));
-    }
+    },
   };
 
   let cursor_next = if let Some(id) = results_page.last_id {
@@ -126,17 +117,9 @@ pub async fn list_user_tts_inference_results_handler(
     None
   };
 
-  let response = ListTtsInferenceResultsForUserSuccessResponse {
-    success: true,
-    results: results_page.inference_records,
-    cursor_next,
-    cursor_previous,
-  };
+  let response = ListTtsInferenceResultsForUserSuccessResponse { success: true, results: results_page.inference_records, cursor_next, cursor_previous };
 
-  let body = serde_json::to_string(&response)
-    .map_err(CommonWebError::from_error)?;
+  let body = serde_json::to_string(&response).map_err(CommonWebError::from_error)?;
 
-  Ok(HttpResponse::Ok()
-    .content_type("application/json")
-    .body(body))
+  Ok(HttpResponse::Ok().content_type("application/json").body(body))
 }

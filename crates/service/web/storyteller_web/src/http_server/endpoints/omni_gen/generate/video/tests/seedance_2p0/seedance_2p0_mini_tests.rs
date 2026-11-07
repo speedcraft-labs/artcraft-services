@@ -18,8 +18,7 @@ use enums::common::generation::common_resolution::CommonResolution;
 use enums::common::generation::common_video_model::CommonVideoModel;
 
 use crate::http_server::endpoints::omni_gen::generate::video::tests::support::{
-  assert_reference_video_charge_then_refund, assert_references_charge_more, assert_successful_generation_charges,
-  assert_variant_charges_premium, Batch, CreditsDelta, ExpectedCredits, Seconds, TestHarness,
+  assert_reference_video_charge_then_refund, assert_references_charge_more, assert_successful_generation_charges, assert_variant_charges_premium, Batch, CreditsDelta, ExpectedCredits, Seconds, TestHarness,
 };
 
 // ── Seedance 2.0 Mini (Volcengine) ──
@@ -85,9 +84,7 @@ mod seedance_2p0_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -119,9 +116,7 @@ mod seedance_2p0_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -147,9 +142,7 @@ mod seedance_2p0_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -212,9 +205,7 @@ mod seedance_2p0_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -246,9 +237,7 @@ mod seedance_2p0_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -263,9 +252,7 @@ mod seedance_2p0_mini {
 
     for resolution in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
       for seconds in [5u16, 10, 15] {
-        assert_references_charge_more(
-          &harness, CommonVideoModel::Seedance2p0Mini, Some(resolution), Seconds(seconds),
-        ).await;
+        assert_references_charge_more(&harness, CommonVideoModel::Seedance2p0Mini, Some(resolution), Seconds(seconds)).await;
       }
     }
   }
@@ -291,9 +278,7 @@ mod seedance_2p0_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0Mini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
@@ -364,9 +349,7 @@ mod seedance_2p0_bp_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -398,9 +381,7 @@ mod seedance_2p0_bp_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -426,9 +407,7 @@ mod seedance_2p0_bp_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -491,9 +470,7 @@ mod seedance_2p0_bp_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -525,9 +502,7 @@ mod seedance_2p0_bp_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -542,9 +517,7 @@ mod seedance_2p0_bp_mini {
 
     for resolution in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
       for seconds in [5u16, 10, 15] {
-        assert_references_charge_more(
-          &harness, CommonVideoModel::Seedance2p0BytePlusMini, Some(resolution), Seconds(seconds),
-        ).await;
+        assert_references_charge_more(&harness, CommonVideoModel::Seedance2p0BytePlusMini, Some(resolution), Seconds(seconds)).await;
       }
     }
   }
@@ -570,9 +543,7 @@ mod seedance_2p0_bp_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
@@ -641,9 +612,7 @@ mod seedance_2p0_bpu_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -675,9 +644,7 @@ mod seedance_2p0_bpu_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -703,9 +670,7 @@ mod seedance_2p0_bpu_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_successful_generation_charges(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_successful_generation_charges(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -768,9 +733,7 @@ mod seedance_2p0_bpu_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -802,9 +765,7 @@ mod seedance_2p0_bpu_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 
@@ -819,9 +780,7 @@ mod seedance_2p0_bpu_mini {
 
     for resolution in [CommonResolution::FourEightyP, CommonResolution::SevenTwentyP] {
       for seconds in [5u16, 10, 15] {
-        assert_references_charge_more(
-          &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, Some(resolution), Seconds(seconds),
-        ).await;
+        assert_references_charge_more(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, Some(resolution), Seconds(seconds)).await;
       }
     }
   }
@@ -847,9 +806,7 @@ mod seedance_2p0_bpu_mini {
     ];
 
     for (resolution, seconds, batch, expected) in cases {
-      assert_reference_video_charge_then_refund(
-        &harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected,
-      ).await;
+      assert_reference_video_charge_then_refund(&harness, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *expected).await;
     }
   }
 }
@@ -876,12 +833,7 @@ mod premium {
     ];
 
     for (resolution, seconds, batch, base, variant, delta) in cases {
-      assert_variant_charges_premium(
-        &harness,
-        CommonVideoModel::Seedance2p0Mini,
-        CommonVideoModel::Seedance2p0BytePlusMini,
-        *resolution, *seconds, *batch, *base, *variant, *delta,
-      ).await;
+      assert_variant_charges_premium(&harness, CommonVideoModel::Seedance2p0Mini, CommonVideoModel::Seedance2p0BytePlusMini, *resolution, *seconds, *batch, *base, *variant, *delta).await;
     }
   }
 
@@ -899,12 +851,7 @@ mod premium {
     ];
 
     for (resolution, seconds, batch, base, variant, delta) in cases {
-      assert_variant_charges_premium(
-        &harness,
-        CommonVideoModel::Seedance2p0Mini,
-        CommonVideoModel::Seedance2p0BytePlusUltraMini,
-        *resolution, *seconds, *batch, *base, *variant, *delta,
-      ).await;
+      assert_variant_charges_premium(&harness, CommonVideoModel::Seedance2p0Mini, CommonVideoModel::Seedance2p0BytePlusUltraMini, *resolution, *seconds, *batch, *base, *variant, *delta).await;
     }
   }
 }

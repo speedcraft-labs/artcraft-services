@@ -36,18 +36,11 @@ use actix_web::{App, Error};
 use billing_component::default_routes::add_suggested_stripe_billing_routes;
 
 /// Add the core application routes.
-pub fn add_application_routes<T, B> (app: App<T>) -> App<T>
+pub fn add_application_routes<T, B>(app: App<T>) -> App<T>
 where
-    B: MessageBody,
-    T: ServiceFactory<
-      ServiceRequest,
-      Config = (),
-      Response = ServiceResponse<B>,
-      Error = Error,
-      InitError = (),
-    >,
+  B: MessageBody,
+  T: ServiceFactory<ServiceRequest, Config = (), Response = ServiceResponse<B>, Error = Error, InitError = ()>,
 {
-
   let mut app = add_moderator_routes(app); // /moderation
 
   // Artcraft surface area
@@ -57,7 +50,7 @@ where
   app = add_character_routes(app); // /v1/character/... and /v1/characters/...
   app = add_webhook_routes(app); // /v1/webhooks/... (fal)
   app = add_internal_routes(app); // /v1/internal/... (internal API key authenticated worker fleets)
-  
+
   // Legacy FakeYou surface area that might be useful again one day
   app = add_weights_routes(app); // v1/weights
 

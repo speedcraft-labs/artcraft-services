@@ -23,12 +23,7 @@ impl InternalApiKey {
   /// Parse a comma-separated key list (the `INTERNAL_API_KEYS` env
   /// var format). Entries are trimmed; blank entries are dropped.
   pub fn parse_comma_separated_list(value: &str) -> HashSet<InternalApiKey> {
-    value
-      .split(',')
-      .map(str::trim)
-      .filter(|entry| !entry.is_empty())
-      .map(InternalApiKey::new)
-      .collect()
+    value.split(',').map(str::trim).filter(|entry| !entry.is_empty()).map(InternalApiKey::new).collect()
   }
 }
 

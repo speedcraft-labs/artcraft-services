@@ -71,9 +71,9 @@ LIMIT 25000
     "#,
     InferenceJobExternalThirdParty::GmiCloud.to_str(),
   )
-    .fetch_all(pool)
-    .await
-    .map_err(|err| anyhow!("error querying pending gmicloud jobs: {:?}", err))?;
+  .fetch_all(pool)
+  .await
+  .map_err(|err| anyhow!("error querying pending gmicloud jobs: {:?}", err))?;
 
   let jobs = records
     .into_iter()
@@ -83,7 +83,7 @@ LIMIT 25000
         None => {
           warn!("PendingGmiCloudJob has no request_id, skipping");
           return None;
-        }
+        },
       };
 
       Some(PendingGmiCloudJob {

@@ -257,7 +257,12 @@ impl EndpointHarness {
         .app_data(web::Data::new(avt.clone()))
         .configure(handlers::configure)
         .route("/v1/session", web::get().to(session_info_handler))
-    }).workers(1).disable_signals().listen(listener).unwrap().run();
+    })
+    .workers(1)
+    .disable_signals()
+    .listen(listener)
+    .unwrap()
+    .run();
     let handle = server.handle();
     actix_web::rt::spawn(server);
     let desktop = client(&base_url, &desktop_ip, None);
@@ -310,13 +315,14 @@ impl EndpointHarness {
 fn client(base_url: &Url, ip: &str, cookie: Option<&str>) -> Client {
   let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
   let jar = Arc::new(Jar::default());
-  if let Some(cookie) = cookie { jar.add_cookie_str(cookie, base_url); }
+  if let Some(cookie) = cookie {
+    jar.add_cookie_str(cookie, base_url);
+  }
   let mut headers = HeaderMap::new();
   headers.insert("Origin", HeaderValue::from_static(BROWSER_ORIGIN));
   // Model the production gateway forwarding different browser and desktop IPs.
   headers.insert("X-Forwarded-For", HeaderValue::from_str(ip).unwrap());
-  Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none())
-    .timeout(Duration::from_secs(10)).default_headers(headers).cookie_provider(jar).build().unwrap()
+  Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(10)).default_headers(headers).cookie_provider(jar).build().unwrap()
 }
 
 async fn read_ok<T: DeserializeOwned>(response: Response) -> T {
@@ -329,9 +335,7 @@ fn approval_token(created: &CreateLoginChallengeResponse) -> &str {
 }
 
 fn session_cookie(response: &Response) -> Option<actix_web::cookie::Cookie<'static>> {
-  response.headers().get_all(SET_COOKIE).iter()
-    .filter_map(|value| actix_web::cookie::Cookie::parse(value.to_str().unwrap()).ok())
-    .find(|cookie| cookie.name() == "session").map(|cookie| cookie.into_owned())
+  response.headers().get_all(SET_COOKIE).iter().filter_map(|value| actix_web::cookie::Cookie::parse(value.to_str().unwrap()).ok()).find(|cookie| cookie.name() == "session").map(|cookie| cookie.into_owned())
 }
 
 fn assert_no_session_cookie(response: &Response) {

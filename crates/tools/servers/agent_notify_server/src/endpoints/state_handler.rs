@@ -7,10 +7,7 @@ use crate::audio_player::EngineStatus;
 use crate::server_state::ServerState;
 
 pub async fn state_handler(state: web::Data<ServerState>) -> impl Responder {
-  let resp = StateResponse {
-    audio: state.audio.status(),
-    config: ConfigSummary::from_state(&state),
-  };
+  let resp = StateResponse { audio: state.audio.status(), config: ConfigSummary::from_state(&state) };
   HttpResponse::Ok().json(resp)
 }
 

@@ -49,11 +49,7 @@ mod tests {
   #[actix_rt::test]
   async fn tailscale_hosts() {
     let cors = isolated_cors(add_artcraft_3d, true);
-    for origin in [
-      "https://macaroni-1.tailce84f.ts.net",
-      "https://halide.tailce84f.ts.net",
-      "https://brandons-macbook-pro.taild62114.ts.net",
-    ] {
+    for origin in ["https://macaroni-1.tailce84f.ts.net", "https://halide.tailce84f.ts.net", "https://brandons-macbook-pro.taild62114.ts.net"] {
       assert_exact_https_origin(&cors, origin).await;
     }
     assert_origin_invalid(&cors, "https://other-machine.tailce84f.ts.net").await;

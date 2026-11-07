@@ -95,22 +95,15 @@ pub async fn list_media_files_for_user_handler(
   http_request: HttpRequest,
   path: Path<ListMediaFilesForUserPathInfo>,
   query: Query<ListMediaFilesForUserQueryParams>,
-  server_state: web::Data<Arc<ServerState>>
-) -> Result<Json<ListMediaFilesForUserSuccessResponse>, CommonWebError>
-{
-  let maybe_user_session = server_state
-      .session_checker
-      .maybe_get_user_session(&http_request, &server_state.mysql_pool)
-      .await?;
+  server_state: web::Data<Arc<ServerState>>,
+) -> Result<Json<ListMediaFilesForUserSuccessResponse>, CommonWebError> {
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session(&http_request, &server_state.mysql_pool).await?;
 
   let mut is_author = false;
   let mut is_mod = false;
 
   // NB: Temporary rollout flag for certain file types (BVH, etc).
-  let mut is_allowed_studio_access = allowed_studio_access(
-    maybe_user_session.as_ref(),
-    &server_state.flags
-  );
+  let mut is_allowed_studio_access = allowed_studio_access(maybe_user_session.as_ref(), &server_state.flags);
 
   match maybe_user_session {
     None => {},
@@ -134,7 +127,7 @@ pub async fn list_media_files_for_user_handler(
   };
 
   let mut maybe_filter_media_types = get_scoped_media_types(query.filter_media_type.as_deref());
-  let mut maybe_filter_media_classes  = get_scoped_media_classes(query.filter_media_classes.as_deref());
+  let mut maybe_filter_media_classes = get_scoped_media_classes(query.filter_media_classes.as_deref());
   let mut maybe_filter_engine_categories = get_scoped_engine_categories(query.filter_engine_categories.as_deref());
 
   let filters = UserMediaFileFilters {
@@ -146,30 +139,15 @@ pub async fn list_media_files_for_user_handler(
     view_as,
   };
   let count_started = Instant::now();
-  let total_count = count_media_files_for_user(CountMediaFilesForUserArgs {
-    filters,
-    mysql_executor: &server_state.mysql_pool,
-  }).await?;
+  let total_count = count_media_files_for_user(CountMediaFilesForUserArgs { filters, mysql_executor: &server_state.mysql_pool }).await?;
   let count_ms = count_started.elapsed().as_millis();
   let page_started = Instant::now();
-  let records = list_media_files_for_user(ListMediaFileForUserArgs {
-    filters,
-    limit: page_size,
-    offset: page_index * page_size,
-    sort_ascending,
-    mysql_executor: &server_state.mysql_pool,
-  }).await?;
-  info!("Listed legacy user media: username={} page={} count_ms={} page_ms={}",
-    path.username, page_index, count_ms, page_started.elapsed().as_millis());
+  let records = list_media_files_for_user(ListMediaFileForUserArgs { filters, limit: page_size, offset: page_index * page_size, sort_ascending, mysql_executor: &server_state.mysql_pool }).await?;
+  info!("Listed legacy user media: username={} page={} count_ms={} page_ms={}", path.username, page_index, count_ms, page_started.elapsed().as_millis());
 
   let media_domain = get_media_domain(&http_request);
 
-  let results = build_user_media_file_response(UserMediaFileResponseArgs {
-    records,
-    is_allowed_studio_access,
-    media_domain,
-    server_environment: server_state.server_environment,
-  });
+  let results = build_user_media_file_response(UserMediaFileResponseArgs { records, is_allowed_studio_access, media_domain, server_environment: server_state.server_environment });
 
   Ok(Json(ListMediaFilesForUserSuccessResponse {
     success: true,
@@ -179,6 +157,6 @@ pub async fn list_media_files_for_user_handler(
       // Preserve v1's historical calculation, including exact multiples.
       // A pagination behavior change belongs in a new endpoint version.
       total_page_count: 1 + (total_count / page_size as i64) as usize,
-    }
+    },
   }))
 }

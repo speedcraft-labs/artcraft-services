@@ -37,25 +37,25 @@ mod tests {
 
   // (reference_images, quality, aspect_ratio, resolution, batch, expected_cents)
   const CASES: &[(usize, Option<Q>, Option<Ar>, Option<R>, u16, u64)] = &[
-    (0, None,            None,                        None,           1,  4),
-    (0, Some(Q::Low),    Some(Ar::Square),            None,           1,  1),
-    (0, Some(Q::Medium), Some(Ar::Square),            None,           1,  2),
-    (0, Some(Q::High),   Some(Ar::Square),            None,           1,  6),
-    (0, Some(Q::High),   Some(Ar::Square),            None,           4, 24),
-    (0, Some(Q::High),   Some(Ar::SquareHd),          None,           1, 10),
-    (0, Some(Q::High),   Some(Ar::Square),            Some(R::TwoK),  1, 10),
-    (0, Some(Q::High),   Some(Ar::Square),            Some(R::FourK), 1, 14),
-    (0, Some(Q::High),   Some(Ar::WideFourByThree),   None,           1,  4),
-    (0, Some(Q::High),   Some(Ar::WideSixteenByNine), None,           1,  5),
-    (0, Some(Q::High),   Some(Ar::WideSixteenByNine), Some(R::OneK),  1,  3),
-    (0, Some(Q::High),   Some(Ar::WideSixteenByNine), Some(R::FourK), 1, 12),
+    (0, None, None, None, 1, 4),
+    (0, Some(Q::Low), Some(Ar::Square), None, 1, 1),
+    (0, Some(Q::Medium), Some(Ar::Square), None, 1, 2),
+    (0, Some(Q::High), Some(Ar::Square), None, 1, 6),
+    (0, Some(Q::High), Some(Ar::Square), None, 4, 24),
+    (0, Some(Q::High), Some(Ar::SquareHd), None, 1, 10),
+    (0, Some(Q::High), Some(Ar::Square), Some(R::TwoK), 1, 10),
+    (0, Some(Q::High), Some(Ar::Square), Some(R::FourK), 1, 14),
+    (0, Some(Q::High), Some(Ar::WideFourByThree), None, 1, 4),
+    (0, Some(Q::High), Some(Ar::WideSixteenByNine), None, 1, 5),
+    (0, Some(Q::High), Some(Ar::WideSixteenByNine), Some(R::OneK), 1, 3),
+    (0, Some(Q::High), Some(Ar::WideSixteenByNine), Some(R::FourK), 1, 12),
     (0, Some(Q::Medium), Some(Ar::TallNineBySixteen), Some(R::ThreeK), 2, 6),
-    (0, Some(Q::High),   Some(Ar::Auto),              None,           1, 12),
-    (1, None,            None,                        None,           1, 12),
-    (1, Some(Q::High),   Some(Ar::Square),            None,           1,  7),
-    (4, Some(Q::High),   Some(Ar::Square),            None,           1, 10),
-    (1, Some(Q::High),   Some(Ar::Square),            None,           4, 28),
-    (1, Some(Q::Low),    Some(Ar::Square),            None,           1,  2),
+    (0, Some(Q::High), Some(Ar::Auto), None, 1, 12),
+    (1, None, None, None, 1, 12),
+    (1, Some(Q::High), Some(Ar::Square), None, 1, 7),
+    (4, Some(Q::High), Some(Ar::Square), None, 1, 10),
+    (1, Some(Q::High), Some(Ar::Square), None, 4, 28),
+    (1, Some(Q::Low), Some(Ar::Square), None, 1, 2),
   ];
 
   #[test]
@@ -76,16 +76,11 @@ mod tests {
   }
 
   fn cost_cents(refs: usize, quality: Option<Q>, aspect_ratio: Option<Ar>, resolution: Option<R>, batch: u16) -> u64 {
-    builder(refs, quality, aspect_ratio, resolution, batch)
-      .build2().unwrap().estimate_cost().unwrap().cost_in_usd_cents.unwrap()
+    builder(refs, quality, aspect_ratio, resolution, batch).build2().unwrap().estimate_cost().unwrap().cost_in_usd_cents.unwrap()
   }
 
   fn builder(refs: usize, quality: Option<Q>, aspect_ratio: Option<Ar>, resolution: Option<R>, batch: u16) -> GenerateImageRequestBuilder {
-    let image_inputs = if refs == 0 {
-      None
-    } else {
-      Some(ImageListRef::MediaFileTokens((0..refs).map(|_| MediaFileToken::generate()).collect()))
-    };
+    let image_inputs = if refs == 0 { None } else { Some(ImageListRef::MediaFileTokens((0..refs).map(|_| MediaFileToken::generate()).collect())) };
     GenerateImageRequestBuilder {
       model: RouterImageModel::GptImage2p5Flare,
       provider: RouterProvider::Artcraft,

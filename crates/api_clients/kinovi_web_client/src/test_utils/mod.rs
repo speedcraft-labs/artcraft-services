@@ -1,11 +1,11 @@
 #[cfg(test)]
-pub (crate) mod assert_batch_cost;
+pub(crate) mod assert_batch_cost;
 
 #[cfg(test)]
-pub (crate) mod get_test_cookies;
+pub(crate) mod get_test_cookies;
 
 #[cfg(test)]
-pub (crate) mod http_download;
+pub(crate) mod http_download;
 
 #[cfg(test)]
-pub (crate) mod setup_test_logging;
+pub(crate) mod setup_test_logging;

@@ -23,7 +23,7 @@ WHERE id = ? AND status IN (?, ?) AND expires_at <= NOW()
     UserLoginChallengeStatus::Pending.to_str(),
     UserLoginChallengeStatus::Approved.to_str()
   )
-    .execute(args.mysql_executor)
-    .await?;
+  .execute(args.mysql_executor)
+  .await?;
   Ok(())
 }

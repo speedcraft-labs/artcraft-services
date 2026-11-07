@@ -10,9 +10,7 @@ use tokens::tokens::users::UserToken;
 
 use crate::http_server::common_responses::common_web_error::CommonWebError;
 use crate::http_server::endpoints::media_files::upload::upload_error::MediaFileUploadError;
-use crate::http_server::user_lookup::api_or_web_session::require_any_session_or_key::{
-  require_any_session_or_key, AnySession,
-};
+use crate::http_server::user_lookup::api_or_web_session::require_any_session_or_key::{require_any_session_or_key, AnySession};
 use crate::state::server_state::ServerState;
 
 /// The optionally-authenticated identity behind a media file upload.
@@ -33,14 +31,7 @@ pub struct UploadSessionAuth {
 impl UploadSessionAuth {
   /// The uploading user, whichever auth path identified them. `None` = anonymous upload.
   pub fn maybe_user_token(&self) -> Option<&UserToken> {
-    self.maybe_header_session
-        .as_ref()
-        .map(|session| &session.user_token)
-        .or_else(|| {
-          self.maybe_cookie_session
-              .as_ref()
-              .map(|session| session.get_user_token())
-        })
+    self.maybe_header_session.as_ref().map(|session| &session.user_token).or_else(|| self.maybe_cookie_session.as_ref().map(|session| session.get_user_token()))
   }
 
   pub fn is_logged_in(&self) -> bool {
@@ -50,50 +41,30 @@ impl UploadSessionAuth {
   /// The user's preferred result visibility. Only web-session lookups carry preferences;
   /// header-authenticated (API key / MCP) uploads fall back to the caller's default.
   pub fn maybe_preferred_visibility(&self) -> Option<Visibility> {
-    self.maybe_cookie_session
-        .as_ref()
-        .map(|session| session.preferred_tts_result_visibility)
+    self.maybe_cookie_session.as_ref().map(|session| session.preferred_tts_result_visibility)
   }
 }
 
 /// Read the upload's identity: a REQUIRED `Authorization` header credential (API key or MCP
 /// session) when one is present, otherwise an OPTIONAL web-session cookie. Banned users are
 /// rejected on both paths.
-pub async fn read_upload_session(
-  http_request: &HttpRequest,
-  server_state: &ServerState,
-  mysql_connection: &mut PoolConnection<MySql>,
-) -> Result<UploadSessionAuth, MediaFileUploadError> {
+pub async fn read_upload_session(http_request: &HttpRequest, server_state: &ServerState, mysql_connection: &mut PoolConnection<MySql>) -> Result<UploadSessionAuth, MediaFileUploadError> {
   if http_request.headers().contains_key(header::AUTHORIZATION) {
-    let session = require_any_session_or_key(
-      http_request,
-      &server_state.session_checker,
-      &server_state.avt_cookie_manager,
-      &mut **mysql_connection,
-    )
-    .await
-    .map_err(|err| match err {
+    let session = require_any_session_or_key(http_request, &server_state.session_checker, &server_state.avt_cookie_manager, &mut **mysql_connection).await.map_err(|err| match err {
       CommonWebError::NotAuthorized => MediaFileUploadError::NotAuthorized,
       other => {
         error!("Header credential lookup error: {:?}", other);
         MediaFileUploadError::ServerError
-      }
+      },
     })?;
 
-    return Ok(UploadSessionAuth {
-      maybe_header_session: Some(session),
-      maybe_cookie_session: None,
-    });
+    return Ok(UploadSessionAuth { maybe_header_session: Some(session), maybe_cookie_session: None });
   }
 
-  let maybe_cookie_session = server_state
-      .session_checker
-      .maybe_get_user_session_from_connection(http_request, mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Session checker error: {:?}", err);
-        MediaFileUploadError::ServerError
-      })?;
+  let maybe_cookie_session = server_state.session_checker.maybe_get_user_session_from_connection(http_request, mysql_connection).await.map_err(|err| {
+    error!("Session checker error: {:?}", err);
+    MediaFileUploadError::ServerError
+  })?;
 
   if let Some(ref user) = maybe_cookie_session {
     if user.is_banned {
@@ -102,10 +73,7 @@ pub async fn read_upload_session(
     }
   }
 
-  Ok(UploadSessionAuth {
-    maybe_header_session: None,
-    maybe_cookie_session,
-  })
+  Ok(UploadSessionAuth { maybe_header_session: None, maybe_cookie_session })
 }
 
 #[cfg(test)]
@@ -127,9 +95,7 @@ mod tests {
   use actix_web::test::TestRequest;
   use actix_web::HttpRequest;
 
-  use mysql_queries::queries::mcp_sessions::revoke_mcp_session::{
-    revoke_mcp_session, RevokeMcpSessionArgs,
-  };
+  use mysql_queries::queries::mcp_sessions::revoke_mcp_session::{revoke_mcp_session, RevokeMcpSessionArgs};
   use mysql_testing::fixtures::users::{create_test_user, TestUser};
 
   use crate::http_server::endpoints::omni_gen::generate::video::tests::support::TestHarness;
@@ -221,10 +187,7 @@ mod tests {
       let api_key = harness.create_api_key(&api_key_user).await;
 
       let cookie = session_cookie(&harness, &cookie_user);
-      let request = TestRequest::default()
-        .insert_header(("Authorization", format!("Bearer {}", api_key.as_str_be_careful())))
-        .cookie(cookie)
-        .to_http_request();
+      let request = TestRequest::default().insert_header(("Authorization", format!("Bearer {}", api_key.as_str_be_careful()))).cookie(cookie).to_http_request();
       let session_auth = read(&harness, &request).await.expect("header credential should win");
 
       assert_eq!(session_auth.maybe_user_token(), Some(&api_key_user.user_token));
@@ -236,16 +199,10 @@ mod tests {
     async fn unknown_header_credentials_are_rejected_not_anonymous() {
       let harness = TestHarness::create().await;
 
-      for credential in [
-        "artcraft_api_no_such_key_0000000000000000",
-        "mcp_session_no_such_session_00000000000000000000000000000000",
-      ] {
+      for credential in ["artcraft_api_no_such_key_0000000000000000", "mcp_session_no_such_session_00000000000000000000000000000000"] {
         let request = request_with_bearer(credential);
         let result = read(&harness, &request).await;
-        assert!(
-          matches!(result, Err(MediaFileUploadError::NotAuthorized)),
-          "bad credential {credential:?} must be a 401, not an anonymous fallthrough",
-        );
+        assert!(matches!(result, Err(MediaFileUploadError::NotAuthorized)), "bad credential {credential:?} must be a 401, not an anonymous fallthrough",);
       }
     }
 
@@ -257,13 +214,7 @@ mod tests {
       let credential = harness.create_mcp_session(&user).await;
 
       let mut connection = harness.pool.acquire().await.expect("acquire for revoke");
-      let revoked = revoke_mcp_session(RevokeMcpSessionArgs {
-        private_session_token: &credential,
-        mysql_executor: &mut *connection,
-        phantom: PhantomData,
-      })
-      .await
-      .expect("revoke mcp session");
+      let revoked = revoke_mcp_session(RevokeMcpSessionArgs { private_session_token: &credential, mysql_executor: &mut *connection, phantom: PhantomData }).await.expect("revoke mcp session");
       assert_eq!(revoked, 1);
 
       let request = request_with_bearer(credential.as_str());
@@ -274,10 +225,7 @@ mod tests {
   }
 
   /// Run the helper under test against a fresh connection from the test pool.
-  async fn read(
-    harness: &TestHarness,
-    request: &HttpRequest,
-  ) -> Result<UploadSessionAuth, MediaFileUploadError> {
+  async fn read(harness: &TestHarness, request: &HttpRequest) -> Result<UploadSessionAuth, MediaFileUploadError> {
     let mut connection = harness.pool.acquire().await.expect("acquire for lookup");
     read_upload_session(request, &harness.server_state, &mut connection).await
   }
@@ -288,25 +236,17 @@ mod tests {
 
   /// A dummy HTTP request presenting `credential` as a Bearer Authorization header.
   fn request_with_bearer(credential: &str) -> HttpRequest {
-    TestRequest::default()
-      .insert_header(("Authorization", format!("Bearer {credential}")))
-      .to_http_request()
+    TestRequest::default().insert_header(("Authorization", format!("Bearer {credential}"))).to_http_request()
   }
 
   /// A dummy HTTP request carrying the user's session cookie and no Authorization header.
   fn request_with_session_cookie(harness: &TestHarness, user: &TestUser) -> HttpRequest {
-    TestRequest::default()
-      .cookie(session_cookie(harness, user))
-      .to_http_request()
+    TestRequest::default().cookie(session_cookie(harness, user)).to_http_request()
   }
 
   /// The user's session cookie, owned so TestRequest can take it.
   fn session_cookie(harness: &TestHarness, user: &TestUser) -> Cookie<'static> {
-    let cookie = harness
-      .server_state
-      .session_cookie_manager
-      .create_cookie(&user.session_token, &user.user_token)
-      .expect("create session cookie");
+    let cookie = harness.server_state.session_cookie_manager.create_cookie(&user.session_token, &user.user_token).expect("create session cookie");
     Cookie::new("session", cookie.value().to_string())
   }
 }

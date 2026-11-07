@@ -13,7 +13,9 @@ use crate::state::server_state::ServerState;
 use crate::util::lookup::lookup_image_urls_as_optional_list::lookup_image_urls_as_optional_list;
 use actix_web::web::Json;
 use actix_web::{web, HttpRequest};
-use artcraft_api_defs::generate::image::multi_function::bytedance_seedream_v4p5_multi_function_image_gen::{BytedanceSeedreamV4p5MultiFunctionImageGenImageSize, BytedanceSeedreamV4p5MultiFunctionImageGenNumImages, BytedanceSeedreamV4p5MultiFunctionImageGenRequest, BytedanceSeedreamV4p5MultiFunctionImageGenResponse};
+use artcraft_api_defs::generate::image::multi_function::bytedance_seedream_v4p5_multi_function_image_gen::{
+  BytedanceSeedreamV4p5MultiFunctionImageGenImageSize, BytedanceSeedreamV4p5MultiFunctionImageGenNumImages, BytedanceSeedreamV4p5MultiFunctionImageGenRequest, BytedanceSeedreamV4p5MultiFunctionImageGenResponse,
+};
 use bucket_paths::legacy::typified_paths::public::media_files::bucket_file_path::MediaFileBucketPath;
 use enums::by_table::prompt_context_items::prompt_context_semantic_type::PromptContextSemanticType;
 use enums::by_table::prompts::prompt_type::PromptType;
@@ -24,8 +26,12 @@ use enums::common::generation::common_generation_mode::CommonGenerationMode;
 use enums::common::generation::common_aspect_ratio::CommonAspectRatio;
 use fal_client::creds::open_ai_api_key::OpenAiApiKey;
 use fal_client::requests::traits::fal_request_cost_calculator_trait::FalRequestCostCalculator;
-use fal_client::requests_old::webhook::image::edit::enqueue_bytedance_seedream_v4p5_edit_image_webhook::{enqueue_bytedance_seedream_v4p5_edit_image_webhook, EnqueueBytedanceSeedreamV4p5EditImageArgs, EnqueueBytedanceSeedreamV4p5EditImageRequest, EnqueueBytedanceSeedreamV4p5EditImageNumImages, EnqueueBytedanceSeedreamV4p5EditImageSize};
-use fal_client::requests_old::webhook::image::text::enqueue_bytedance_seedream_v4p5_text_to_image_webhook::{enqueue_bytedance_seedream_v4p5_text_to_image_webhook, EnqueueBytedanceSeedreamV4p5TextToImageArgs, EnqueueBytedanceSeedreamV4p5TextToImageNumImages, EnqueueBytedanceSeedreamV4p5TextToImageRequest, EnqueueBytedanceSeedreamV4p5TextToImageSize};
+use fal_client::requests_old::webhook::image::edit::enqueue_bytedance_seedream_v4p5_edit_image_webhook::{
+  enqueue_bytedance_seedream_v4p5_edit_image_webhook, EnqueueBytedanceSeedreamV4p5EditImageArgs, EnqueueBytedanceSeedreamV4p5EditImageRequest, EnqueueBytedanceSeedreamV4p5EditImageNumImages, EnqueueBytedanceSeedreamV4p5EditImageSize,
+};
+use fal_client::requests_old::webhook::image::text::enqueue_bytedance_seedream_v4p5_text_to_image_webhook::{
+  enqueue_bytedance_seedream_v4p5_text_to_image_webhook, EnqueueBytedanceSeedreamV4p5TextToImageArgs, EnqueueBytedanceSeedreamV4p5TextToImageNumImages, EnqueueBytedanceSeedreamV4p5TextToImageRequest, EnqueueBytedanceSeedreamV4p5TextToImageSize,
+};
 use http_server_common::request::get_request_ip::get_request_ip;
 use log::{error, info, warn};
 use mysql_queries::queries::generic_inference::api_providers::fal::insert_generic_inference_job_for_fal_queue::insert_generic_inference_job_for_fal_queue;
@@ -58,59 +64,43 @@ use utoipa::ToSchema;
 pub async fn bytedance_seedream_v4p5_multi_function_image_gen_handler(
   http_request: HttpRequest,
   request: Json<BytedanceSeedreamV4p5MultiFunctionImageGenRequest>,
-  server_state: web::Data<Arc<ServerState>>
+  server_state: web::Data<Arc<ServerState>>,
 ) -> Result<Json<BytedanceSeedreamV4p5MultiFunctionImageGenResponse>, CommonWebError> {
-  
   payments_error_test(&request.prompt.as_deref().unwrap_or(""))?;
-  
-  let mut mysql_connection = server_state.mysql_pool
-      .acquire()
-      .await?;
-  
-  let maybe_user_session = server_state
-      .session_checker
-      .maybe_get_user_session_from_connection(&http_request, &mut mysql_connection)
-      .await
-      .map_err(|e| {
-        warn!("Session checker error: {:?}", e);
-        CommonWebError::from_error(e)
-      })?;
 
-  let maybe_avt_token = server_state
-      .avt_cookie_manager
-      .get_avt_token_from_request(&http_request);
+  let mut mysql_connection = server_state.mysql_pool.acquire().await?;
+
+  let maybe_user_session = server_state.session_checker.maybe_get_user_session_from_connection(&http_request, &mut mysql_connection).await.map_err(|e| {
+    warn!("Session checker error: {:?}", e);
+    CommonWebError::from_error(e)
+  })?;
+
+  let maybe_avt_token = server_state.avt_cookie_manager.get_avt_token_from_request(&http_request);
 
   let user_token = match maybe_user_session.as_ref() {
     Some(session) if session.is_banned => return Err(CommonWebError::NotAuthorized),
     Some(session) => &session.user_token,
     None => {
       return Err(CommonWebError::NotAuthorized);
-    }
+    },
   };
 
   if let Err(reason) = validate_idempotency_token_format(&request.uuid_idempotency_token) {
     return Err(CommonWebError::BadInputWithSimpleMessage(reason));
   }
-  
+
   let image_urls = match request.image_media_tokens.as_ref() {
     Some(media_tokens) => {
       info!("Looking up image media tokens: {:?}", media_tokens);
-      lookup_image_urls_as_optional_list(
-        &http_request,
-        &mut mysql_connection,
-        server_state.server_environment,
-        media_tokens,
-      ).await?
+      lookup_image_urls_as_optional_list(&http_request, &mut mysql_connection, server_state.server_environment, media_tokens).await?
     },
     None => None,
   };
 
-  insert_idempotency_token(&request.uuid_idempotency_token, &mut *mysql_connection)
-      .await
-      .map_err(|err| {
-        error!("Error inserting idempotency token: {:?}", err);
-        CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
-      })?;
+  insert_idempotency_token(&request.uuid_idempotency_token, &mut *mysql_connection).await.map_err(|err| {
+    error!("Error inserting idempotency token: {:?}", err);
+    CommonWebError::BadInputWithSimpleMessage("repeated idempotency token".to_string())
+  })?;
 
   info!("Fal webhook URL: {}", server_state.inference_providers.fal.webhook_url);
 
@@ -147,38 +137,20 @@ pub async fn bytedance_seedream_v4p5_multi_function_image_gen_handler(
       None => EnqueueBytedanceSeedreamV4p5EditImageSize::SquareHd,
     };
 
-    let edit_request = EnqueueBytedanceSeedreamV4p5EditImageRequest {
-      prompt: request.prompt.clone().unwrap_or_default(),
-      image_urls: input_image_urls.to_owned(),
-      num_images: Some(num_images),
-      image_size: Some(image_size),
-      max_images: None,
-    };
+    let edit_request = EnqueueBytedanceSeedreamV4p5EditImageRequest { prompt: request.prompt.clone().unwrap_or_default(), image_urls: input_image_urls.to_owned(), num_images: Some(num_images), image_size: Some(image_size), max_images: None };
 
     let cost = edit_request.calculate_cost_in_cents();
 
-    let args = EnqueueBytedanceSeedreamV4p5EditImageArgs {
-      request: edit_request,
-      webhook_url: &server_state.inference_providers.fal.webhook_url,
-      api_key: &server_state.inference_providers.fal.api_key,
-    };
+    let args = EnqueueBytedanceSeedreamV4p5EditImageArgs { request: edit_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
     info!("Charging wallet: {}", cost);
 
-    attempt_wallet_deduction_else_common_web_error(
-      user_token,
-      Some(apriori_job_token.as_str()),
-      cost,
-      &mut mysql_connection,
-    ).await?;
+    attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-    fal_result = enqueue_bytedance_seedream_v4p5_edit_image_webhook(args)
-        .await
-        .map_err(|err| {
-          warn!("Error calling enqueue_bytedance_seedream_v4p5_edit_image_webhook: {:?}", err);
-          CommonWebError::from_error(err)
-        })?;
-
+    fal_result = enqueue_bytedance_seedream_v4p5_edit_image_webhook(args).await.map_err(|err| {
+      warn!("Error calling enqueue_bytedance_seedream_v4p5_edit_image_webhook: {:?}", err);
+      CommonWebError::from_error(err)
+    })?;
   } else {
     info!("text-to-image case");
     generation_mode = CommonGenerationMode::Text;
@@ -207,55 +179,35 @@ pub async fn bytedance_seedream_v4p5_multi_function_image_gen_handler(
       None => EnqueueBytedanceSeedreamV4p5TextToImageSize::SquareHd,
     };
 
-    let t2i_request = EnqueueBytedanceSeedreamV4p5TextToImageRequest {
-      prompt: request.prompt.clone().unwrap_or_default(),
-      num_images: Some(num_images),
-      image_size: Some(image_size),
-      max_images: None,
-    };
+    let t2i_request = EnqueueBytedanceSeedreamV4p5TextToImageRequest { prompt: request.prompt.clone().unwrap_or_default(), num_images: Some(num_images), image_size: Some(image_size), max_images: None };
 
     let cost = t2i_request.calculate_cost_in_cents();
 
     info!("Charging wallet: {}", cost);
 
-    attempt_wallet_deduction_else_common_web_error(
-      user_token,
-      Some(apriori_job_token.as_str()),
-      cost,
-      &mut mysql_connection,
-    ).await?;
+    attempt_wallet_deduction_else_common_web_error(user_token, Some(apriori_job_token.as_str()), cost, &mut mysql_connection).await?;
 
-    let args = EnqueueBytedanceSeedreamV4p5TextToImageArgs {
-      request: t2i_request,
-      webhook_url: &server_state.inference_providers.fal.webhook_url,
-      api_key: &server_state.inference_providers.fal.api_key,
-    };
+    let args = EnqueueBytedanceSeedreamV4p5TextToImageArgs { request: t2i_request, webhook_url: &server_state.inference_providers.fal.webhook_url, api_key: &server_state.inference_providers.fal.api_key };
 
-    fal_result = enqueue_bytedance_seedream_v4p5_text_to_image_webhook(args)
-        .await
-        .map_err(|err| {
-          warn!("Error calling enqueue_bytedance_seedream_v4p5_text_to_image_webhook: {:?}", err);
-          CommonWebError::from_error(err)
-        })?;
+    fal_result = enqueue_bytedance_seedream_v4p5_text_to_image_webhook(args).await.map_err(|err| {
+      warn!("Error calling enqueue_bytedance_seedream_v4p5_text_to_image_webhook: {:?}", err);
+      CommonWebError::from_error(err)
+    })?;
   }
 
-  let external_job_id = fal_result.request_id
-      .ok_or_else(|| {
-        warn!("Fal request_id is None");
-        CommonWebError::server_error_with_message("Fal request_id is None")
-      })?;
+  let external_job_id = fal_result.request_id.ok_or_else(|| {
+    warn!("Fal request_id is None");
+    CommonWebError::server_error_with_message("Fal request_id is None")
+  })?;
 
   info!("Fal request_id: {}", external_job_id);
 
   let ip_address = get_request_ip(&http_request);
 
-  let mut transaction = mysql_connection
-      .begin()
-      .await
-      .map_err(|err| {
-        error!("Error starting MySQL transaction: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
+  let mut transaction = mysql_connection.begin().await.map_err(|err| {
+    error!("Error starting MySQL transaction: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
 
   // NB: Don't fail the job if the query fails.
   let maybe_aspect_ratio = match request.image_size {
@@ -297,28 +249,25 @@ pub async fn bytedance_seedream_v4p5_multi_function_image_gen_handler(
     creator_ip_address: &ip_address,
     mysql_executor: &mut *transaction,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   let prompt_token = match prompt_result {
     Ok(token) => Some(token),
     Err(err) => {
       warn!("Error inserting prompt: {:?}", err);
       None // Don't fail the job if the prompt insertion fails.
-    }
+    },
   };
 
   if let Some(media_tokens) = &request.image_media_tokens {
     if let Some(token) = prompt_token.as_ref() {
       let result = insert_batch_prompt_context_items(InsertBatchArgs {
         prompt_token: token.clone(),
-        items: media_tokens.iter().map(|token| {
-          PromptContextItem {
-            media_token: token.clone(),
-            context_semantic_type: PromptContextSemanticType::Imgref,
-          }
-        }).collect(),
+        items: media_tokens.iter().map(|token| PromptContextItem { media_token: token.clone(), context_semantic_type: PromptContextSemanticType::Imgref }).collect(),
         transaction: &mut transaction,
-      }).await;
+      })
+      .await;
 
       if let Err(err) = result {
         // NB: Fail open.
@@ -345,28 +294,23 @@ pub async fn bytedance_seedream_v4p5_multi_function_image_gen_handler(
     starting_job_status_override: None,
     maybe_frontend_failure_category: None,
     maybe_failure_reason: None,
-      maybe_debug_log_event_token: None,
+    maybe_debug_log_event_token: None,
     phantom: Default::default(),
-  }).await;
+  })
+  .await;
 
   let job_token = match db_result {
     Ok(token) => token,
     Err(err) => {
       warn!("Error inserting generic inference job for FAL queue: {:?}", err);
       return Err(CommonWebError::from_error(err));
-    }
+    },
   };
-  
-  let _r = transaction
-      .commit()
-      .await
-      .map_err(|err| {
-        error!("Error committing MySQL transaction: {:?}", err);
-        CommonWebError::from_error(err)
-      })?;
 
-  Ok(Json(BytedanceSeedreamV4p5MultiFunctionImageGenResponse {
-    success: true,
-    inference_job_token: job_token,
-  }))
+  let _r = transaction.commit().await.map_err(|err| {
+    error!("Error committing MySQL transaction: {:?}", err);
+    CommonWebError::from_error(err)
+  })?;
+
+  Ok(Json(BytedanceSeedreamV4p5MultiFunctionImageGenResponse { success: true, inference_job_token: job_token }))
 }

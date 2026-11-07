@@ -102,10 +102,7 @@ impl AnimatedPreviewFormat {
 /// Which animated preview to serve for a video, from its
 /// `media_files.maybe_thumbnail_version` and `created_at` (as Unix seconds).
 /// See the module docs for the version history.
-pub fn animated_preview_format(
-  maybe_thumbnail_version: Option<u8>,
-  created_at_unix_seconds: i64,
-) -> AnimatedPreviewFormat {
+pub fn animated_preview_format(maybe_thumbnail_version: Option<u8>, created_at_unix_seconds: i64) -> AnimatedPreviewFormat {
   match maybe_thumbnail_version {
     Some(version) if version >= VIDEO_THUMBNAIL_VERSION_WEBP => AnimatedPreviewFormat::Webp,
     Some(_) => AnimatedPreviewFormat::Gif,

@@ -10,11 +10,7 @@ use enums::common::generation::common_quality::CommonQuality;
 pub const OMNI_GEN_IMAGE_MODELS_AND_PROVIDERS: Lazy<OmniGenImageModelsResponse> = Lazy::new(|| {
   let models = build_omni_gen_image_models();
   let providers = build_omni_gen_image_model_providers();
-  OmniGenImageModelsResponse {
-    success: true,
-    models,
-    providers,
-  }
+  OmniGenImageModelsResponse { success: true, models, providers }
 });
 
 fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
@@ -25,14 +21,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     model_creator: Some(ModelCreator::BlackForestLabs),
     full_name: Some("FLUX.1 [dev]".to_string()),
     text_prompt_supported: Some(true),
-    aspect_ratio_options: Some(vec![
-      CommonAspectRatio::SquareHd,
-      CommonAspectRatio::Square,
-      CommonAspectRatio::TallThreeByFour,
-      CommonAspectRatio::TallNineBySixteen,
-      CommonAspectRatio::WideFourByThree,
-      CommonAspectRatio::WideSixteenByNine,
-    ]),
+    aspect_ratio_options: Some(vec![CommonAspectRatio::SquareHd, CommonAspectRatio::Square, CommonAspectRatio::TallThreeByFour, CommonAspectRatio::TallNineBySixteen, CommonAspectRatio::WideFourByThree, CommonAspectRatio::WideSixteenByNine]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
@@ -45,14 +34,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     model_creator: Some(ModelCreator::BlackForestLabs),
     full_name: Some("FLUX.1 [schnell]".to_string()),
     text_prompt_supported: Some(true),
-    aspect_ratio_options: Some(vec![
-      CommonAspectRatio::SquareHd,
-      CommonAspectRatio::Square,
-      CommonAspectRatio::TallThreeByFour,
-      CommonAspectRatio::TallNineBySixteen,
-      CommonAspectRatio::WideFourByThree,
-      CommonAspectRatio::WideSixteenByNine,
-    ]),
+    aspect_ratio_options: Some(vec![CommonAspectRatio::SquareHd, CommonAspectRatio::Square, CommonAspectRatio::TallThreeByFour, CommonAspectRatio::TallNineBySixteen, CommonAspectRatio::WideFourByThree, CommonAspectRatio::WideSixteenByNine]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
@@ -65,14 +47,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     model_creator: Some(ModelCreator::BlackForestLabs),
     full_name: Some("FLUX 1.1 [pro]".to_string()),
     text_prompt_supported: Some(true),
-    aspect_ratio_options: Some(vec![
-      CommonAspectRatio::SquareHd,
-      CommonAspectRatio::Square,
-      CommonAspectRatio::TallThreeByFour,
-      CommonAspectRatio::TallNineBySixteen,
-      CommonAspectRatio::WideFourByThree,
-      CommonAspectRatio::WideSixteenByNine,
-    ]),
+    aspect_ratio_options: Some(vec![CommonAspectRatio::SquareHd, CommonAspectRatio::Square, CommonAspectRatio::TallThreeByFour, CommonAspectRatio::TallNineBySixteen, CommonAspectRatio::WideFourByThree, CommonAspectRatio::WideSixteenByNine]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
@@ -232,12 +207,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    resolution_options: Some(vec![
-      CommonResolution::HalfK,
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-      CommonResolution::FourK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::HalfK, CommonResolution::OneK, CommonResolution::TwoK, CommonResolution::FourK]),
     resolution_default: Some(CommonResolution::OneK),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
@@ -266,11 +236,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    resolution_options: Some(vec![
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-      CommonResolution::FourK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::OneK, CommonResolution::TwoK, CommonResolution::FourK]),
     resolution_default: Some(CommonResolution::OneK),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
@@ -284,43 +250,27 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     full_name: Some("GPT Image 1".to_string()),
     text_prompt_supported: Some(true),
     image_refs_supported: Some(true),
-    aspect_ratio_options: Some(vec![
-      CommonAspectRatio::Square,
-      CommonAspectRatio::WideThreeByTwo,
-      CommonAspectRatio::TallTwoByThree,
-    ]),
+    aspect_ratio_options: Some(vec![CommonAspectRatio::Square, CommonAspectRatio::WideThreeByTwo, CommonAspectRatio::TallTwoByThree]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    quality_options: Some(vec![
-      CommonQuality::High,
-      CommonQuality::Medium,
-      CommonQuality::Low,
-    ]),
+    quality_options: Some(vec![CommonQuality::High, CommonQuality::Medium, CommonQuality::Low]),
     default_quality: Some(CommonQuality::High),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
     batch_size_default: Some(1),
     ..Default::default()
   });
-  
+
   models.push(OmniGenImageModelDetails {
     model: CommonImageModel::GptImage1p5,
     model_creator: Some(ModelCreator::OpenAi),
     full_name: Some("GPT Image 1.5".to_string()),
     text_prompt_supported: Some(true),
     image_refs_supported: Some(true),
-    aspect_ratio_options: Some(vec![
-      CommonAspectRatio::Square,
-      CommonAspectRatio::WideThreeByTwo,
-      CommonAspectRatio::TallTwoByThree,
-    ]),
+    aspect_ratio_options: Some(vec![CommonAspectRatio::Square, CommonAspectRatio::WideThreeByTwo, CommonAspectRatio::TallTwoByThree]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    quality_options: Some(vec![
-      CommonQuality::High,
-      CommonQuality::Medium,
-      CommonQuality::Low,
-    ]),
+    quality_options: Some(vec![CommonQuality::High, CommonQuality::Medium, CommonQuality::Low]),
     default_quality: Some(CommonQuality::High),
     batch_size_min: Some(1),
     batch_size_max: Some(4),
@@ -345,19 +295,10 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    quality_options: Some(vec![
-      CommonQuality::High,
-      CommonQuality::Medium,
-      CommonQuality::Low,
-    ]),
+    quality_options: Some(vec![CommonQuality::High, CommonQuality::Medium, CommonQuality::Low]),
     default_quality: Some(CommonQuality::High),
     // NOTE: Gpt-Image-2 does not have "resolution" natively. We're emulating this.
-    resolution_options: Some(vec![
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-      CommonResolution::ThreeK,
-      CommonResolution::FourK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::OneK, CommonResolution::TwoK, CommonResolution::ThreeK, CommonResolution::FourK]),
     // NOTE: Gpt-Image-2 does not have "resolution" natively. We're emulating this.
     resolution_default: Some(CommonResolution::OneK),
     batch_size_min: Some(1),
@@ -383,22 +324,10 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    quality_options: Some(vec![
-      CommonQuality::Auto,
-      CommonQuality::Max,
-      CommonQuality::XHigh,
-      CommonQuality::High,
-      CommonQuality::Medium,
-      CommonQuality::Low,
-    ]),
+    quality_options: Some(vec![CommonQuality::Auto, CommonQuality::Max, CommonQuality::XHigh, CommonQuality::High, CommonQuality::Medium, CommonQuality::Low]),
     default_quality: Some(CommonQuality::High),
     // NOTE: GPT Image 2.5 does not have "resolution" natively. We're emulating this.
-    resolution_options: Some(vec![
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-      CommonResolution::ThreeK,
-      CommonResolution::FourK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::OneK, CommonResolution::TwoK, CommonResolution::ThreeK, CommonResolution::FourK]),
     // NOTE: GPT Image 2.5 does not have "resolution" natively. We're emulating this.
     resolution_default: Some(CommonResolution::OneK),
     batch_size_min: Some(1),
@@ -424,22 +353,10 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    quality_options: Some(vec![
-      CommonQuality::Auto,
-      CommonQuality::Max,
-      CommonQuality::XHigh,
-      CommonQuality::High,
-      CommonQuality::Medium,
-      CommonQuality::Low,
-    ]),
+    quality_options: Some(vec![CommonQuality::Auto, CommonQuality::Max, CommonQuality::XHigh, CommonQuality::High, CommonQuality::Medium, CommonQuality::Low]),
     default_quality: Some(CommonQuality::High),
     // NOTE: GPT Image 2.5 does not have "resolution" natively. We're emulating this.
-    resolution_options: Some(vec![
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-      CommonResolution::ThreeK,
-      CommonResolution::FourK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::OneK, CommonResolution::TwoK, CommonResolution::ThreeK, CommonResolution::FourK]),
     // NOTE: GPT Image 2.5 does not have "resolution" natively. We're emulating this.
     resolution_default: Some(CommonResolution::OneK),
     batch_size_min: Some(1),
@@ -541,10 +458,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    resolution_options: Some(vec![
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::OneK, CommonResolution::TwoK]),
     resolution_default: Some(CommonResolution::TwoK),
     batch_size_min: Some(1),
     batch_size_max: Some(8),
@@ -572,10 +486,7 @@ fn build_omni_gen_image_models() -> Vec<OmniGenImageModelDetails> {
     ]),
     aspect_ratio_default: Some(CommonAspectRatio::Square),
     aspect_ratio_default_when_editing: Some(CommonAspectRatio::Auto),
-    resolution_options: Some(vec![
-      CommonResolution::OneK,
-      CommonResolution::TwoK,
-    ]),
+    resolution_options: Some(vec![CommonResolution::OneK, CommonResolution::TwoK]),
     resolution_default: Some(CommonResolution::TwoK),
     batch_size_min: Some(1),
     batch_size_max: Some(8),
@@ -592,70 +503,22 @@ fn build_omni_gen_image_model_providers() -> Vec<OmniGenImageModelProviderDetail
   providers.push(OmniGenImageModelProviderDetails {
     provider: GenerationProvider::Artcraft,
     models: vec![
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Flux1Dev,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Flux1Schnell,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::FluxPro11,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::FluxPro11Ultra,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::GptImage1p5,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::GptImage2,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::GptImage2p5Flare,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::GptImage2p5Sunburst,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Seedream4,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Seedream4p5,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Seedream5Lite,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Seedream5p0Pro,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::Seedream5p0ProUltra,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::NanoBanana,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::NanoBanana2,
-        overrides: None,
-      },
-      OmniGenImageProviderModelDetails {
-        model: CommonImageModel::NanoBananaPro,
-        overrides: None,
-      },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Flux1Dev, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Flux1Schnell, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::FluxPro11, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::FluxPro11Ultra, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::GptImage1p5, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::GptImage2, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::GptImage2p5Flare, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::GptImage2p5Sunburst, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Seedream4, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Seedream4p5, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Seedream5Lite, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Seedream5p0Pro, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::Seedream5p0ProUltra, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::NanoBanana, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::NanoBanana2, overrides: None },
+      OmniGenImageProviderModelDetails { model: CommonImageModel::NanoBananaPro, overrides: None },
     ],
   });
 
@@ -669,27 +532,14 @@ mod tests {
   #[test]
   fn gpt_image_2p5_models_are_listed_with_quality_and_resolution_options() {
     let models = build_omni_gen_image_models();
-    for (model, full_name) in [
-      (CommonImageModel::GptImage2p5Flare, "GPT Image 2.5 Flare"),
-      (CommonImageModel::GptImage2p5Sunburst, "GPT Image 2.5 Sunburst"),
-    ] {
+    for (model, full_name) in [(CommonImageModel::GptImage2p5Flare, "GPT Image 2.5 Flare"), (CommonImageModel::GptImage2p5Sunburst, "GPT Image 2.5 Sunburst")] {
       let details = models.iter().find(|m| m.model == model).unwrap_or_else(|| panic!("{model:?} missing"));
       assert_eq!(details.full_name.as_deref(), Some(full_name));
       assert_eq!(details.model_creator, Some(ModelCreator::OpenAi));
       assert_eq!(details.text_prompt_supported, Some(true));
       assert_eq!(details.image_refs_supported, Some(true));
       assert_eq!(details.default_quality, Some(CommonQuality::High));
-      assert_eq!(
-        details.quality_options.as_deref(),
-        Some(&[
-          CommonQuality::Auto,
-          CommonQuality::Max,
-          CommonQuality::XHigh,
-          CommonQuality::High,
-          CommonQuality::Medium,
-          CommonQuality::Low,
-        ][..]),
-      );
+      assert_eq!(details.quality_options.as_deref(), Some(&[CommonQuality::Auto, CommonQuality::Max, CommonQuality::XHigh, CommonQuality::High, CommonQuality::Medium, CommonQuality::Low,][..]),);
       assert_eq!(details.resolution_default, Some(CommonResolution::OneK));
       assert_eq!(details.resolution_options.as_ref().map(|r| r.len()), Some(4));
       assert_eq!(details.aspect_ratio_default_when_editing, Some(CommonAspectRatio::Auto));
@@ -700,9 +550,7 @@ mod tests {
   #[test]
   fn gpt_image_2p5_models_are_served_by_the_artcraft_provider() {
     let providers = build_omni_gen_image_model_providers();
-    let artcraft = providers.iter()
-      .find(|p| p.provider == GenerationProvider::Artcraft)
-      .expect("artcraft provider");
+    let artcraft = providers.iter().find(|p| p.provider == GenerationProvider::Artcraft).expect("artcraft provider");
     for model in [CommonImageModel::GptImage2p5Flare, CommonImageModel::GptImage2p5Sunburst] {
       assert!(artcraft.models.iter().any(|m| m.model == model), "{model:?} missing from artcraft provider");
     }

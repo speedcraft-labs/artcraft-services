@@ -99,12 +99,7 @@ pub(super) struct Wan3p0ApiParams {
 }
 
 impl Wan3p0Model {
-  pub(super) fn calculate_costs(
-    self,
-    resolution: Option<KinoviWan3p0OutputResolution>,
-    duration_seconds: u8,
-    tier: KinoviPricingTier,
-  ) -> KinoviFractionalGenerationCost {
+  pub(super) fn calculate_costs(self, resolution: Option<KinoviWan3p0OutputResolution>, duration_seconds: u8, tier: KinoviPricingTier) -> KinoviFractionalGenerationCost {
     let rates = match self {
       Self::TextToVideo | Self::ImageToVideo | Self::RefToVideo => WAN_CREDIT_HUNDREDTHS_PER_SECOND,
       Self::PrimeTextToVideo | Self::PrimeImageToVideo | Self::PrimeRefToVideo => PRIME_CREDIT_HUNDREDTHS_PER_SECOND,
@@ -120,15 +115,7 @@ impl Wan3p0Model {
 }
 
 impl Wan3p0ApiParams {
-  pub(super) fn new(
-    model: Wan3p0Model,
-    prompt: String,
-    aspect_ratio: Option<KinoviWan3p0AspectRatio>,
-    resolution: Option<KinoviWan3p0OutputResolution>,
-    duration_seconds: u8,
-    seed: Option<u32>,
-    audio: Option<bool>,
-  ) -> Result<Self, KinoviWebError> {
+  pub(super) fn new(model: Wan3p0Model, prompt: String, aspect_ratio: Option<KinoviWan3p0AspectRatio>, resolution: Option<KinoviWan3p0OutputResolution>, duration_seconds: u8, seed: Option<u32>, audio: Option<bool>) -> Result<Self, KinoviWebError> {
     if !(MIN_DURATION_SECONDS..=MAX_DURATION_SECONDS).contains(&duration_seconds) {
       return Err(invalid_field("duration_seconds", duration_seconds, "must be between 2 and 30"));
     }
@@ -177,11 +164,7 @@ impl Wan3p0ApiParams {
     })
   }
 
-  pub(super) fn validate_media(
-    &mut self,
-    duration_seconds: u8,
-    maybe_total_reference_video_duration_millis: Option<u32>,
-  ) -> Result<(), KinoviWebError> {
+  pub(super) fn validate_media(&mut self, duration_seconds: u8, maybe_total_reference_video_duration_millis: Option<u32>) -> Result<(), KinoviWebError> {
     self.uploaded_urls = self.uploaded_urls.take().filter(|urls| !urls.is_empty());
     self.video_urls = self.video_urls.take().filter(|urls| !urls.is_empty());
     self.audio_urls = self.audio_urls.take().filter(|urls| !urls.is_empty());
@@ -189,11 +172,7 @@ impl Wan3p0ApiParams {
     let video_count = self.video_urls.as_ref().map_or(0, Vec::len);
     let audio_count = self.audio_urls.as_ref().map_or(0, Vec::len);
     let max_images = if self.mode == Some("keyframe") { 2 } else { 10 };
-    for (field, count, maximum) in [
-      ("maybe_reference_image_urls", image_count, max_images),
-      ("maybe_reference_video_urls", video_count, 5),
-      ("maybe_reference_audio_urls", audio_count, 5),
-    ] {
+    for (field, count, maximum) in [("maybe_reference_image_urls", image_count, max_images), ("maybe_reference_video_urls", video_count, 5), ("maybe_reference_audio_urls", audio_count, 5)] {
       if count > maximum {
         return Err(invalid_field(field, count, format!("at most {maximum} items are supported")));
       }
@@ -216,18 +195,10 @@ impl Wan3p0ApiParams {
       let minimum_millis = video_count as u32 * 1_000;
       let input_millis = maybe_total_reference_video_duration_millis.unwrap_or(minimum_millis);
       if !(minimum_millis..=MAX_REFERENCE_VIDEO_DURATION_MILLIS).contains(&input_millis) {
-        return Err(invalid_field(
-          "maybe_total_reference_video_duration_millis",
-          input_millis,
-          "reference videos must each be 1-15s and total at most 15s",
-        ));
+        return Err(invalid_field("maybe_total_reference_video_duration_millis", input_millis, "reference videos must each be 1-15s and total at most 15s"));
       }
       if input_millis + u32::from(duration_seconds) * 1_000 > 30_000 {
-        return Err(invalid_field(
-          "duration_seconds",
-          duration_seconds,
-          "reference-video duration plus output duration must not exceed 30s",
-        ));
+        return Err(invalid_field("duration_seconds", duration_seconds, "reference-video duration plus output duration must not exceed 30s"));
       }
       self.video_url = self.video_urls.as_ref().and_then(|urls| urls.first()).cloned();
     }
@@ -236,12 +207,7 @@ impl Wan3p0ApiParams {
 }
 
 pub(super) fn invalid_field(field: &'static str, value: impl ToString, reason: impl Into<String>) -> KinoviWebError {
-  KinoviWebClientError::InvalidRequestField {
-    field,
-    raw_value: value.to_string(),
-    reason: reason.into(),
-  }
-  .into()
+  KinoviWebClientError::InvalidRequestField { field, raw_value: value.to_string(), reason: reason.into() }.into()
 }
 
 #[cfg(test)]
@@ -271,24 +237,9 @@ mod tests {
 
   #[test]
   fn all_wan_modalities_scale_linearly_with_duration() {
-    for model in [
-      Wan3p0Model::TextToVideo,
-      Wan3p0Model::ImageToVideo,
-      Wan3p0Model::RefToVideo,
-      Wan3p0Model::PrimeTextToVideo,
-      Wan3p0Model::PrimeImageToVideo,
-      Wan3p0Model::PrimeRefToVideo,
-    ] {
-      let two_seconds = model.calculate_costs(
-        Some(KinoviWan3p0OutputResolution::SevenTwentyP),
-        2,
-        KinoviPricingTier::Enterprise,
-      );
-      let ten_seconds = model.calculate_costs(
-        Some(KinoviWan3p0OutputResolution::SevenTwentyP),
-        10,
-        KinoviPricingTier::Enterprise,
-      );
+    for model in [Wan3p0Model::TextToVideo, Wan3p0Model::ImageToVideo, Wan3p0Model::RefToVideo, Wan3p0Model::PrimeTextToVideo, Wan3p0Model::PrimeImageToVideo, Wan3p0Model::PrimeRefToVideo] {
+      let two_seconds = model.calculate_costs(Some(KinoviWan3p0OutputResolution::SevenTwentyP), 2, KinoviPricingTier::Enterprise);
+      let ten_seconds = model.calculate_costs(Some(KinoviWan3p0OutputResolution::SevenTwentyP), 10, KinoviPricingTier::Enterprise);
       assert!((ten_seconds.kinovi_credits - two_seconds.kinovi_credits * 5.0).abs() < FLOAT_TOLERANCE);
     }
   }

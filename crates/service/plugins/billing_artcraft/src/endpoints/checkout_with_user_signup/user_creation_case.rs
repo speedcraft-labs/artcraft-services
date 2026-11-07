@@ -16,14 +16,17 @@ use mysql_queries::queries::users::user_sessions::create_user_session_with_execu
 use sqlx::pool::PoolConnection;
 use sqlx::{Acquire, MySql};
 use std::collections::HashMap;
-use stripe_checkout::checkout_session::{CreateCheckoutSession, CreateCheckoutSessionAutomaticTax, CreateCheckoutSessionLineItems, CreateCheckoutSessionSavedPaymentMethodOptions, CreateCheckoutSessionSavedPaymentMethodOptionsAllowRedisplayFilters, CreateCheckoutSessionSavedPaymentMethodOptionsPaymentMethodSave, CreateCheckoutSessionSubscriptionData};
+use stripe_checkout::checkout_session::{
+  CreateCheckoutSession, CreateCheckoutSessionAutomaticTax, CreateCheckoutSessionLineItems, CreateCheckoutSessionSavedPaymentMethodOptions, CreateCheckoutSessionSavedPaymentMethodOptionsAllowRedisplayFilters,
+  CreateCheckoutSessionSavedPaymentMethodOptionsPaymentMethodSave, CreateCheckoutSessionSubscriptionData,
+};
 use stripe_shared::{CheckoutSession, CheckoutSessionMode, PriceId};
 use users::email::email_to_gravatar_hash::email_to_gravatar_hash;
 use users::email::generate_random_synthetic_email::generate_random_synthetic_email;
 use tokens::tokens::users::UserToken;
 use users::username::generate_random_username::generate_random_username;
 
-pub (super) async fn user_creation_case(
+pub(super) async fn user_creation_case(
   http_request: &HttpRequest,
   price_id: &PriceId,
   mysql_connection: &mut PoolConnection<MySql>,
@@ -33,13 +36,10 @@ pub (super) async fn user_creation_case(
   maybe_referral_partner: Option<String>,
   maybe_referral_user_token: Option<UserToken>,
 ) -> Result<CreationPayload, CommonWebError> {
-
-  let mut transaction = mysql_connection.begin()
-      .await
-      .map_err(|e| {
-        warn!("Could not begin transaction: {:?}", e);
-        CommonWebError::ServerError
-      })?;
+  let mut transaction = mysql_connection.begin().await.map_err(|e| {
+    warn!("Could not begin transaction: {:?}", e);
+    CommonWebError::ServerError
+  })?;
 
   let ip_address = get_request_ip(&http_request);
 
@@ -53,13 +53,7 @@ pub (super) async fn user_creation_case(
   };
 
   // NB: Not sure if these lock important functionality, so we're keeping this
-  let user_feature_flags = vec![
-    UserFeatureFlag::Studio,
-    UserFeatureFlag::VideoStyleTransfer,
-  ].into_iter()
-      .map(|flag| flag.to_string())
-      .collect::<Vec<String>>()
-      .join(",");
+  let user_feature_flags = vec![UserFeatureFlag::Studio, UserFeatureFlag::VideoStyleTransfer].into_iter().map(|flag| flag.to_string()).collect::<Vec<String>>().join(",");
 
   let mut final_user_token = None;
   let mut final_username = None;
@@ -71,7 +65,7 @@ pub (super) async fn user_creation_case(
 
     let user_email_address = generate_random_synthetic_email();
     let user_email_gravatar_hash = email_to_gravatar_hash(&user_email_address);
-    
+
     let display_name = generate_random_username();
     let username = display_name.trim().to_lowercase();
 
@@ -92,7 +86,8 @@ pub (super) async fn user_creation_case(
         maybe_referral_user_token: maybe_referral_user_token.as_ref(),
       },
       &mut *transaction,
-    ).await;
+    )
+    .await;
 
     match result {
       Ok(token) => {
@@ -132,22 +127,15 @@ pub (super) async fn user_creation_case(
     CommonWebError::ServerError
   })?;
 
-  transaction.commit()
-      .await
-      .map_err(|e| {
-        warn!("Could not commit transaction: {:?}", e);
-        CommonWebError::ServerError
-      })?;
+  transaction.commit().await.map_err(|e| {
+    warn!("Could not commit transaction: {:?}", e);
+    CommonWebError::ServerError
+  })?;
 
-  let session_token = create_user_session_with_executor(
-    &final_user_token,
-    &ip_address,
-    &mut **mysql_connection)
-      .await
-      .map_err(|e| {
-        warn!("error creating user session: {:?}", e);
-        CommonWebError::ServerError
-      })?;
+  let session_token = create_user_session_with_executor(&final_user_token, &ip_address, &mut **mysql_connection).await.map_err(|e| {
+    warn!("error creating user session: {:?}", e);
+    CommonWebError::ServerError
+  })?;
 
   let checkout_session = create_subscription_checkout_session(CreateSubscriptionCheckoutSessionArgs {
     subscription_price_id: price_id,
@@ -158,16 +146,8 @@ pub (super) async fn user_creation_case(
     stripe_client: &stripe_config.client,
     success_url: &stripe_config.checkout_success_url,
     cancel_url: &stripe_config.checkout_cancel_url,
-  }).await?;
-
-  Ok(CreationPayload {
-    checkout_session,
-    maybe_new_user_metadata: Some(UserMetadata {
-      user_token: final_user_token,
-      session_token,
-      username: final_username,
-      display_name: final_display_name,
-      email_address: final_email_address,
-    })
   })
+  .await?;
+
+  Ok(CreationPayload { checkout_session, maybe_new_user_metadata: Some(UserMetadata { user_token: final_user_token, session_token, username: final_username, display_name: final_display_name, email_address: final_email_address }) })
 }

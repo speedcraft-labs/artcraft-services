@@ -36,17 +36,13 @@ pub struct CommentForListModFields {
   pub maybe_object_owner_deleted_at: Option<DateTime<Utc>>,
 }
 
-pub async fn get_comment<'e, 'c, E>(
-  comment_token: &'e CommentToken,
-  mysql_executor: E
-)
-  -> AnyhowResult<Option<Comment>>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn get_comment<'e, 'c, E>(comment_token: &'e CommentToken, mysql_executor: E) -> AnyhowResult<Option<Comment>>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
-
   let maybe_results = sqlx::query_as!(
-      RawComment,
-        r#"
+    RawComment,
+    r#"
 SELECT
     c.token as `token: tokens::tokens::comments::CommentToken`,
 
@@ -78,10 +74,10 @@ JOIN users AS u
 WHERE
     c.token = ?
         "#,
-      comment_token
-    )
-      .fetch_one(mysql_executor)
-      .await;
+    comment_token
+  )
+  .fetch_one(mysql_executor)
+  .await;
 
   match maybe_results {
     Ok(comment) => Ok(Some(Comment {
@@ -108,7 +104,7 @@ WHERE
     Err(err) => match err {
       sqlx::Error::RowNotFound => Ok(None),
       _ => Err(anyhow!("Error querying for IP ban: {:?}", err)),
-    }
+    },
   }
 }
 

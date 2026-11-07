@@ -88,8 +88,6 @@ pub async fn get_unified_queue_stats_handler() -> Json<GetUnifiedQueueStatsSucce
         pending_acting_face: 0,
       },
     },
-    legacy_tts: LegacyQueueDetails {
-      pending_job_count: 0,
-    },
+    legacy_tts: LegacyQueueDetails { pending_job_count: 0 },
   })
 }

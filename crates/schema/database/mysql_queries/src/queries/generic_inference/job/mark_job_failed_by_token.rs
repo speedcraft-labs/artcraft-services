@@ -32,7 +32,8 @@ pub async fn mark_job_failed_by_token(args: MarkJobFailedByTokenArgs<'_>) -> Any
     maybe_public_failure_reason: args.maybe_public_failure_reason,
     internal_debugging_failure_reason: args.internal_debugging_failure_reason,
     maybe_frontend_failure_category: args.maybe_frontend_failure_category,
-  }).await
+  })
+  .await
 }
 
 /// Permanently mark an inference job as failed, looked up by its token.
@@ -44,7 +45,8 @@ pub async fn mark_job_failed_by_token_from_connection(args: MarkJobFailedByToken
     maybe_public_failure_reason: args.maybe_public_failure_reason,
     internal_debugging_failure_reason: args.internal_debugging_failure_reason,
     maybe_frontend_failure_category: args.maybe_frontend_failure_category,
-  }).await
+  })
+  .await
 }
 
 /// Permanently mark an inference job as failed using an arbitrary executor.
@@ -60,13 +62,7 @@ pub async fn mark_job_failed_by_token_with_executor<'e, E>(
 where
   E: sqlx::Executor<'e, Database = MySql>,
 {
-  execute_mark_failed(ExecuteMarkJobFailedByTokenArgs {
-    executor,
-    job_token,
-    maybe_public_failure_reason,
-    internal_debugging_failure_reason,
-    maybe_frontend_failure_category,
-  }).await
+  execute_mark_failed(ExecuteMarkJobFailedByTokenArgs { executor, job_token, maybe_public_failure_reason, internal_debugging_failure_reason, maybe_frontend_failure_category }).await
 }
 
 struct ExecuteMarkJobFailedByTokenArgs<'a, E> {
@@ -77,9 +73,7 @@ struct ExecuteMarkJobFailedByTokenArgs<'a, E> {
   maybe_frontend_failure_category: Option<FrontendFailureCategory>,
 }
 
-async fn execute_mark_failed<'e, E>(
-  args: ExecuteMarkJobFailedByTokenArgs<'_, E>,
-) -> AnyhowResult<()>
+async fn execute_mark_failed<'e, E>(args: ExecuteMarkJobFailedByTokenArgs<'_, E>) -> AnyhowResult<()>
 where
   E: sqlx::Executor<'e, Database = MySql>,
 {
@@ -111,8 +105,8 @@ WHERE token = ?
     args.maybe_frontend_failure_category,
     args.job_token.as_str()
   )
-    .execute(args.executor)
-    .await;
+  .execute(args.executor)
+  .await;
 
   match query_result {
     Err(err) => Err(anyhow!("error with query: {:?}", err)),

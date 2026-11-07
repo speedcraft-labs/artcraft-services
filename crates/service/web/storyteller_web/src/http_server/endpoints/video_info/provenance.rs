@@ -2,10 +2,7 @@
 //! `video_info` types into the public API types, and deriving the database
 //! `detected_model_type` / `detected_model_family` enums from a parse result.
 
-use artcraft_api_defs::video_info::read_only::{
-  DreaminaVideoInfo, KlingVideoInfo, SeedanceVideoInfo, SoraVideoInfo, VeoVideoInfo,
-  VideoProvenanceKind,
-};
+use artcraft_api_defs::video_info::read_only::{DreaminaVideoInfo, KlingVideoInfo, SeedanceVideoInfo, SoraVideoInfo, VeoVideoInfo, VideoProvenanceKind};
 use enums::by_table::uploaded_videos::uploaded_video_detected_model_family::UploadedVideoDetectedModelFamily;
 use enums::by_table::uploaded_videos::uploaded_video_detected_model_type::UploadedVideoDetectedModelType;
 use video_info::dreamina_info::DreaminaInfo;
@@ -31,42 +28,31 @@ pub struct Provenance {
 /// Map a `video_info` parse result into the public [`Provenance`]. Any parse
 /// error (unrecognized or malformed) collapses to `Unrecognized` — internal
 /// error types are never surfaced.
-pub fn to_provenance(
-  result: &Result<VideoInfo, VideoInfoError>,
-  maybe_encoder: Option<String>,
-) -> Provenance {
-  let mut provenance = Provenance {
-    kind: VideoProvenanceKind::Unrecognized,
-    maybe_encoder,
-    maybe_seedance: None,
-    maybe_veo: None,
-    maybe_sora: None,
-    maybe_dreamina: None,
-    maybe_kling: None,
-  };
+pub fn to_provenance(result: &Result<VideoInfo, VideoInfoError>, maybe_encoder: Option<String>) -> Provenance {
+  let mut provenance = Provenance { kind: VideoProvenanceKind::Unrecognized, maybe_encoder, maybe_seedance: None, maybe_veo: None, maybe_sora: None, maybe_dreamina: None, maybe_kling: None };
 
   match result {
     Ok(VideoInfo::Seedance(info)) => {
       provenance.kind = VideoProvenanceKind::Seedance;
       provenance.maybe_seedance = Some(to_seedance(info));
-    }
+    },
     Ok(VideoInfo::Veo(info)) => {
       provenance.kind = VideoProvenanceKind::Veo;
       provenance.maybe_veo = Some(to_veo(info));
-    }
+    },
     Ok(VideoInfo::Sora(info)) => {
       provenance.kind = VideoProvenanceKind::Sora;
       provenance.maybe_sora = Some(to_sora(info));
-    }
+    },
     Ok(VideoInfo::Dreamina(info)) => {
       provenance.kind = VideoProvenanceKind::Dreamina;
       provenance.maybe_dreamina = Some(to_dreamina(info));
-    }
+    },
     Ok(VideoInfo::Kling(info)) => {
       provenance.kind = VideoProvenanceKind::Kling;
       provenance.maybe_kling = Some(to_kling(info));
-    }
-    Err(_) => {}
+    },
+    Err(_) => {},
   }
 
   provenance
@@ -77,9 +63,7 @@ pub fn to_provenance(
 /// Best-effort specific model type. Only Seedance carries enough metadata to pin
 /// an exact variant; other families return `None` (we can't honestly claim a
 /// version we didn't observe).
-pub fn detect_model_type(
-  result: &Result<VideoInfo, VideoInfoError>,
-) -> Option<UploadedVideoDetectedModelType> {
+pub fn detect_model_type(result: &Result<VideoInfo, VideoInfoError>) -> Option<UploadedVideoDetectedModelType> {
   match result.as_ref().ok()? {
     VideoInfo::Seedance(info) => seedance_model_type(info),
     _ => None,
@@ -88,20 +72,12 @@ pub fn detect_model_type(
 
 /// Map a known model type to its family. The requested
 /// "family based on the model type" helper.
-pub fn model_family_for_type(
-  model_type: UploadedVideoDetectedModelType,
-) -> UploadedVideoDetectedModelFamily {
+pub fn model_family_for_type(model_type: UploadedVideoDetectedModelType) -> UploadedVideoDetectedModelFamily {
   use UploadedVideoDetectedModelFamily as Family;
   use UploadedVideoDetectedModelType as Type;
   match model_type {
     Type::GrokVideo | Type::GrokImagineVideo | Type::GrokImagineVideo1p5 => Family::Grok,
-    Type::Kling16Pro
-    | Type::Kling21Pro
-    | Type::Kling21Master
-    | Type::Kling2p5TurboPro
-    | Type::Kling2p6Pro
-    | Type::Kling3p0Standard
-    | Type::Kling3p0Pro => Family::Kling,
+    Type::Kling16Pro | Type::Kling21Pro | Type::Kling21Master | Type::Kling2p5TurboPro | Type::Kling2p6Pro | Type::Kling3p0Standard | Type::Kling3p0Pro => Family::Kling,
     Type::HappyHorse1p0 => Family::HappyHorse,
     // Historical rows may carry the deprecated Ultra tier variants.
     #[allow(deprecated)]
@@ -124,9 +100,7 @@ pub fn model_family_for_type(
 /// exact model type couldn't be pinned (e.g. Veo/Sora/Kling, whose version isn't
 /// in the metadata). Dreamina is ByteDance's Seedance consumer app, so it maps
 /// to the Seedance family.
-pub fn detect_model_family(
-  result: &Result<VideoInfo, VideoInfoError>,
-) -> Option<UploadedVideoDetectedModelFamily> {
+pub fn detect_model_family(result: &Result<VideoInfo, VideoInfoError>) -> Option<UploadedVideoDetectedModelFamily> {
   use UploadedVideoDetectedModelFamily as Family;
   Some(match result.as_ref().ok()? {
     VideoInfo::Seedance(_) | VideoInfo::Dreamina(_) => Family::Seedance,

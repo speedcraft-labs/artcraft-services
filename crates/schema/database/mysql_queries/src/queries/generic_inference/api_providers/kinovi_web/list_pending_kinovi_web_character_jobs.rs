@@ -46,8 +46,8 @@ LIMIT 25000
     InferenceJobExternalThirdParty::Seedance2Pro.to_str(),
     InferenceJobType::Seedance2ProCharacter.to_str(),
   )
-    .fetch_all(pool)
-    .await?;
+  .fetch_all(pool)
+  .await?;
 
   let jobs = records
     .into_iter()
@@ -57,14 +57,10 @@ LIMIT 25000
         None => {
           warn!("PendingKinoviWebCharacterJob has no kinovi_character_id, skipping");
           return None;
-        }
+        },
       };
 
-      Some(PendingKinoviWebCharacterJob {
-        job_token: record.job_token,
-        kinovi_character_id,
-        maybe_creator_user_token: record.maybe_creator_user_token,
-      })
+      Some(PendingKinoviWebCharacterJob { job_token: record.job_token, kinovi_character_id, maybe_creator_user_token: record.maybe_creator_user_token })
     })
     .collect();
 

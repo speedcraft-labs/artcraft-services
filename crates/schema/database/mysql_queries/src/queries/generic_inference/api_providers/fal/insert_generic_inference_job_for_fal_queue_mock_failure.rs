@@ -15,17 +15,15 @@ use tokens::tokens::users::UserToken;
 use crate::errors::database_query_error::DatabaseQueryError;
 use crate::payloads::generic_inference_args::generic_inference_args::GenericInferenceArgs;
 use crate::queries::generic_inference::api_providers::fal::insert_generic_inference_job_for_fal_queue::FalCategory;
-use crate::queries::generic_inference::api_providers::fal::insert_generic_inference_job_for_fal_queue_with_apriori_job_token::{
-  insert_generic_inference_job_for_fal_queue_with_apriori_job_token,
-  InsertGenericInferenceForFalWithAprioriJobTokenArgs,
-};
+use crate::queries::generic_inference::api_providers::fal::insert_generic_inference_job_for_fal_queue_with_apriori_job_token::{insert_generic_inference_job_for_fal_queue_with_apriori_job_token, InsertGenericInferenceForFalWithAprioriJobTokenArgs};
 
 /// Same as [`InsertGenericInferenceForFalArgs`] but without `maybe_external_third_party_id`,
 /// since no external Fal call was made. The inserted job will have status
 /// [`JobStatusPlus::CompleteFailure`] immediately, making it a synthetic failed job useful
 /// for testing error-handling paths on the frontend without touching real inference services.
 pub struct InsertGenericInferenceForFalMockFailureArgs<'e, 'c, E>
-  where E: 'e + Executor<'c, Database = MySql>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   pub uuid_idempotency_token: &'e str,
 
@@ -53,10 +51,9 @@ pub struct InsertGenericInferenceForFalMockFailureArgs<'e, 'c, E>
   pub phantom: PhantomData<&'c E>,
 }
 
-pub async fn insert_generic_inference_job_for_fal_queue_mock_failure<'e, 'c: 'e, E>(
-  args: InsertGenericInferenceForFalMockFailureArgs<'e, 'c, E>,
-) -> Result<InferenceJobToken, DatabaseQueryError>
-  where E: 'e + Executor<'c, Database = MySql>
+pub async fn insert_generic_inference_job_for_fal_queue_mock_failure<'e, 'c: 'e, E>(args: InsertGenericInferenceForFalMockFailureArgs<'e, 'c, E>) -> Result<InferenceJobToken, DatabaseQueryError>
+where
+  E: 'e + Executor<'c, Database = MySql>,
 {
   let job_token = InferenceJobToken::generate();
   let synthetic_external_id = format!("synthetic_{}", generate_random_uuid());
@@ -81,5 +78,6 @@ pub async fn insert_generic_inference_job_for_fal_queue_mock_failure<'e, 'c: 'e,
     maybe_debug_log_event_token: None,
     mysql_executor: args.mysql_executor,
     phantom: args.phantom,
-  }).await
+  })
+  .await
 }

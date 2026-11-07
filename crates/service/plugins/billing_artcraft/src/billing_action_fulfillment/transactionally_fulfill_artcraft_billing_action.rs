@@ -8,16 +8,12 @@ use errors::AnyhowResult;
 use log::{info, warn};
 use sqlx::Transaction;
 
-pub async fn transactionally_fulfill_artcraft_billing_action(
-  event: &ArtcraftBillingAction,
-  transaction: &mut Transaction<'_, sqlx::MySql>,
-) -> AnyhowResult<()> {
-
+pub async fn transactionally_fulfill_artcraft_billing_action(event: &ArtcraftBillingAction, transaction: &mut Transaction<'_, sqlx::MySql>) -> AnyhowResult<()> {
   match event {
     ArtcraftBillingAction::IgnorableEvent => {
       warn!("Received ignorable billing action; nothing to fulfill.");
-      return Ok(())
-    }
+      return Ok(());
+    },
     ArtcraftBillingAction::WalletCreditsPurchase(purchase) => {
       info!("Completing credits pack purchase for user: {:?} ... ", purchase.owner_user_token);
       complete_credits_pack_purchase(
@@ -32,26 +28,27 @@ pub async fn transactionally_fulfill_artcraft_billing_action(
         purchase.is_production,
         purchase.payment_occurred_at,
         transaction,
-      ).await?;
-    }
+      )
+      .await?;
+    },
     ArtcraftBillingAction::SubscriptionCreated(subscription_details) => {
       info!("Upserting subscription details (sub created) for user {:?}", subscription_details.owner_user_token);
       upsert_subscription_details(subscription_details, CrudType::Create, transaction).await?;
-    }
+    },
     ArtcraftBillingAction::SubscriptionUpdated(subscription_details) => {
       info!("Upserting subscription details (sub updated) for user {:?}", subscription_details.owner_user_token);
       upsert_subscription_details(subscription_details, CrudType::Update, transaction).await?;
-    }
+    },
     ArtcraftBillingAction::SubscriptionDeleted(subscription_details) => {
       info!("Upserting subscription details (sub deleted) for user {:?}", subscription_details.owner_user_token);
       upsert_subscription_details(subscription_details, CrudType::Delete, transaction).await?;
-    }
+    },
     ArtcraftBillingAction::SubscriptionPaid(paid_details) => {
       info!("Completing subscription paid event for user: {:?}", paid_details.owner_user_token);
       mark_subscription_as_paid(paid_details, transaction).await?;
       //paid_details.customer_email
       //paid_details.owner_user_token
-    }
+    },
     // ArtcraftBillingAction::CustomerCreated(customer_link) => {
     //   info!("Linking user to newly created stripe customer: {:?}", customer_link.user_token);
     //   link_user_to_customer(customer_link, transaction).await?;
@@ -62,7 +59,7 @@ pub async fn transactionally_fulfill_artcraft_billing_action(
     // }
     _ => {
       return Err(anyhow!("Unhandled billing action in fulfillment"));
-    }
+    },
   }
 
   Ok(())

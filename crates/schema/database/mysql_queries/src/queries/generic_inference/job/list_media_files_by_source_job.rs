@@ -58,15 +58,13 @@ where
 /// List the media files produced by an inference job (`maybe_source_job_token`),
 /// oldest first. Deliberately lean: no user/model/stats joins — just the file
 /// fields plus a self-join for the cover image.
-pub async fn list_media_files_by_source_job<'a, 'c: 'a, E>(
-  args: ListMediaFilesBySourceJobArgs<'a, 'c, E>,
-) -> Result<Vec<JobMediaFileRecord>, sqlx::Error>
+pub async fn list_media_files_by_source_job<'a, 'c: 'a, E>(args: ListMediaFilesBySourceJobArgs<'a, 'c, E>) -> Result<Vec<JobMediaFileRecord>, sqlx::Error>
 where
   E: 'a + Executor<'c, Database = MySql>,
 {
   sqlx::query_as!(
-      JobMediaFileRecord,
-      r#"
+    JobMediaFileRecord,
+    r#"
 SELECT
     m.token as `token: tokens::tokens::media_files::MediaFileToken`,
 
@@ -103,10 +101,10 @@ WHERE
 ORDER BY m.id ASC
 LIMIT ?
       "#,
-      args.job_token,
-      args.creator_user_token,
-      MAX_RESULTS,
-    )
-      .fetch_all(args.mysql_executor)
-      .await
+    args.job_token,
+    args.creator_user_token,
+    MAX_RESULTS,
+  )
+  .fetch_all(args.mysql_executor)
+  .await
 }

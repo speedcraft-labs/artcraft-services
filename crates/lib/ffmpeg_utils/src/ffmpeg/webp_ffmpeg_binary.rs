@@ -19,10 +19,7 @@ use errors::AnyhowResult;
 const PATH_FFMPEG: &str = "ffmpeg";
 
 /// Homebrew's keg-only `ffmpeg-full` (Apple Silicon, then Intel prefixes).
-const HOMEBREW_FFMPEG_FULL_CANDIDATES: [&str; 2] = [
-  "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg",
-  "/usr/local/opt/ffmpeg-full/bin/ffmpeg",
-];
+const HOMEBREW_FFMPEG_FULL_CANDIDATES: [&str; 2] = ["/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg", "/usr/local/opt/ffmpeg-full/bin/ffmpeg"];
 
 /// The process-wide decision. Resolved once (the first caller probes the
 /// binaries while concurrent callers wait), then shared by every thread.
@@ -40,19 +37,15 @@ static WEBP_FFMPEG: OnceLock<Result<PathBuf, String>> = OnceLock::new();
 pub fn resolve_webp_ffmpeg(is_development: bool) -> AnyhowResult<&'static Path> {
   let decision = WEBP_FFMPEG.get_or_init(|| {
     let allow_macos_fallback = is_development && cfg!(target_os = "macos");
-    let decision = choose_webp_ffmpeg(
-      has_webp_encoder(Path::new(PATH_FFMPEG)),
-      allow_macos_fallback,
-      find_homebrew_ffmpeg_full,
-    );
+    let decision = choose_webp_ffmpeg(has_webp_encoder(Path::new(PATH_FFMPEG)), allow_macos_fallback, find_homebrew_ffmpeg_full);
     match &decision {
-      Ok(WebpFfmpegChoice::Path) =>
-        info!("Using the ffmpeg on the PATH for webp previews."),
-      Ok(WebpFfmpegChoice::HomebrewFallback(binary)) =>
-        warn!("The ffmpeg on the PATH has no libwebp_anim encoder; falling back to {} for webp previews \
-               (macOS development only).", binary.display()),
-      Err(err) =>
-        warn!("No ffmpeg can encode webp previews: {}", err),
+      Ok(WebpFfmpegChoice::Path) => info!("Using the ffmpeg on the PATH for webp previews."),
+      Ok(WebpFfmpegChoice::HomebrewFallback(binary)) => warn!(
+        "The ffmpeg on the PATH has no libwebp_anim encoder; falling back to {} for webp previews \
+               (macOS development only).",
+        binary.display()
+      ),
+      Err(err) => warn!("No ffmpeg can encode webp previews: {}", err),
     }
     decision.map(WebpFfmpegChoice::into_binary)
   });
@@ -82,39 +75,28 @@ impl WebpFfmpegChoice {
 }
 
 /// The decision, separated from probing binaries so it can be tested.
-fn choose_webp_ffmpeg(
-  path_ffmpeg_has_webp: bool,
-  allow_macos_fallback: bool,
-  find_fallback: impl FnOnce() -> Option<PathBuf>,
-) -> Result<WebpFfmpegChoice, String> {
+fn choose_webp_ffmpeg(path_ffmpeg_has_webp: bool, allow_macos_fallback: bool, find_fallback: impl FnOnce() -> Option<PathBuf>) -> Result<WebpFfmpegChoice, String> {
   if path_ffmpeg_has_webp {
     return Ok(WebpFfmpegChoice::Path);
   }
   if !allow_macos_fallback {
     return Err("the ffmpeg on the PATH has no libwebp_anim encoder, which animated webp thumbnails need".to_string());
   }
-  find_fallback()
-      .map(WebpFfmpegChoice::HomebrewFallback)
-      .ok_or_else(|| "neither the ffmpeg on the PATH nor Homebrew's ffmpeg-full has a libwebp_anim encoder. \
-          Run `brew install ffmpeg-full`.".to_string())
+  find_fallback().map(WebpFfmpegChoice::HomebrewFallback).ok_or_else(|| {
+    "neither the ffmpeg on the PATH nor Homebrew's ffmpeg-full has a libwebp_anim encoder. \
+          Run `brew install ffmpeg-full`."
+      .to_string()
+  })
 }
 
 /// The first installed Homebrew `ffmpeg-full` that has the webp encoder.
 fn find_homebrew_ffmpeg_full() -> Option<PathBuf> {
-  HOMEBREW_FFMPEG_FULL_CANDIDATES.iter()
-      .map(PathBuf::from)
-      .find(|binary| binary.exists() && has_webp_encoder(binary))
+  HOMEBREW_FFMPEG_FULL_CANDIDATES.iter().map(PathBuf::from).find(|binary| binary.exists() && has_webp_encoder(binary))
 }
 
 /// Whether `binary -encoders` lists `libwebp_anim`. False if it can't run.
 fn has_webp_encoder(binary: &Path) -> bool {
-  Command::new(binary)
-      .args(["-hide_banner", "-encoders"])
-      .output()
-      .map(|output| String::from_utf8_lossy(&output.stdout)
-          .split_whitespace()
-          .any(|word| word == "libwebp_anim"))
-      .unwrap_or(false)
+  Command::new(binary).args(["-hide_banner", "-encoders"]).output().map(|output| String::from_utf8_lossy(&output.stdout).split_whitespace().any(|word| word == "libwebp_anim")).unwrap_or(false)
 }
 
 #[cfg(test)]

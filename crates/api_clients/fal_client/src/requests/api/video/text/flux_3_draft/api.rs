@@ -1,8 +1,6 @@
 use crate::error::fal_error_plus::FalErrorPlus;
 use crate::requests::api::video::text::flux_3::api::{Flux3AspectRatio, Flux3Duration};
-use crate::requests::api::video::text::flux_3_draft::raw_request::{
-  Flux3DraftTextToVideoInput, Flux3DraftTextToVideoOutput,
-};
+use crate::requests::api::video::text::flux_3_draft::raw_request::{Flux3DraftTextToVideoInput, Flux3DraftTextToVideoOutput};
 use crate::requests::traits::fal_endpoint_trait::FalEndpoint;
 
 /// Flux 3 Draft text-to-video: lower cost, lower fidelity (always 720p). The
@@ -36,13 +34,7 @@ impl FalEndpoint for Flux3DraftTextToVideoRequest {
   type RawResponse = Flux3DraftTextToVideoOutput;
 
   fn to_raw_request(&self) -> Result<Self::RawRequest, FalErrorPlus> {
-    Ok(Self::RawRequest {
-      prompt: self.prompt.clone(),
-      duration: self.duration,
-      aspect_ratio: self.aspect_ratio.map(|ar| ar.to_str().to_string()),
-      generate_audio: self.generate_audio,
-      safety_tolerance: self.safety_tolerance,
-    })
+    Ok(Self::RawRequest { prompt: self.prompt.clone(), duration: self.duration, aspect_ratio: self.aspect_ratio.map(|ar| ar.to_str().to_string()), generate_audio: self.generate_audio, safety_tolerance: self.safety_tolerance })
   }
 }
 
@@ -100,13 +92,7 @@ mod tests {
 
   #[test]
   fn raw_request_maps_all_fields() {
-    let request = Flux3DraftTextToVideoRequest {
-      prompt: "p".to_string(),
-      duration: Some(Flux3Duration::Seconds(12)),
-      aspect_ratio: Some(Flux3AspectRatio::ThreeByFour),
-      generate_audio: Some(false),
-      safety_tolerance: Some(4),
-    };
+    let request = Flux3DraftTextToVideoRequest { prompt: "p".to_string(), duration: Some(Flux3Duration::Seconds(12)), aspect_ratio: Some(Flux3AspectRatio::ThreeByFour), generate_audio: Some(false), safety_tolerance: Some(4) };
     let raw = request.to_raw_request().unwrap();
     assert_eq!(raw.prompt, "p");
     assert_eq!(raw.duration, Some(Flux3Duration::Seconds(12)));
@@ -117,13 +103,7 @@ mod tests {
 
   #[test]
   fn raw_request_omits_unset_optionals() {
-    let request = Flux3DraftTextToVideoRequest {
-      prompt: "minimal".to_string(),
-      duration: None,
-      aspect_ratio: None,
-      generate_audio: None,
-      safety_tolerance: None,
-    };
+    let request = Flux3DraftTextToVideoRequest { prompt: "minimal".to_string(), duration: None, aspect_ratio: None, generate_audio: None, safety_tolerance: None };
     let json = serde_json::to_value(request.to_raw_request().unwrap()).unwrap();
     assert_eq!(json, serde_json::json!({ "prompt": "minimal" }));
   }
